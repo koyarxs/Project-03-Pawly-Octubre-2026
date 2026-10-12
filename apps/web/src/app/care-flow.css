@@ -1,0 +1,303 @@
+.care-flow {
+  background: #eef5f3;
+  padding: 56px 0;
+  border-top: 1px solid #dce8e3;
+}
+.care-flow-layout {
+  display: grid;
+  grid-template-columns: 0.85fr 2.6fr;
+  align-items: center;
+  gap: 48px;
+}
+.care-flow-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  color: #10686d;
+}
+.care-flow-eyebrow::before {
+  content: "";
+  width: 28px;
+  height: 2px;
+  background: #147d83;
+}
+.care-flow-copy h2 {
+  font-size: clamp(25px, 2.4vw, 34px);
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+  margin-top: 22px;
+}
+.care-flow-copy h2 em {
+  font-style: normal;
+  color: #147d83;
+}
+.care-flow-copy > p {
+  font-size: 14px;
+  line-height: 1.75;
+  color: #526873;
+  margin-top: 19px;
+}
+.care-flow-copy > small {
+  display: block;
+  font-size: 10px;
+  line-height: 1.6;
+  color: #526873;
+  margin-top: 15px;
+}
+.care-flow-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 36px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.care-flow-steps > li {
+  min-width: 0;
+}
+.care-flow-step {
+  position: relative;
+  padding-top: 17px;
+}
+.care-step-number {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 39px;
+  height: 39px;
+  border-radius: 50%;
+  background: #d5eae5;
+  color: #10686d;
+  font-size: 15px;
+  font-weight: 650;
+}
+.care-scene {
+  height: 164px;
+  background: white;
+  border: 1px solid #e0e9e6;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 12px 24px -20px #102b3540;
+}
+.care-agenda,
+.care-history {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+}
+.care-photo {
+  position: relative;
+  min-width: 0;
+}
+.care-photo img {
+  object-fit: cover;
+  object-position: 50% 42%;
+}
+.care-history .care-photo img {
+  object-position: 66% 50%;
+}
+.care-agenda-slots {
+  padding: 27px 11px 12px;
+}
+.care-agenda-slots > span {
+  font-size: 7px;
+  letter-spacing: 0.1em;
+  color: #10686d;
+}
+.care-agenda-slots > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 9px;
+}
+.care-agenda-slots small {
+  font-size: 8px;
+  color: #526873;
+}
+.care-agenda-slots div > span {
+  display: grid;
+  gap: 5px;
+  flex: 1;
+  background: #e0eff3;
+  border-radius: 5px;
+  padding: 8px;
+}
+.care-agenda-slots div:nth-of-type(2) > span {
+  background: #ddf0e8;
+}
+.care-agenda-slots div:nth-of-type(3) > span {
+  background: #f7e9d9;
+}
+.care-scene i {
+  display: block;
+  height: 4px;
+  background: #a6c6cc;
+  border-radius: 5px;
+  width: 65%;
+}
+.care-scene i + i {
+  width: 90%;
+  opacity: 0.5;
+}
+.care-patient {
+  padding: 31px 14px 14px;
+}
+.care-patient-heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.care-avatar {
+  width: 46px;
+  height: 46px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.care-avatar img {
+  object-fit: cover;
+  object-position: 50% 40%;
+}
+.care-patient-heading strong {
+  font-size: 12px;
+}
+.care-patient-heading span {
+  display: block;
+  font-size: 7px;
+  color: #526873;
+  margin: 5px 0 7px;
+}
+.care-patient-fields {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin-top: 17px;
+}
+.care-patient-fields > div {
+  padding: 8px 5px;
+  background: #eaf4f1;
+  border-radius: 6px;
+  color: #10686d;
+}
+.care-patient-fields span {
+  display: block;
+  font-size: 7px;
+  margin-block: 4px;
+}
+.care-record {
+  padding: 25px 10px 10px;
+  color: #10686d;
+}
+.care-record > span {
+  display: block;
+  font-size: 6px;
+  letter-spacing: 0.04em;
+  margin-top: 6px;
+}
+.care-record strong {
+  display: block;
+  font-size: 9px;
+  margin-top: 9px;
+  color: #102b35;
+}
+.care-record-lines {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+.care-record .care-record-tag {
+  font-size: 6px;
+  letter-spacing: 0;
+  background: #e4f3ec;
+  padding: 5px;
+  border-radius: 4px;
+  margin-top: 10px;
+}
+.care-step-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: #d5eee5;
+  border: 3px solid #eef5f3;
+  border-radius: 13px;
+  color: #10686d;
+  margin-top: -27px;
+  margin-left: -5px;
+}
+.care-flow-step h3 {
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.35;
+  letter-spacing: -0.025em;
+}
+.care-flow-step > p {
+  margin-top: 7px;
+  font-size: 12px;
+  color: #526873;
+  line-height: 1.6;
+}
+.care-step-arrow {
+  position: absolute;
+  right: -30px;
+  top: 92px;
+  color: #729f9e;
+}
+@media (max-width: 1099px) {
+  .care-flow-layout {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+  .care-flow-copy {
+    max-width: 540px;
+  }
+  .care-flow-copy h2 br {
+    display: none;
+  }
+  .care-flow-copy h2 em::before {
+    content: " ";
+  }
+}
+@media (max-width: 599px) {
+  .care-flow {
+    padding-block: 40px;
+  }
+  .care-flow-steps {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+  .care-scene {
+    height: 190px;
+  }
+  .care-flow-step h3 {
+    font-size: 18px;
+  }
+  .care-flow-step > p {
+    font-size: 14px;
+  }
+  .care-step-arrow {
+    display: none;
+  }
+  .care-patient {
+    padding: 38px 22px 20px;
+  }
+  .care-agenda-slots {
+    padding: 32px 20px;
+  }
+  .care-agenda-slots > div {
+    margin-top: 13px;
+  }
+  .care-record {
+    padding: 30px 20px;
+  }
+  .care-patient-fields {
+    margin-top: 25px;
+  }
+}

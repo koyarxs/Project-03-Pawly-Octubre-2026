@@ -1,0 +1,118 @@
+{
+  "license": "Pexels License",
+  "licenseUrl": "https://www.pexels.com/license/",
+  "retrievedOn": "2026-10-11",
+  "usage": "Illustrative stock photographs, not Pawly customers or endorsements. Local optimized WebP derivatives.",
+  "assets": [
+    {
+      "file": "veterinary-care.webp",
+      "author": "Tima Miroshnichenko",
+      "source": "https://www.pexels.com/photo/a-veterinarian-sitting-beside-a-black-dog-lying-on-the-table-6234618/",
+      "id": "6234618",
+      "placement": "Previous hero photograph, retained locally"
+    },
+    {
+      "file": "veterinary-team.webp",
+      "author": "Tima Miroshnichenko",
+      "source": "https://www.pexels.com/photo/a-woman-bringing-her-pet-to-a-veterinarian-6234611/",
+      "id": "6234611",
+      "placement": "Solutions"
+    },
+    {
+      "file": "hero-dog.webp",
+      "author": "Michał Robak",
+      "source": "https://www.pexels.com/photo/portrait-of-a-brown-dog-standing-in-a-forest-19784911/",
+      "id": "19784911",
+      "placement": "Hero carousel, slide 1",
+      "width": 1800
+    },
+    {
+      "file": "hero-cat.webp",
+      "author": "Mahmoud Yahyaoui",
+      "source": "https://www.pexels.com/photo/portrait-of-grey-cat-with-green-eyes-20893095/",
+      "id": "20893095",
+      "placement": "Hero carousel, slide 2",
+      "width": 1800
+    },
+    {
+      "file": "hero-rabbit.webp",
+      "author": "Jiří Mikoláš",
+      "source": "https://www.pexels.com/photo/a-close-up-shot-of-a-rabbit-on-grass-5152010/",
+      "id": "5152010",
+      "placement": "Hero carousel, slide 3"
+    },
+    {
+      "file": "hero-retriever.webp",
+      "author": "Mithul Varshan",
+      "source": "https://www.pexels.com/photo/portrait-of-a-golden-retriever-2318990/",
+      "id": "2318990",
+      "placement": "Hero carousel, slide 4"
+    },
+    {
+      "file": "hero-extra-10.webp",
+      "source": "https://www.pexels.com/photo/golden-retriever-in-outdoor-portrait-29904444/",
+      "id": "29904444",
+      "placement": "Hero carousel, slide 14"
+    },
+    {
+      "file": "hero-extra-11.webp",
+      "source": "https://www.pexels.com/photo/golden-retriever-portrait-in-natural-setting-35511912/",
+      "id": "35511912",
+      "placement": "Hero carousel, slide 15"
+    },
+    {
+      "file": "hero-extra-01.webp",
+      "source": "https://www.pexels.com/photo/close-up-portrait-of-a-domestic-cat-outdoors-35657000/",
+      "id": "35657000",
+      "placement": "Hero carousel, slide 5"
+    },
+    {
+      "file": "hero-extra-02.webp",
+      "source": "https://www.pexels.com/photo/close-up-portrait-of-a-curious-outdoor-cat-30758426/",
+      "id": "30758426",
+      "placement": "Hero carousel, slide 6"
+    },
+    {
+      "file": "hero-extra-03.webp",
+      "source": "https://www.pexels.com/photo/portrait-of-a-black-and-white-cat-outdoors-31031359/",
+      "id": "31031359",
+      "placement": "Hero carousel, slide 7"
+    },
+    {
+      "file": "hero-extra-04.webp",
+      "source": "https://www.pexels.com/photo/portrait-of-a-fluffy-cat-standing-outdoors-15974224/",
+      "id": "15974224",
+      "placement": "Hero carousel, slide 8"
+    },
+    {
+      "file": "hero-extra-05.webp",
+      "source": "https://www.pexels.com/photo/majestic-black-and-white-cat-portrait-outdoors-31047979/",
+      "id": "31047979",
+      "placement": "Hero carousel, slide 9"
+    },
+    {
+      "file": "hero-extra-06.webp",
+      "source": "https://www.pexels.com/photo/close-up-of-a-pet-rabbit-19958076/",
+      "id": "19958076",
+      "placement": "Hero carousel, slide 10"
+    },
+    {
+      "file": "hero-extra-07.webp",
+      "source": "https://www.pexels.com/photo/brown-border-collie-standing-in-the-park-18886632/",
+      "id": "18886632",
+      "placement": "Hero carousel, slide 11"
+    },
+    {
+      "file": "hero-extra-08.webp",
+      "source": "https://www.pexels.com/photo/a-dog-is-standing-in-the-woods-18337379/",
+      "id": "18337379",
+      "placement": "Hero carousel, slide 12"
+    },
+    {
+      "file": "hero-extra-09.webp",
+      "source": "https://www.pexels.com/photo/lone-dog-in-autumn-forest-at-golden-hour-29568286/",
+      "id": "29568286",
+      "placement": "Hero carousel, slide 13"
+    }
+  ]
+}

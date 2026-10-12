@@ -1,0 +1,279 @@
+.product-introduction {
+  background: #f7f9f7;
+  border-bottom: 1px solid #dfe8e2;
+}
+.hero-reference .product-introduction .hero-product-strip {
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 48px 40px;
+  padding-block: 72px 40px;
+}
+.intro-copy {
+  max-width: 540px;
+}
+.intro-copy h2 {
+  margin-top: 0;
+  font-size: clamp(30px, 3.1vw, 44px);
+  line-height: 1.16;
+  letter-spacing: -0.045em;
+}
+.intro-copy h2 em {
+  color: #147d83;
+  font-style: normal;
+}
+.intro-copy > p {
+  max-width: 440px;
+  margin-top: 23px;
+  color: #526873;
+  font-size: 15px;
+  line-height: 1.8;
+}
+.intro-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 19px;
+  margin-top: 28px;
+  background: #102b35;
+  color: white;
+  border: 1px solid #102b35;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
+}
+.intro-action:hover {
+  background: #147d83;
+  box-shadow: 0 5px 14px #102b3518;
+}
+.intro-action:focus-visible {
+  outline: 3px solid #147d83;
+  outline-offset: 4px;
+}
+.intro-development {
+  display: block;
+  margin-top: 16px;
+  color: #526873;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.hero-reference .product-introduction .intro-scene {
+  max-width: none;
+  padding: 0 10px 20px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+.intro-laptop-screen {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  border: 10px solid #17232a;
+  border-top-width: 18px;
+  border-radius: 20px 20px 8px 8px;
+  background: #edf3f4;
+  overflow: hidden;
+  box-shadow: 0 20px 35px -20px #102b3559;
+}
+.intro-workspace-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 8px;
+  background: #102b35;
+  color: #e5eeee;
+}
+.intro-workspace-sidebar > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 5px;
+  font-size: 9px;
+}
+.intro-workspace-sidebar .intro-workspace-brand {
+  font-size: 17px;
+  font-weight: 650;
+  margin-bottom: 18px;
+}
+.intro-workspace-brand svg {
+  width: 24px;
+  height: 24px;
+}
+.intro-workspace-sidebar .intro-sidebar-current {
+  background: #147d8366;
+  border-radius: 6px;
+}
+.intro-workspace-sidebar small {
+  margin-top: auto;
+  font-size: 8px;
+  color: #c8f2e5;
+  padding-inline: 5px;
+}
+.intro-workspace-content {
+  min-width: 0;
+  padding: 12px;
+}
+.intro-laptop-base {
+  position: relative;
+  height: 16px;
+  width: calc(100% + 20px);
+  margin-left: -10px;
+  background: linear-gradient(#dde4e8, #a5afb6 60%, #75868e);
+  border-radius: 2px 2px 40% 40%;
+  box-shadow: 0 14px 18px -8px #102b354d;
+}
+.intro-laptop-base::before {
+  content: "";
+  display: block;
+  margin-inline: auto;
+  width: 20%;
+  height: 5px;
+  background: #89969e;
+  border-radius: 0 0 6px 6px;
+}
+.product-introduction .compact-workspace {
+  box-shadow: 0 12px 26px -18px #102b354d;
+}
+.product-introduction .compact-workspace .window-bar {
+  background: white;
+}
+.hero-reference .product-introduction .compact-workspace .window-mark {
+  font-size: 12px;
+}
+.hero-reference
+  .product-introduction
+  .compact-workspace
+  .demo-appointment
+  strong {
+  font-size: 12px;
+}
+.hero-reference
+  .product-introduction
+  .compact-workspace
+  .demo-appointment
+  small {
+  font-size: 10px;
+}
+.intro-patient-story {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 15px;
+  padding: 15px;
+  background: #102b35;
+  color: white;
+  border-radius: 12px;
+}
+.intro-patient-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: #c8f2e5;
+  color: #10686d;
+}
+.intro-patient-story > div {
+  flex: 1;
+  min-width: 0;
+}
+.intro-patient-story div > span {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: #c8f2e5;
+}
+.intro-patient-story strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 14px;
+}
+.intro-patient-story small {
+  font-size: 11px;
+  font-weight: 400;
+  color: #e2ece8;
+}
+.intro-patient-story p {
+  margin-top: 5px;
+  font-size: 10px;
+  color: #c8d8dd;
+}
+.intro-patient-story > svg {
+  color: #c8f2e5;
+  flex-shrink: 0;
+}
+@media (max-width: 1099px) {
+  .hero-reference .product-introduction .hero-product-strip {
+    gap: 36px;
+  }
+  .hero-reference .product-introduction .intro-scene {
+    padding: 0 10px 20px;
+  }
+}
+@media (max-width: 899px) {
+  .hero-reference .product-introduction .hero-product-strip {
+    grid-template-columns: 1fr;
+    padding-block: 48px 32px;
+  }
+  .intro-copy {
+    max-width: 600px;
+  }
+  .intro-copy > p {
+    max-width: 540px;
+  }
+  .hero-reference .product-introduction .intro-scene {
+    max-width: 600px;
+  }
+}
+@media (max-width: 599px) {
+  .intro-laptop-screen {
+    grid-template-columns: 1fr;
+    border-width: 7px;
+    border-top-width: 14px;
+  }
+  .intro-workspace-sidebar {
+    flex-direction: row;
+    align-items: center;
+    padding: 10px;
+  }
+  .intro-workspace-sidebar > span:not(.intro-workspace-brand) {
+    display: none;
+  }
+  .intro-workspace-sidebar .intro-workspace-brand {
+    margin: 0;
+    padding: 0;
+  }
+  .intro-workspace-sidebar small {
+    margin: 0 0 0 auto;
+  }
+  .intro-workspace-content {
+    padding: 8px;
+  }
+  .intro-copy h2 {
+    font-size: 32px;
+  }
+  .intro-copy > p {
+    font-size: 14px;
+  }
+  .intro-action {
+    gap: 10px;
+    font-size: 11px;
+    padding: 14px;
+  }
+  .intro-patient-story {
+    padding: 12px;
+    gap: 10px;
+  }
+  .intro-patient-story > svg {
+    display: none;
+  }
+  .intro-patient-story div > span {
+    font-size: 7px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-action {
+    transition: none;
+  }
+}
