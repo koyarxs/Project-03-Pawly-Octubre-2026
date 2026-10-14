@@ -1,0 +1,601 @@
+.pawly-auth {
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: minmax(330px, 0.95fr) minmax(460px, 1.05fr);
+  background: #f7f9f7;
+}
+.pawly-auth .auth-story {
+  background: var(--petrol);
+  color: #f7f9f7;
+  padding: 44px clamp(32px, 5vw, 80px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 46px;
+}
+.pawly-auth .auth-story-copy {
+  max-width: 490px;
+}
+.pawly-auth .auth-story .auth-kicker {
+  color: var(--mint);
+}
+.pawly-auth .auth-story h2 {
+  font-size: clamp(36px, 4vw, 57px);
+  line-height: 1.09;
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  margin: 18px 0;
+}
+.pawly-auth .auth-story-copy > p {
+  color: #c2d4d5;
+  font-size: 15px;
+  max-width: 390px;
+}
+.pawly-auth .auth-story-photo {
+  position: relative;
+  aspect-ratio: 1.7;
+  margin-top: 34px;
+  border-radius: 18px;
+  overflow: hidden;
+}
+.pawly-auth .auth-story-photo img {
+  object-fit: cover;
+}
+.pawly-auth .auth-story-footer {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: #c2d4d5;
+  font-size: 12px;
+}
+.pawly-auth .auth-main {
+  display: flex;
+  flex-direction: column;
+  padding: 34px clamp(24px, 5vw, 80px) 22px;
+}
+.pawly-auth .auth-back {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pawly-auth .auth-form-area {
+  width: 100%;
+  max-width: 430px;
+  margin: auto;
+  padding: 38px 0;
+}
+.pawly-auth .auth-kicker,
+.pawly-workspace .auth-kicker {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  font-weight: 650;
+  color: var(--teal-ink);
+  display: block;
+}
+.pawly-auth h1 {
+  font-size: clamp(29px, 3vw, 38px);
+  line-height: 1.17;
+  letter-spacing: -0.045em;
+  font-weight: 550;
+  margin-top: 14px;
+  text-wrap: balance;
+}
+.pawly-auth .auth-intro {
+  margin: 14px 0 27px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+.pawly-auth .auth-field {
+  margin-bottom: 17px;
+}
+.pawly-auth .auth-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 7px;
+}
+.pawly-auth .auth-input-wrap {
+  position: relative;
+}
+.pawly-auth .auth-input-wrap input {
+  width: 100%;
+  height: 48px;
+  border: 1px solid #cbd8d3;
+  background: #fff;
+  border-radius: 9px;
+  padding: 0 14px;
+  color: var(--petrol);
+  font-size: 14px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.pawly-auth .auth-input-wrap:has(.auth-eye) input {
+  padding-right: 48px;
+}
+.pawly-auth .auth-input-wrap input::placeholder {
+  color: #70817f;
+  font-size: 13px;
+}
+.pawly-auth .auth-input-wrap input:focus {
+  outline: 2px solid #147d8325;
+  outline-offset: 1px;
+  border-color: var(--teal);
+}
+.pawly-auth .auth-input-wrap input[aria-invalid="true"] {
+  border-color: #b74335;
+}
+.pawly-auth .auth-input-wrap input:disabled {
+  background: #edf2ee;
+}
+.pawly-auth .auth-eye {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: #52676c;
+  border: 0;
+  background: transparent;
+  border-radius: 7px;
+}
+.pawly-auth .auth-eye:hover {
+  background: #edf4f0;
+}
+.pawly-auth .auth-field-error {
+  color: #96352b;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+.pawly-auth .auth-hint {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 7px;
+}
+.pawly-auth .auth-submit,
+.pawly-workspace .auth-submit {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  background: var(--teal);
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+.pawly-auth .auth-submit:hover,
+.pawly-workspace .auth-submit:hover {
+  background: var(--petrol);
+}
+.pawly-auth .auth-submit:disabled,
+.pawly-workspace button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.pawly-auth .auth-security-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  margin: 13px 0 0;
+}
+.pawly-auth .auth-switch {
+  padding-top: 22px;
+  margin-top: 23px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pawly-auth .auth-switch a {
+  color: var(--teal-ink);
+  font-weight: 650;
+  margin-left: 4px;
+}
+.pawly-auth .auth-switch a:hover {
+  text-decoration: underline;
+}
+.pawly-auth .auth-footer {
+  text-align: center;
+  color: #647873;
+  font-size: 10px;
+  padding-top: 12px;
+}
+.pawly-auth .auth-alert,
+.pawly-workspace .auth-alert {
+  border: 1px solid #ecd0bc;
+  background: #fff5ec;
+  color: #77452a;
+  border-radius: 9px;
+  padding: 13px 15px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.pawly-auth .auth-success-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: var(--mint);
+  color: var(--teal-ink);
+  display: grid;
+  place-items: center;
+  margin-bottom: 25px;
+}
+.pawly-auth .auth-success > p {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 18px 0 28px;
+  overflow-wrap: anywhere;
+}
+.pawly-auth .auth-success h1 {
+  margin-bottom: 10px;
+}
+.pawly-auth .auth-spinner,
+.pawly-workspace .auth-spinner {
+  animation: auth-spin 1s linear infinite;
+}
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.pawly-workspace {
+  min-height: 100svh;
+  background: #f7f9f7;
+}
+.pawly-workspace.workspace-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+}
+.pawly-workspace .workspace-sidebar {
+  background: white;
+  border-right: 1px solid var(--border);
+  padding: 34px 24px;
+  display: flex;
+  flex-direction: column;
+}
+.pawly-workspace .workspace-label {
+  margin: 44px 13px 14px;
+  font-size: 9px;
+  font-weight: 650;
+  color: #70817f;
+  letter-spacing: 0.15em;
+}
+.pawly-workspace .workspace-nav-current {
+  padding: 12px 14px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border-radius: 9px;
+  background: #eaf4ef;
+  color: var(--teal-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.pawly-workspace .workspace-sidebar-bottom {
+  margin-top: auto;
+  padding-top: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #58736d;
+}
+.pawly-workspace .workspace-sidebar-bottom p {
+  font-size: 11px;
+  line-height: 1.6;
+}
+.pawly-workspace .workspace-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  height: 82px;
+  padding: 0 38px;
+  border-bottom: 1px solid var(--border);
+  background: white;
+}
+.pawly-workspace .workspace-topbar > span {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.pawly-workspace .workspace-logout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pawly-workspace .workspace-logout:hover {
+  border-color: var(--teal);
+  color: var(--teal-ink);
+}
+.pawly-workspace .workspace-content {
+  padding: 53px clamp(24px, 5vw, 76px) 28px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.pawly-workspace .workspace-welcome {
+  margin-bottom: 48px;
+}
+.pawly-workspace .workspace-welcome h1 {
+  font-size: clamp(30px, 3.8vw, 43px);
+  line-height: 1.2;
+  font-weight: 520;
+  letter-spacing: -0.05em;
+  margin: 14px 0 10px;
+  overflow-wrap: anywhere;
+}
+.pawly-workspace .workspace-welcome p,
+.pawly-workspace .workspace-section-heading p {
+  color: var(--muted);
+  font-size: 13px;
+}
+.pawly-workspace .workspace-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 24px;
+}
+.pawly-workspace .workspace-section-heading h2 {
+  font-size: 22px;
+  letter-spacing: -0.025em;
+  margin-bottom: 7px;
+}
+.pawly-workspace .workspace-section-heading > span {
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 20px;
+  padding: 6px 11px;
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pawly-workspace .workspace-clinics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.pawly-workspace .workspace-clinic {
+  text-align: left;
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  padding: 25px 22px;
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 13px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+  min-width: 0;
+}
+.pawly-workspace .workspace-clinic:hover {
+  border-color: var(--teal);
+  box-shadow: 0 6px 20px #102b3508;
+}
+.pawly-workspace .workspace-clinic.is-selected {
+  border-color: var(--teal);
+  background: #f0faf5;
+}
+.pawly-workspace .workspace-clinic-icon {
+  height: 48px;
+  width: 48px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #edf5f0;
+  color: var(--teal-ink);
+  display: grid;
+  place-items: center;
+}
+.pawly-workspace .workspace-clinic-detail {
+  min-width: 0;
+}
+.pawly-workspace .workspace-clinic-detail strong {
+  font-size: 14px;
+  display: block;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.pawly-workspace .workspace-clinic-detail > span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.pawly-workspace .workspace-clinic-action {
+  margin-left: auto;
+  color: var(--teal);
+}
+.pawly-workspace .workspace-active {
+  margin-top: 30px;
+  padding: 28px 32px;
+  border: 1px solid #cbded5;
+  border-radius: 13px;
+  background: #ebf4ee;
+}
+.pawly-workspace .workspace-active-badge {
+  color: var(--teal-ink);
+  font-size: 11px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.pawly-workspace .workspace-active h2 {
+  font-size: 26px;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+.pawly-workspace .workspace-active p {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  max-width: 650px;
+}
+.pawly-workspace .workspace-empty {
+  border: 1px dashed #bbcfc3;
+  padding: 38px;
+  border-radius: 13px;
+  background: #f0f5f1;
+  color: var(--muted);
+}
+.pawly-workspace .workspace-empty h3 {
+  font-size: 18px;
+  color: var(--petrol);
+  margin: 15px 0 10px;
+}
+.pawly-workspace .workspace-empty p {
+  font-size: 13px;
+  max-width: 520px;
+}
+.pawly-workspace .workspace-refresh {
+  display: block;
+  background: transparent;
+  border: 0;
+  padding: 10px 0 0;
+  color: var(--teal-ink);
+  font-weight: 600;
+  font-size: 12px;
+}
+.pawly-workspace .workspace-footer {
+  margin-top: 65px;
+  border-top: 1px solid var(--border);
+  padding-top: 19px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted);
+}
+.pawly-workspace.workspace-gate {
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 55px;
+  text-align: center;
+}
+.pawly-workspace.workspace-gate h1 {
+  font-size: 27px;
+  font-weight: 500;
+  margin: 18px 0 10px;
+  letter-spacing: -0.03em;
+}
+.pawly-workspace.workspace-gate p {
+  color: var(--muted);
+  font-size: 14px;
+  max-width: 440px;
+}
+.pawly-workspace.workspace-gate .auth-submit {
+  margin-top: 24px;
+}
+.pawly-workspace.workspace-gate svg.auth-spinner {
+  margin: auto;
+  color: var(--teal);
+}
+@media (max-width: 899px) {
+  .pawly-auth {
+    grid-template-columns: 1fr;
+  }
+  .pawly-auth .auth-story {
+    padding: 24px;
+    gap: 0;
+  }
+  .pawly-auth .auth-story-copy,
+  .pawly-auth .auth-story-footer {
+    display: none;
+  }
+  .pawly-auth .auth-main {
+    padding: 22px 24px 20px;
+    min-height: calc(100svh - 84px);
+  }
+  .pawly-auth .auth-form-area {
+    padding: 30px 0;
+  }
+  .pawly-workspace.workspace-layout {
+    grid-template-columns: 1fr;
+  }
+  .pawly-workspace .workspace-sidebar {
+    padding: 20px 24px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .pawly-workspace .workspace-label,
+  .pawly-workspace .workspace-sidebar nav,
+  .pawly-workspace .workspace-sidebar-bottom {
+    display: none;
+  }
+  .pawly-workspace .workspace-topbar {
+    height: 66px;
+    padding: 0 24px;
+  }
+  .pawly-workspace .workspace-content {
+    padding-top: 35px;
+  }
+}
+@media (max-width: 600px) {
+  .pawly-workspace .workspace-clinics {
+    grid-template-columns: 1fr;
+  }
+  .pawly-workspace .workspace-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .pawly-workspace .workspace-clinic {
+    padding: 20px;
+  }
+  .pawly-workspace .workspace-active,
+  .pawly-workspace .workspace-empty {
+    padding: 24px;
+  }
+  .pawly-workspace .workspace-topbar {
+    padding: 0 18px;
+  }
+  .pawly-workspace .workspace-topbar > span {
+    font-size: 11px;
+    gap: 6px;
+  }
+  .pawly-workspace .workspace-logout {
+    padding: 9px;
+    font-size: 11px;
+  }
+  .pawly-workspace .workspace-footer {
+    gap: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pawly-auth .auth-spinner,
+  .pawly-workspace .auth-spinner {
+    animation: none;
+  }
+  .pawly-auth *,
+  .pawly-workspace * {
+    transition: none !important;
+  }
+}
