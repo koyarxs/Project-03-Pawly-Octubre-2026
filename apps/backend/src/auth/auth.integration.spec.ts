@@ -272,6 +272,89 @@ describe("authentication with isolated PostgreSQL", () => {
         .send(invalid)
         .expect(400);
       expect(JSON.stringify(r.body)).not.toContain(password);
+      expect(r.body).toEqual({
+        statusCode: 400,
+        message: "Solicitud inválida.",
+      });
+      expect(r.headers["cache-control"]).toBe("no-store");
+    }
+  });
+
+  it("rejects malformed JSON before guards without reflecting credentials or losing no-store", async () => {
+    const marker = "CANARY_PASSWORD_TOKEN_COOKIE";
+    for (const route of [
+      "/api/auth/login",
+      "/API/AUTH/register-clinic",
+      "/api/auth/logout",
+      `/api/clinics/${clinicId}/access`,
+    ]) {
+      for (const body of [
+        `{"password":${marker}}`,
+        `{"password":"${marker}",broken}`,
+        `{"token":"${marker}",`,
+      ]) {
+        // No Origin/CSRF header: a parser 400 proves this runs before the guards.
+        const result = await request(app.getHttpServer())
+          .post(route)
+          .set("Content-Type", "application/json")
+          .set("Cookie", cookie)
+          .send(body)
+          .expect(400);
+        expect(result.body).toEqual({
+          statusCode: 400,
+          message: "Solicitud inválida.",
+        });
+        expect(result.headers["cache-control"]).toBe("no-store");
+        expect(result.text).not.toMatch(
+          /CANARY|password|token|cookie|Unexpected|position/i,
+        );
+      }
+    }
+    await request(app.getHttpServer())
+      .get("/api/auth/me")
+      .set("Cookie", cookie)
+      .expect(200);
+    expect(await prisma.user.count()).toBe(2);
+    expect(await prisma.veterinaryClinic.count()).toBe(2);
+    expect(await prisma.session.count()).toBe(1);
+  });
+
+  it("does not reflect attacker-controlled validation property names or bad cookies", async () => {
+    const marker = "CANARY_PASSWORD_TOKEN_COOKIE";
+    const invalid = await post("/api/auth/register-clinic")
+      .send({ ...input, [marker]: marker })
+      .expect(400);
+    const unauthorized = await request(app.getHttpServer())
+      .get("/api/auth/me")
+      .set("Cookie", `pawly_session=${marker}`)
+      .expect(401);
+    const missing = await request(app.getHttpServer())
+      .get(`/api/auth/${marker}`)
+      .expect(404);
+    for (const result of [invalid, unauthorized, missing]) {
+      expect(result.headers["cache-control"]).toBe("no-store");
+      expect(result.text).not.toContain("CANARY");
+    }
+  });
+
+  it("keeps oversized and unsupported-charset parser errors private with their HTTP status", async () => {
+    const oversized = await post("/api/auth/login")
+      .set("Content-Type", "application/json")
+      .send(`{"password":"${"CANARY".repeat(20000)}"}`)
+      .expect(413);
+    const charset = await post("/api/auth/login")
+      .set("Content-Type", "application/json; charset=unsupported")
+      .send('{"password":"CANARY"}')
+      .expect(415);
+    for (const result of [oversized, charset]) {
+      expect(result.headers["cache-control"]).toBe("no-store");
+      expect(result.text).not.toMatch(
+        /CANARY|password|charset|unsupported|stack/i,
+      );
+      expect(Object.keys(result.body).sort()).toEqual([
+        "message",
+        "statusCode",
+      ]);
     }
   });
 
