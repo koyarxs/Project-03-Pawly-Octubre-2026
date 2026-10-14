@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePrivateWorkspace } from "./use-private-workspace";
+import { PrivateWorkspaceGate } from "./private-workspace-gate";
+import { roleNames, dashboardPath } from "@/lib/workspace";
 import {
   ArrowRight,
   Building2,
@@ -12,98 +15,45 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Brand } from "@/components/brand";
-import {
-  AuthError,
-  authErrorMessage,
-  checkClinicAccess,
-  getSession,
-  logout,
-  type Session,
-  type ClinicRole,
-} from "@/lib/auth";
-const roleNames: Record<ClinicRole, string> = {
-  OWNER: "Propietario",
-  ADMIN: "Administrador",
-  VETERINARIAN: "Veterinario",
-  RECEPTIONIST: "Recepción",
-};
-type State =
-  | { kind: "loading" }
-  | { kind: "error"; message: string }
-  | { kind: "ready"; session: Session };
+import { AuthError, authErrorMessage, checkClinicAccess } from "@/lib/auth";
 export function Workspace() {
-  const router = useRouter();
-  const [state, setState] = useState<State>({ kind: "loading" });
-  const [retry, setRetry] = useState(0);
-  const [selected, setSelected] = useState<Awaited<
-    ReturnType<typeof checkClinicAccess>
-  > | null>(null);
+  const {
+    state,
+    revision,
+    refresh: refreshSession,
+    endSession: expired,
+    signOut: closeSession,
+    leaving,
+    logoutError,
+  } = usePrivateWorkspace();
+  const [chosen, setChosen] = useState<{
+    access: Awaited<ReturnType<typeof checkClinicAccess>>;
+    revision: number;
+  } | null>(null);
+  const selected = chosen?.revision === revision ? chosen.access : null;
   const [checking, setChecking] = useState<string | null>(null);
-  const [message, setMessage] = useState("");
-  const [leaving, setLeaving] = useState(false);
+  const [accessMessage, setMessage] = useState("");
+  const message = accessMessage || logoutError;
   const selection = useRef<AbortController | null>(null);
-  const logoutLock = useRef(false);
-  useEffect(() => {
-    const controller = new AbortController();
-    getSession(controller.signal)
-      .then((session) => {
-        if (!controller.signal.aborted) setState({ kind: "ready", session });
-      })
-      .catch((error) => {
-        if (controller.signal.aborted) return;
-        if (error instanceof AuthError && error.status === 401)
-          router.replace("/iniciar-sesion");
-        else
-          setState({
-            kind: "error",
-            message: authErrorMessage(error, "workspace"),
-          });
-      });
-    const refresh = () => {
-      if (document.visibilityState !== "visible") return;
-      selection.current?.abort();
-      setSelected(null);
-      setChecking(null);
-      setMessage("");
-      setState({ kind: "loading" });
-      setRetry((v) => v + 1);
-    };
-    const restored = (event: PageTransitionEvent) => {
-      if (event.persisted) refresh();
-    };
-    window.addEventListener("pageshow", restored);
-    document.addEventListener("visibilitychange", refresh);
-    return () => {
-      controller.abort();
-      selection.current?.abort();
-      window.removeEventListener("pageshow", restored);
-      document.removeEventListener("visibilitychange", refresh);
-    };
-  }, [retry, router]);
+  useEffect(() => () => selection.current?.abort(), []);
   function refresh() {
     selection.current?.abort();
-    setSelected(null);
+    setChosen(null);
     setChecking(null);
     setMessage("");
-    setState({ kind: "loading" });
-    setRetry((v) => v + 1);
-  }
-  function expired() {
-    selection.current?.abort();
-    setSelected(null);
-    setState({ kind: "loading" });
-    router.replace("/iniciar-sesion");
+    refreshSession();
   }
   async function selectClinic(id: string) {
+    if (state.kind !== "ready") return;
     selection.current?.abort();
     const controller = new AbortController();
     selection.current = controller;
-    setSelected(null);
+    setChosen(null);
     setChecking(id);
     setMessage("");
     try {
       const access = await checkClinicAccess(id, controller.signal);
-      if (!controller.signal.aborted) setSelected(access);
+      if (!controller.signal.aborted) setChosen({ access, revision });
     } catch (error) {
       if (controller.signal.aborted) return;
       if (error instanceof AuthError && error.status === 401) expired();
@@ -113,50 +63,13 @@ export function Workspace() {
     }
   }
   async function signOut() {
-    if (logoutLock.current) return;
-    logoutLock.current = true;
     selection.current?.abort();
     setChecking(null);
-    setLeaving(true);
     setMessage("");
-    try {
-      await logout();
-      expired();
-    } catch (error) {
-      if (error instanceof AuthError && error.status === 401) expired();
-      else setMessage(authErrorMessage(error, "logout"));
-    } finally {
-      logoutLock.current = false;
-      setLeaving(false);
-    }
+    await closeSession();
   }
   if (state.kind !== "ready")
-    return (
-      <main className="pawly-workspace workspace-gate">
-        <Brand />
-        <div role={state.kind === "loading" ? "status" : "alert"}>
-          {state.kind === "loading" ? (
-            <>
-              <LoaderCircle
-                className="auth-spinner"
-                size={28}
-                aria-hidden="true"
-              />
-              <h1>Preparando tu espacio…</h1>
-              <p>Estamos comprobando tu sesión.</p>
-            </>
-          ) : (
-            <>
-              <h1>No pudimos abrir tu espacio.</h1>
-              <p>{state.message}</p>
-              <button className="auth-submit" onClick={refresh}>
-                Volver a intentar <ArrowRight size={18} />
-              </button>
-            </>
-          )}
-        </div>
-      </main>
-    );
+    return <PrivateWorkspaceGate state={state} onRetry={refresh} />;
   const { session } = state;
   return (
     <div className="pawly-workspace workspace-layout">
@@ -285,6 +198,11 @@ export function Workspace() {
                 estarán disponibles en próximas etapas.
               </p>
             </section>
+          )}
+          {selected && (
+            <Link className="workspace-enter" href={dashboardPath(selected.id)}>
+              Entrar al dashboard <ArrowRight size={18} aria-hidden="true" />
+            </Link>
           )}
           <footer className="workspace-footer">
             Pawly Workspace <span>Más tiempo para cuidar.</span>

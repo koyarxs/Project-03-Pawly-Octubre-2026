@@ -1,4 +1,4 @@
-﻿import { expect, test } from "@playwright/test";
+﻿import { expect, test, api } from "./support/real-fixtures";
 import { randomUUID } from "node:crypto";
 
 test("registro, login, selección y logout con Nest/PostgreSQL reales", async ({
@@ -58,18 +58,15 @@ test("registro, login, selección y logout con Nest/PostgreSQL reales", async ({
   ).toBeVisible();
   await page.getByRole("button", { name: new RegExp(clinic) }).click();
   await expect(page.getByText("Acceso verificado")).toBeVisible();
-  const me = await context.request.get("http://localhost:3001/api/auth/me");
+  const me = await context.request.get(`${api}/auth/me`);
   expect(me.status()).toBe(200);
   const profile = await me.json();
   expect(profile.memberships).toHaveLength(1);
   const foreign = await context.request.get(
-    `http://localhost:3001/api/clinics/${randomUUID()}/access`,
+    `${api}/clinics/${randomUUID()}/access`,
   );
   expect(foreign.status()).toBe(403);
-  const csrf = await context.request.post(
-    "http://localhost:3001/api/auth/logout",
-    { data: {} },
-  );
+  const csrf = await context.request.post(`${api}/auth/logout`, { data: {} });
   expect(csrf.status()).toBe(403);
   const publicHtml = await request.get("/app");
   expect(await publicHtml.text()).not.toContain(name);
@@ -78,9 +75,7 @@ test("registro, login, selección y logout con Nest/PostgreSQL reales", async ({
   expect(
     (await context.cookies()).some((c) => c.name === "pawly_session"),
   ).toBe(false);
-  expect(
-    (await context.request.get("http://localhost:3001/api/auth/me")).status(),
-  ).toBe(401);
+  expect((await context.request.get(`${api}/auth/me`)).status()).toBe(401);
   await page.goto("/app");
   await expect(page).toHaveURL(/\/iniciar-sesion$/);
 });

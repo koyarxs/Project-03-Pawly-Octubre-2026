@@ -130,9 +130,9 @@ try {
   app = await NestFactory.create(AppModule, { logger: ["error"] });
   configureHttp(app);
   await assertOwned(app.get(PrismaService));
-  await app.listen(3001, "127.0.0.1");
+  await app.listen(4001, "127.0.0.1");
   console.info(
-    `Browser test API ready: localhost:3001/pawly; schema=${schema}`,
+    `Browser test API ready: localhost:4001/pawly; schema=${schema}`,
   );
 } catch {
   console.error("Isolated browser API could not start.");
