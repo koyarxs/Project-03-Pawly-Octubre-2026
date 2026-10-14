@@ -1,0 +1,275 @@
+/* The finished lower landing: scoped so the approved hero and challenges keep their styling. */
+.landing-continuation { --lower-ink: #102b35; --lower-accent: #147d83; --lower-muted: #526873; }
+.landing-continuation .section { padding-block: 96px; }
+.landing-continuation h2 { font-size: clamp(32px, 3.35vw, 46px); font-weight: 620; line-height: 1.15; letter-spacing: -.045em; }
+.landing-continuation h2 em { color: var(--lower-accent); font-style: normal; }
+.landing-continuation .eyebrow { display: flex; align-items: center; gap: 12px; font-size: 10px; letter-spacing: .12em; margin-bottom: 20px; }
+.landing-continuation .eyebrow::before { content: ""; width: 24px; height: 2px; background: currentColor; border-radius: 2px; flex-shrink: 0; }
+.landing-continuation .light-eyebrow { color: #b9e8da; }
+.landing-continuation .container > *, .landing-continuation .lower-heading > *, .landing-continuation .contact-grid > * { min-width: 0; }
+.lower-heading { margin-bottom: 40px; }
+.lower-heading p, .lower-intro { color: var(--lower-muted); font-size: 15px; line-height: 1.85; }
+.lower-heading-centered { text-align: center; max-width: 780px; margin-inline: auto; }
+.lower-heading-centered .eyebrow { justify-content: center; }
+.lower-heading-centered > p { margin-top: 22px; }
+.lower-heading-split { display: grid; grid-template-columns: 1.35fr 1fr; align-items: end; gap: 64px; }
+.lower-heading-split p { max-width: 420px; }
+.lower-intro { margin-top: 22px; max-width: 470px; }
+.lower-status { display: inline-flex; align-items: center; gap: 8px; color: #526873; font-size: 11px; line-height: 1.6; margin-top: 16px; }
+.lower-text-link { display: inline-flex; align-items: center; gap: 14px; padding-block: 8px; margin-top: 22px; color: #10686d; font-size: 13px; font-weight: 600; }
+.lower-text-link svg { transition: transform .25s ease; }
+.lower-text-link:hover svg { transform: translateX(3px); }
+
+/* Product first: the interactive interface is the visual, without competing stock imagery. */
+.landing-continuation .lower-demo { background: linear-gradient(180deg, #f4f9fa, #fff); }
+.lower-demo-frame { width: min(1100px, 100%); margin-inline: auto; padding: 18px; border: 1px solid #dbe6e8; border-radius: 25px; background: #eaf2f3; box-shadow: 0 30px 65px -45px #153b4d70; }
+.lower-demo-caption { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: #526873; font-size: 10px; padding: 3px 6px 17px; }
+.lower-demo-caption > span:first-child { display: flex; align-items: center; gap: 8px; font-size: 9px; font-weight: 600; letter-spacing: .08em; }
+.landing-continuation .demo-stage { width: 100%; padding: 0; margin: 0; border: 0; border-radius: 16px; background: white; }
+.landing-continuation .showcase-workspace { border-radius: 16px; box-shadow: 0 5px 18px #102b350a; }
+.lower-demo-footnote { display: flex; justify-content: space-between; align-items: center; gap: 20px; max-width: 1100px; margin: 22px auto 0; font-size: 10px; color: #627880; }
+.lower-demo-footnote > span { display: flex; align-items: center; gap: 8px; color: #10686d; }
+
+/* Modules: gentle color variety, readable UI previews and consistent icon containers. */
+.landing-continuation .lower-features { background: #fff; padding-top: 48px; }
+.landing-continuation .bento-grid { gap: 20px; }
+.landing-continuation .bento { border-radius: 20px; padding: 30px; border-color: #dfe8e5; box-shadow: 0 10px 25px -23px #102b3533; transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease; }
+.landing-continuation .bento-category { font-size: 10px; letter-spacing: .09em; gap: 9px; }
+.landing-continuation .bento-category > svg { box-sizing: content-box; padding: 8px; background: #e0efea; border: 1px solid #cddfd7; border-radius: 10px; }
+.landing-continuation .bento h3 { font-size: clamp(23px, 2.1vw, 29px); font-weight: 600; letter-spacing: -.035em; line-height: 1.22; margin-top: 20px; }
+.landing-continuation .bento p { font-size: 14px; line-height: 1.75; margin-top: 14px; }
+.landing-continuation .bento-agenda { background: #edf5f3; gap: 28px; }
+.landing-continuation .bento-record { background: #102b35; border-color: #254650; }
+.landing-continuation .bento-record .bento-category > svg { background: #25444b; border-color: #436268; }
+.landing-continuation .bento-record > p { color: #c5d8d8; }
+.landing-continuation .bento-patients { background: #f7fafc; }
+.landing-continuation .bento-tutors { background: #fff; }
+.landing-continuation .bento-vaccines { background: #faf5ec; border-color: #eae1d1; }
+.landing-continuation .bento-vaccines .bento-category > svg { background: #f2e7d4; border-color: #e5d6bf; color: #7c633c; }
+.landing-continuation .bento-inventory { background: #f6f9f7; }
+.landing-continuation .mini-interface { border-radius: 14px; box-shadow: 0 12px 20px -17px #102b3538; }
+.landing-continuation :is(.mini-record, .mini-patients, .mini-tutor, .mini-stock) { border-radius: 12px; }
+.landing-continuation .mini-patients .patient-avatar { width: 42px; height: 42px; border-radius: 50%; overflow: hidden; }
+.landing-continuation .mini-patients .patient-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.landing-continuation .mini-patients > div:first-child .patient-avatar img { object-position: 50% 85%; }
+.landing-continuation .mini-patients > div { background: white; padding: 14px; }
+.landing-continuation .bento .mini-record > p { font-size: 10px; margin-top: 16px; }
+.landing-continuation .bento-disclaimer { font-size: 11px; margin-top: 0; padding-top: 4px; }
+
+/* Workflow: a human scene anchored to the conceptual patient timeline. */
+.landing-continuation .lower-workflow { background: #eef5f3; border: 0; }
+.lower-workflow-layout { display: grid; grid-template-columns: 1fr 1.05fr; gap: 80px; align-items: center; }
+.lower-workflow-steps { list-style: none; padding: 0; margin: 32px 0 0; display: grid; gap: 26px; }
+.lower-workflow-steps li { display: flex; align-items: flex-start; gap: 18px; }
+.lower-step-icon { position: relative; display: grid; place-items: center; width: 46px; height: 46px; flex-shrink: 0; border: 1px solid #c4dbd1; border-radius: 13px; color: #147d83; background: #e1efe9; }
+.lower-step-icon small { position: absolute; right: -5px; bottom: -5px; border: 2px solid #eef5f3; border-radius: 50%; width: 20px; height: 20px; display: grid; place-items: center; background: #147d83; color: white; font-size: 7px; font-weight: 600; }
+.lower-workflow-steps h3 { font-size: 16px; font-weight: 600; line-height: 1.4; }
+.lower-workflow-steps p { font-size: 13px; color: #526873; line-height: 1.8; margin-top: 6px; max-width: 370px; }
+.lower-workflow-scene { position: relative; padding-bottom: 24px; }
+.lower-workflow-photo { position: relative; height: 280px; margin: 0 0 0 48px; border-radius: 22px; overflow: hidden; background: #dfeae7; }
+.lower-workflow-photo img { object-fit: cover; object-position: 60% 48%; }
+.lower-workflow-photo figcaption { position: absolute; display: flex; align-items: center; gap: 8px; top: 16px; left: 16px; padding: 9px 12px; background: #fffffff0; color: #23424b; border-radius: 9px; font-size: 10px; }
+.landing-continuation .lower-workflow-scene .workflow-visual { position: relative; width: calc(100% - 50px); max-width: 440px; background: #fff; margin: -50px 0 0; padding: 24px; border-radius: 18px; border-color: #d7e5df; box-shadow: 0 24px 40px -30px #102b3555; }
+.lower-photo-note { display: block; color: #627880; font-size: 9px; margin: 16px 0 0; }
+
+/* Two practices, two cards. The photo supports the content instead of repeating a UI mockup. */
+.landing-continuation .solutions-section { background: #fff; }
+.landing-continuation .solutions-layout { gap: 26px; grid-template-columns: 1fr 1.05fr; }
+.landing-continuation .practice-photo { border-radius: 22px; background: #102b35; }
+.landing-continuation .practice-photo-image { min-height: 380px; }
+.landing-continuation .practice-photo-image img { object-position: 34% 50%; }
+.landing-continuation .practice-photo figcaption { padding: 24px 26px; color: white; }
+.landing-continuation .practice-photo figcaption strong { font-size: 16px; font-weight: 550; }
+.landing-continuation .practice-photo figcaption span { color: #bdd5d1; font-size: 12px; }
+.landing-continuation .practice-photo figcaption a { color: #c5d8d8; font-size: 9px; }
+.landing-continuation .solutions-layout .solutions-grid { gap: 20px; }
+.landing-continuation .solutions-layout .solutions-grid article { border-radius: 20px; padding: 28px; }
+.landing-continuation .solution-clinic { background: #eef5f3; color: #102b35; border: 1px solid #d8e6df; }
+.landing-continuation .solution-practice { background: #f5f8fc; border: 1px solid #dce6ef; }
+.landing-continuation .solution-title > svg { box-sizing: content-box; padding: 9px; border-radius: 12px; background: #dceee6; color: #147d83; }
+.landing-continuation .solution-practice .solution-title > svg { background: #e0ecf5; color: #34677e; }
+.landing-continuation .solution-title .eyebrow { color: #406c65; font-size: 9px; margin: 0; }
+.landing-continuation .solution-title .eyebrow::before { display: none; }
+.landing-continuation .solutions-layout .solutions-grid h3 { font-size: 26px; font-weight: 600; line-height: 1.2; }
+.landing-continuation .solutions-layout .solutions-grid p { color: #526873; font-size: 14px; line-height: 1.75; }
+.landing-continuation .solutions-grid li svg { color: #147d83; }
+.landing-continuation .solutions-grid .text-action { color: #10686d; border-color: #ceded7; font-size: 12px; }
+
+/* The why: an editorial photograph and a small set of concrete principles. */
+.landing-continuation .lower-about { background: #f7faf9; border: 0; }
+.lower-about-layout { display: grid; grid-template-columns: 1fr 1.05fr; gap: 80px; align-items: center; }
+.lower-about-scene { position: relative; padding: 0 24px 26px 0; }
+.lower-about-photo { position: relative; height: 470px; overflow: hidden; margin: 0; border-radius: 24px; background: #e8efeb; }
+.lower-about-photo img { object-fit: cover; object-position: 42% center; }
+.lower-about-photo::after { content: ""; position: absolute; inset: 60% 0 0; background: linear-gradient(transparent, #102b35b0); }
+.lower-about-photo figcaption { position: absolute; z-index: 1; bottom: 24px; left: 24px; right: 24px; color: white; font-size: 12px; max-width: 300px; line-height: 1.7; }
+.lower-about-stamp { position: absolute; right: 0; bottom: 0; display: flex; align-items: center; gap: 14px; padding: 19px 25px; border: 1px solid #d2e6db; border-radius: 16px; background: #e2f3eb; color: #10686d; box-shadow: 0 12px 25px -20px #102b3540; font-size: 12px; line-height: 1.5; }
+.lower-about-stamp strong { font-size: 17px; font-weight: 600; }
+.lower-about-copy > p { color: #526873; font-size: 14px; line-height: 1.85; margin-top: 20px; }
+.lower-about-copy > .lower-about-lead { color: #102b35; font-size: 19px; line-height: 1.65; margin-top: 26px; letter-spacing: -.02em; }
+.lower-values { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; border-top: 1px solid #dbe5df; padding-top: 24px; margin-top: 26px; }
+.lower-values svg { color: #147d83; }
+.lower-values h3 { font-size: 13px; margin-top: 9px; }
+.lower-values p { font-size: 11px; color: #627880; margin-top: 4px; }
+.lower-about-copy .lower-status { margin-top: 24px; font-size: 10px; }
+
+/* Commercial expectations remain accurate while the product is in development. */
+.landing-continuation .lower-pricing { background: #edf5f7; }
+.landing-continuation .pricing-grid { grid-template-columns: 1fr 1fr; gap: 100px; }
+.landing-continuation .pricing-panel { border: 1px solid #d7e5e7; background: #fff; padding: 36px; border-radius: 24px; box-shadow: 0 24px 45px -30px #1b526638; max-width: 550px; }
+.lower-pricing-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.lower-pricing-top .lower-status { margin: 0; padding: 6px 11px; border-radius: 20px; background: #eef6f3; font-size: 10px; color: #406c65; }
+.lower-pricing-icon { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 14px; background: #102b35; color: #c8f2e5; }
+.landing-continuation .pricing-panel h3 { font-size: 28px; font-weight: 600; letter-spacing: -.035em; margin-top: 26px; }
+.landing-continuation .pricing-panel > p { font-size: 14px; line-height: 1.8; }
+.landing-continuation .pricing-status { margin-top: 24px; padding-block: 22px; }
+.landing-continuation .pricing-status strong { font-size: 26px; font-weight: 600; color: #147d83; }
+.landing-continuation .pricing-panel li { font-size: 12px; gap: 10px; }
+.lower-pricing-note { display: block; text-align: center; margin-top: 13px; color: #627880; font-size: 10px; }
+.landing-continuation .pricing-panel a { border-radius: 12px; }
+
+/* Accessible native disclosure controls, with generous spacing. */
+.landing-continuation .lower-faq { background: #fff; }
+.landing-continuation .faq-grid { grid-template-columns: .9fr 1.1fr; gap: 80px; }
+.lower-faq-icon { display: grid; place-items: center; width: 56px; height: 56px; border: 1px solid #d1e5db; background: #e9f4ef; color: #147d83; border-radius: 17px; margin-bottom: 24px; }
+.landing-continuation .faq-item { border: 1px solid #e0e8e5; border-radius: 13px; background: #fafcfb; margin-bottom: 10px; overflow: hidden; transition: border-color .25s ease, background .25s ease; }
+.landing-continuation .faq-item[open] { border-color: #bcd8cd; background: #f1f8f4; }
+.landing-continuation .faq-item summary { padding: 19px 22px; font-size: 14px; font-weight: 550; gap: 18px; }
+.lower-faq-toggle { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; color: #147d83; background: #e4f0ea; }
+.lower-faq-toggle svg { transition: transform .2s ease; }
+.faq-item[open] .lower-faq-toggle svg { transform: rotate(45deg); }
+.landing-continuation .faq-item > p { padding: 0 65px 22px 22px; font-size: 13px; line-height: 1.85; color: #526873; }
+
+/* Contact is the final primary action; keep its local-download behavior explicit. */
+.landing-continuation .lower-contact { background: radial-gradient(ellipse at 0 0, #1e454d, transparent 65%), #102b35; }
+.landing-continuation .contact-grid { grid-template-columns: 1fr 1fr; gap: 88px; align-items: start; }
+.landing-continuation .contact-copy h2 { font-size: clamp(38px, 3.8vw, 52px); color: #fff; }
+.landing-continuation .contact-copy > p { font-size: 15px; line-height: 1.85; max-width: 460px; }
+.lower-contact-photo { position: relative; height: 220px; border: 1px solid #45616a; border-radius: 18px; overflow: hidden; margin-top: 30px; }
+.lower-contact-photo img { object-fit: cover; object-position: 60% 38%; }
+.lower-contact-photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, #102b35d9, #102b3520 85%); }
+.lower-contact-photo > span { position: absolute; z-index: 1; left: 24px; bottom: 25px; color: #e3f6ee; display: flex; gap: 12px; align-items: center; }
+.lower-contact-photo strong { font-size: 16px; line-height: 1.5; font-weight: 550; }
+.lower-contact-note { display: flex; align-items: flex-start; gap: 12px; margin-top: 23px; color: #bddbd4; }
+.lower-contact-note svg { margin-top: 4px; }
+.lower-contact-note p { font-size: 12px; line-height: 1.8; max-width: 380px; color: #c5d8d8; }
+.landing-continuation .contact-status { display: flex; align-items: center; gap: 8px; margin-top: 23px; font-size: 10px; line-height: 1.6; }
+.landing-continuation .contact-status .status-dot { background: #a5dfce; }
+.lower-form-entrance { min-width: 0; }
+.landing-continuation .demo-form { padding: 32px; background: #fbfdfc; border: 1px solid #e4ece7; border-radius: 22px; box-shadow: 0 24px 50px -30px #061d2999; max-width: none; }
+.landing-continuation .form-heading h3 { font-size: 28px; font-weight: 600; letter-spacing: -.035em; }
+.landing-continuation .form-heading p { font-size: 13px; }
+.landing-continuation .form-heading .eyebrow { font-size: 9px; gap: 8px; }
+.landing-continuation .field label { font-size: 12px; }
+.landing-continuation .field :is(input, select, textarea) { border-radius: 9px; border-color: #d5e0da; font-size: 14px; padding: 12px 13px; min-height: 46px; transition: border-color .2s ease; }
+.landing-continuation .field :is(input, select, textarea):hover { border-color: #a9c4b8; }
+.landing-continuation .form-disclosure { border-radius: 10px; padding: 12px; background: #edf4f0; font-size: 10px; line-height: 1.75; }
+.landing-continuation .demo-form button[type="submit"] { height: auto; min-height: 48px; white-space: normal; border-radius: 10px; padding: 12px 14px; }
+
+/* A calm, navigable footer with a clear closing statement. */
+.lower-footer { background: #0b222b; padding-top: 0; }
+.lower-footer-top { display: flex; justify-content: space-between; align-items: center; gap: 32px; padding-block: 36px; border-bottom: 1px solid #29454f; }
+.lower-footer-top > p { color: #eaf4f2; font-size: 25px; font-weight: 550; line-height: 1.2; letter-spacing: -.035em; }
+.lower-footer-top > p span { color: #b9e8da; }
+.lower-footer-action { display: flex; align-items: center; gap: 16px; color: #d5efe5; border: 1px solid #44635f; padding: 12px 17px; border-radius: 10px; font-size: 12px; transition: background .25s ease; }
+.lower-footer-action:hover { background: #c8f2e511; }
+.lower-footer .footer-main { padding-block: 42px; gap: 40px; }
+.lower-footer .footer-brand p { font-size: 13px; margin-top: 0; line-height: 1.85; color: #c5d8d8; }
+.lower-footer .footer-brand > span { display: flex; align-items: center; gap: 7px; font-size: 10px; margin-top: 14px; }
+.lower-footer .footer-brand > .footer-stage { display: inline-flex; color: #b9e8da; border-radius: 20px; padding: 6px 10px; font-size: 9px; border-color: #34554e; }
+.lower-footer .footer-stage .status-dot { background: #a5dfce; }
+.lower-footer .footer-column { gap: 13px; font-size: 12px; }
+.lower-footer .footer-column h3 { font-size: 12px; color: #fff; font-weight: 600; }
+.lower-footer-small { color: #92adb4; font-size: 10px; line-height: 1.8; margin-top: 3px; }
+.lower-footer .footer-bottom { font-size: 10px; padding-block: 23px; }
+.lower-footer .footer-bottom a { padding: 6px 0; }
+
+@media (hover: hover) and (pointer: fine) {
+  .landing-continuation .bento:hover { transform: translateY(-4px); border-color: #b8d3c6; box-shadow: 0 18px 30px -24px #102b3540; }
+}
+@media (max-width: 1199px) {
+  .lower-workflow-layout, .lower-about-layout { gap: 48px; }
+  .landing-continuation .pricing-grid, .landing-continuation .contact-grid, .landing-continuation .faq-grid { gap: 48px; }
+  .landing-continuation .bento-agenda { grid-template-columns: 1fr; }
+  .landing-continuation .bento { padding: 25px; }
+  .landing-continuation .pricing-panel, .landing-continuation .demo-form { padding: 28px; }
+}
+@media (max-width: 899px) {
+  .landing-continuation .section { padding-block: 72px; }
+  .landing-continuation .lower-features { padding-top: 24px; }
+  .lower-heading-split { grid-template-columns: 1fr; gap: 20px; }
+  .lower-workflow-layout, .lower-about-layout, .landing-continuation .pricing-grid, .landing-continuation .faq-grid, .landing-continuation .contact-grid { grid-template-columns: 1fr; gap: 38px; }
+  .lower-workflow-copy, .lower-about-copy, .lower-pricing-copy { max-width: 650px; }
+  .lower-workflow-scene { width: min(600px, 100%); margin-inline: auto; }
+  .lower-about-layout { align-items: start; }
+  .lower-about-scene { max-width: 620px; width: 100%; }
+  .lower-about-photo { height: 390px; }
+  .landing-continuation .solutions-layout { grid-template-columns: 1fr; }
+  .landing-continuation .solutions-layout .solutions-grid { grid-template-columns: 1fr 1fr; }
+  .landing-continuation .practice-photo-image { min-height: 370px; }
+  .landing-continuation .contact-copy { max-width: 650px; }
+  .lower-contact-photo { max-width: 600px; }
+  .landing-continuation .demo-form { max-width: 650px; }
+  .lower-faq-copy { max-width: 580px; }
+  .lower-footer .footer-main { grid-template-columns: 1fr 1fr; gap: 36px; }
+}
+@media (max-width: 599px) {
+  .landing-continuation .section { padding-block: 52px; }
+  .landing-continuation h2 { font-size: 32px; }
+  .landing-continuation .eyebrow { font-size: 9px; letter-spacing: .09em; line-height: 1.7; }
+  .lower-heading { margin-bottom: 28px; }
+  .lower-heading p, .lower-intro { font-size: 14px; }
+  .desktop-break { display: none; }
+  .lower-demo-frame { padding: 8px; border-radius: 18px; }
+  .lower-demo-caption { padding: 5px 5px 12px; }
+  .lower-demo-caption > span:first-child { font-size: 8px; letter-spacing: .03em; gap: 6px; }
+  .lower-demo-caption > span:last-child { display: none; }
+  .lower-demo-footnote { flex-direction: column; align-items: flex-start; gap: 10px; font-size: 9px; margin-top: 16px; }
+  .landing-continuation .lower-features { padding-top: 12px; }
+  .landing-continuation .bento-grid { grid-template-columns: 1fr; gap: 16px; }
+  .landing-continuation .bento { grid-column: auto; padding: 24px; border-radius: 17px; }
+  .landing-continuation .bento h3 { font-size: 25px; }
+  .landing-continuation .bento-inventory { grid-template-columns: 1fr; gap: 20px; }
+  .landing-continuation .bento-disclaimer { font-size: 10px; }
+  .lower-workflow-steps { gap: 25px; }
+  .lower-workflow-photo { margin-left: 24px; height: 230px; }
+  .landing-continuation .lower-workflow-scene .workflow-visual { width: calc(100% - 16px); padding: 18px; margin-top: -32px; }
+  .lower-workflow-photo figcaption { font-size: 9px; top: 12px; left: 12px; padding: 8px; }
+  .lower-photo-note { font-size: 8px; line-height: 1.7; }
+  .landing-continuation .solutions-layout .solutions-grid { grid-template-columns: 1fr; }
+  .landing-continuation .practice-photo-image { min-height: 310px; }
+  .landing-continuation .practice-photo figcaption { padding: 20px; }
+  .landing-continuation .solutions-layout .solutions-grid article { padding: 24px; }
+  .landing-continuation .solutions-layout .solutions-grid h3 { font-size: 25px; }
+  .lower-about-photo { height: 330px; }
+  .lower-about-scene { padding-right: 15px; }
+  .lower-about-stamp { padding: 14px 18px; }
+  .lower-about-copy > .lower-about-lead { font-size: 18px; }
+  .lower-values { gap: 16px; }
+  .landing-continuation .pricing-panel { padding: 25px; max-width: none; border-radius: 18px; }
+  .landing-continuation .pricing-panel h3 { font-size: 25px; }
+  .landing-continuation .pricing-status strong { font-size: 23px; }
+  .landing-continuation .faq-item summary { padding: 17px; font-size: 13px; gap: 12px; }
+  .landing-continuation .faq-item > p { padding: 0 17px 20px; font-size: 12px; }
+  .landing-continuation .contact-copy h2 { font-size: 38px; }
+  .landing-continuation .contact-copy > p { font-size: 14px; }
+  .lower-contact-photo { height: 200px; }
+  .landing-continuation .demo-form { padding: 24px 20px; border-radius: 18px; }
+  .landing-continuation .form-row { grid-template-columns: 1fr; gap: 0; }
+  .landing-continuation .form-heading h3 { font-size: 26px; }
+  .landing-continuation .form-heading .eyebrow { font-size: 8px; }
+  .landing-continuation .contact-status { font-size: 9px; }
+  .lower-footer-top { flex-wrap: wrap; gap: 24px; padding-block: 28px; }
+  .lower-footer-top > p { font-size: 22px; }
+  .lower-footer-action { width: 100%; justify-content: space-between; }
+  .lower-footer .footer-main { gap: 30px 22px; padding-block: 32px; }
+  .lower-footer .footer-brand { grid-column: 1 / -1; }
+  .lower-footer .footer-column { font-size: 11px; }
+  .lower-footer .footer-column:last-child { grid-column: 1 / -1; }
+  .lower-footer .footer-bottom { font-size: 9px; gap: 12px 20px; flex-wrap: wrap; }
+  .lower-footer .footer-bottom > span:nth-child(2) { order: 3; flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-continuation .bento, .lower-text-link svg, .lower-faq-toggle svg, .landing-continuation .faq-item, .landing-continuation .field :is(input, select, textarea), .lower-footer-action { transition: none; }
+  .landing-continuation .bento:hover, .lower-text-link:hover svg { transform: none; }
+}
