@@ -278,7 +278,7 @@ test("la solicitud valida y descarga, sin envío remoto", async ({ page }) => {
   expect(submitted).toEqual([]);
 });
 
-test("el acceso es informativo y se respeta movimiento reducido", async ({
+test("el acceso tiene formulario y se respeta movimiento reducido", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -296,11 +296,11 @@ test("el acceso es informativo y se respeta movimiento reducido", async ({
   await expect(page).toHaveURL(/#contenido$/);
   await page.goto("/iniciar-sesion");
   await expect(
-    page.getByText("Esta pantalla es informativa.", { exact: false }),
+    page.getByRole("heading", { name: "Qué bueno verte de nuevo." }),
   ).toBeVisible();
-  await expect(page.locator("input")).toHaveCount(0);
-  await page.getByRole("link", { name: "Me interesa conocer Pawly" }).click();
-  await expect(page).toHaveURL(/\/#contacto$/);
+  await expect(page.locator("input")).toHaveCount(2);
+  await page.getByRole("link", { name: "Volver a Pawly" }).click();
+  await expect(page).toHaveURL(/\/$/);
 });
 
 test("fotografías locales optimizadas y vista previa social", async ({
