@@ -3,12 +3,23 @@ import { ConfigModule } from "@nestjs/config";
 import Joi from "joi";
 import { HealthModule } from "./health/health.module";
 import { PrismaModule } from "./prisma/prisma.module";
+import { AuthModule } from "./auth/auth.module";
+import { AuthorizationModule } from "./authorization/authorization.module";
+import { HttpSecurityModule } from "./http/http-security.module";
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema: Joi.object({
+        NODE_ENV: Joi.string()
+          .valid("development", "test", "production")
+          .default("development"),
+        SESSION_TTL_SECONDS: Joi.number()
+          .integer()
+          .min(60)
+          .max(604800)
+          .default(28800),
         PORT: Joi.number().port().default(3001),
         CORS_ORIGINS: Joi.string()
           .default("http://localhost:3000,http://127.0.0.1:3000")
@@ -39,6 +50,9 @@ import { PrismaModule } from "./prisma/prisma.module";
     }),
     PrismaModule,
     HealthModule,
+    HttpSecurityModule,
+    AuthModule,
+    AuthorizationModule,
   ],
 })
 export class AppModule {}

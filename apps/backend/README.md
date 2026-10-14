@@ -1,0 +1,54 @@
+# API de identidad y clínicas
+
+Base local: `http://localhost:3001/api`. La landing no cambia. Para producción se recomienda publicar frontend y `/api` bajo el mismo origen mediante un reverse proxy HTTPS.
+
+## Contrato HTTP
+
+| Método | Ruta | Entrada / resultado |
+| --- | --- | --- |
+| POST | `/auth/register-clinic` | JSON `{ name, email, password, clinicName }`; 201 con usuario público, clínica y rol OWNER. No inicia sesión. |
+| POST | `/auth/login` | JSON `{ email, password }`; 200 con usuario público y cookie de sesión. |
+| GET | `/auth/me` | Cookie requerida; perfil público y membresías de clínicas activas. |
+| POST | `/auth/logout` | Cookie requerida y JSON `{}`; 204, revocación y eliminación de cookie. |
+| GET | `/clinics/:clinicId/access` | Cookie requerida; contexto de clínica obtenido de una membresía activa y permiso `clinic:read`. |
+
+Todas las operaciones POST requieren `Content-Type: application/json`, un `Origin` exacto de `CORS_ORIGINS` y `X-Pawly-CSRF: 1`, incluso registro/login (evita login CSRF). Origen ausente, opaco o ajeno se rechaza. La cabecera personalizada impide solicitudes simples y exige preflight entre orígenes. No habilitar CORS arbitrario ni admitir contenido simple como alternativa. El cliente del frontend debe usar `credentials: "include"` en desarrollo. Para GET puede omitir esas cabeceras. Un cliente de servidor también debe cumplir el contrato de POST.
+
+DTO rechaza propiedades adicionales: el cliente no puede elegir rol, estado, slug ni fecha de verificación. Nombres se recortan y no pueden quedar vacíos. Contraseñas: 15–128 caracteres al registrar, sin recortar ni normalizar. Correo ASCII válido de hasta 254 caracteres: trim y minúsculas para identidad, sin reglas específicas de proveedores. Conflictos de registro devuelven un mensaje genérico 409, sin detalles de restricciones; este estado puede indicar una cuenta existente, por lo que no se promete resistencia completa a enumeración en el registro. Login devuelve el mismo 401 para usuario inexistente, contraseña errónea y cuenta inactiva; realiza verificación Argon2 también para usuarios desconocidos.
+
+## Seguridad y comportamiento temporal
+
+- Argon2id: 19 MiB, dos iteraciones, paralelismo uno; sal aleatoria administrada por la biblioteca, conforme al mínimo recomendado por [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
+- Registro transaccional de User, VeterinaryClinic y ClinicMembership OWNER; el slug reserva 37 caracteres para el separador y UUID completo, con una base de hasta 63 caracteres y límite total de 100. Se normalizan acentos y separadores; nombres sin caracteres ASCII usan `clinica`. Colisiones de slug reintentan hasta tres transacciones con UUID nuevo. La adquisición de una transacción tiene un plazo acotado de 5 segundos y su ejecución de 10 segundos; esto evita el fallo observado con el plazo predeterminado de 2 segundos al registrar concurrentemente. La restricción única de correo sigue siendo la autoridad para resolver duplicados, sin convertir fallos de infraestructura en conflictos de identidad.
+- Sesiones opacas de 32 bytes aleatorios; PostgreSQL guarda únicamente SHA-256 del token. Vencimiento absoluto por `SESSION_TTL_SECONDS` (28800 por defecto, máximo siete días). No hay renovación deslizante; `lastSeenAt` registra uso, no extiende el vencimiento.
+- Cookie HttpOnly, SameSite=Lax, Path=/, sin Domain. En desarrollo `pawly_session` permite HTTP local; en producción `__Host-pawly_session` exige Secure/HTTPS. Sesiones vencidas, revocadas y usuarios inactivos son rechazados. Logout de una sesión inválida devuelve 401.
+- **Sin proveedor de correo:** en desarrollo/test se permite login sin verificación; `emailVerifiedAt` permanece null. En producción el registro público está deshabilitado y el login/acceso de usuarios sin verificar se rechaza. Debe implementarse verificación real antes del uso comercial; nunca marcar correos como verificados automáticamente.
+- `SessionGuard` obtiene identidad solo de la cookie. `ClinicGuard` falla cerrado si falta permiso declarado. `ClinicAuthorizationService` comprueba usuario, clínica y membresía activos y aplica permisos por rol: todos pueden leer contexto; solo OWNER/ADMIN tienen `clinic:manage`. El ID de URL no autoriza nada por sí solo. Futuras consultas deben usar el contexto validado y filtrar todos los recursos por `clinicId`.
+- Helmet, respuestas privadas no-store, validación sin valores sensibles y errores internos genéricos. No registrar cuerpos de autenticación, cookies o hashes en proxies/observabilidad.
+- Límites por IP y endpoint: 60 solicitudes/minuto general, 10/minuto login, 5/minuto registro. Almacenamiento en memoria, apropiado para una instancia de desarrollo; reiniciar borra contadores. Antes de escalar, usar almacenamiento compartido/límites en el perímetro y evaluar controles por cuenta. Express no confía en X-Forwarded-For: no activar `trust proxy` globalmente; configurar únicamente proxies conocidos al desplegar.
+
+Variables: `NODE_ENV`, `SESSION_TTL_SECONDS`, `CORS_ORIGINS`, `DATABASE_URL` y `PORT`; ver `.env.example`. En producción configurar orígenes HTTPS exactos, TLS y secretos fuera de Git. No hay JWT, envío de correos ni nuevas migraciones.
+
+Al copiar `.env.example`, sustituir `CHANGE_ME_LOCAL_ONLY` por la contraseña local configurada en `POSTGRES_PASSWORD` del `.env` raíz, codificada para una URL si contiene caracteres especiales. El archivo de ejemplo no contiene la credencial local activa. Los prefijos protegidos se comparan sin distinguir mayúsculas, igual que el enrutamiento de Express, para preservar CSRF y `no-store` en esas variantes.
+
+## Verificación
+
+Desde `apps/backend`: `npm run prisma:generate`, `npx prisma validate`, `npx tsc --noEmit --incremental false`, `npm run lint`, `npm run build`, `npm test`, `npm run test:integration`.
+
+Integración exige la base de desarrollo `pawly` en `localhost`, `127.0.0.1` o `::1`, puerto `5433`, esquema de origen `public` y un entorno distinto de producción. Rechaza otros destinos y parámetros de conexión inesperados. Comprueba `current_database()` y `current_schema()` en el cliente de pruebas y en el cliente de la API antes de ejecutar escenarios.
+
+Cada ejecución crea con `CREATE SCHEMA` (sin `IF NOT EXISTS`) un esquema aleatorio `pawly_auth_test_<uuid>`; solo una creación exitosa acredita propiedad para limpiarlo. Aplica allí las migraciones existentes y levanta la API HTTP en loopback y puerto efímero. Cada escenario prepara sus propios usuarios, clínicas y sesión, y restablece únicamente los datos y contadores de pruebas. Puede ejecutarse un escenario por nombre sin depender de los anteriores.
+
+La limpieza elimina exclusivamente tablas y tipos conocidos, calificados con el esquema creado, y después el propio esquema. Todas las eliminaciones usan `RESTRICT`, nunca `CASCADE`: dependencias externas o nuevos objetos desconocidos bloquean la limpieza. Antes de limpiar vuelve a comprobar la conexión y la propiedad del esquema. Compara al final columnas, restricciones, índices, enums, recuentos y huellas de todas las filas de las tablas de `public` con una captura inicial de solo lectura; no imprime datos reales. No ejecuta reset, no escribe fixtures en `public` y no reutiliza esquemas anteriores. Una ejecución interrumpida podría dejar únicamente su esquema temporal pendiente de revisión.
+
+Validación local del 14 de octubre de 2026: Prisma generate/validate, TypeScript, lint y build aprobados; 4 suites y 16 pruebas unitarias aprobadas; 23 escenarios HTTP/PostgreSQL aprobados. Incluyen nombres largos y especiales, una colisión real de slug con rollback y reintento, registro concurrente, controles de producción, cookies, sesiones, CSRF (también con rutas en mayúsculas), CORS, límites por IP y aislamiento de clínicas. La estructura y las huellas de datos de `public` permanecieron iguales y el esquema temporal se eliminó con `RESTRICT`. El escenario de concurrencia también se ejecutó por separado, sin necesitar los anteriores.
+
+Pendiente para uso comercial: verificación y recuperación de correo/contraseña, límites distribuidos, revisión operacional de dependencias, auditoría, backups y política de conservación. Las interfaces de login/registro y dashboard todavía no están implementadas.
+
+## Auditoría de dependencias — 14 de octubre de 2026
+
+La auditoría actual `npm audit --omit=dev --json` registra **3 entradas altas**: `prisma@6.19.3` → `@prisma/config@6.19.3` → `deepmerge-ts@7.1.5`. Corresponden a un mismo aviso, [GHSA-ggr8-5vv4-36mx](https://github.com/advisories/GHSA-ggr8-5vv4-36mx): agotamiento de pila al mezclar objetos con referencias recursivas. La corrección de `deepmerge-ts` está en 8.0.0. Prisma 6.19.3 es la versión estable más reciente de la serie 6 consultada y su configuración fija 7.1.5; no existe una actualización posterior de esa serie que resuelva el aviso. No se fuerza una dependencia transitiva de versión mayor ni se aplica la bajada a Prisma 6.12.0 sugerida por npm.
+
+En el código instalado, Prisma utiliza `deepmerge-ts` al cargar archivos de configuración mediante `c12`; los endpoints de autenticación no pasan cuerpos HTTP a esa API. Esto limita la exposición observada, sin declarar resuelta la vulnerabilidad. Mantener configuraciones de Prisma confiables y revisar la corrección oficial antes de producción.
+
+La auditoría completa registra **37 entradas: 32 altas y 5 moderadas**, sin críticas. Además de Prisma, incluye la cadena de herramientas de desarrollo Jest/micromatch por [braces: GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) (alta, patrones profundamente anidados) y Jest/js-yaml/argparse por [sprintf-js: GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c) (moderada, formatos con precisión desmedida). Los paquetes afectados ya estaban en el lockfile de la base; no son 37 fallos independientes ni nuevos avisos introducidos por autenticación. npm propone migraciones mayores de Jest y sus tipos; requieren revisión aparte y no garantizan resolver todos los avisos transitivos. No se ejecutó `npm audit fix --force` ni se actualizaron versiones de dependencias durante esta validación.
