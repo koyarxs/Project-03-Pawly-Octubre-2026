@@ -129,7 +129,8 @@ export async function checkClinicAccess(
     value.clinic.id !== id ||
     typeof value.clinic.name !== "string" ||
     typeof value.clinic.slug !== "string" ||
-    !roles.includes(String(value.clinic.role))
+    typeof value.clinic.role !== "string" ||
+    !roles.includes(value.clinic.role)
   )
     throw new AuthError(502);
   return value.clinic as {

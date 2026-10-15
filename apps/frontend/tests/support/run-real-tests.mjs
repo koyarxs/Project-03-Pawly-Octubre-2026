@@ -13,6 +13,8 @@ const backendExit = new Promise((resolve) =>
   backend.once("exit", (code) => resolve(code ?? 1)),
 );
 let ready = false;
+let schema;
+let output = "";
 const readiness = new Promise((resolve, reject) => {
   const timer = setTimeout(
     () => reject(new Error("Isolated API startup timed out")),
@@ -20,7 +22,12 @@ const readiness = new Promise((resolve, reject) => {
   );
   backend.stdout.on("data", (data) => {
     process.stdout.write(data);
-    if (String(data).includes("Browser test API ready:")) {
+    output += String(data);
+    const match = output.match(
+      /Browser test API ready: localhost:4001\/pawly; schema=(pawly_frontend_test_[a-f0-9]{32})/,
+    );
+    if (!ready && match) {
+      schema = match[1];
       ready = true;
       clearTimeout(timer);
       resolve();
@@ -43,7 +50,15 @@ try {
       "--config",
       "playwright.real.config.ts",
     ],
-    { cwd, stdio: "inherit" },
+    {
+      cwd,
+      stdio: "inherit",
+      env: {
+        ...process.env,
+        PAWLY_TEST_SCHEMA: schema,
+        PAWLY_QA_API_URL: "http://localhost:4001/api",
+      },
+    },
   );
   code = await new Promise((resolve) =>
     tests.once("exit", (exit) => resolve(exit ?? 1)),
