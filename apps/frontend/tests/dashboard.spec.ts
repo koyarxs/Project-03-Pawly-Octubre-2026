@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { returnToTab } from "./support/tab-lifecycle";
 const owner = {
   id: "1f603846-d722-49ef-bb7f-07e129ae4fd8",
   name: "Responsable del workspace",
@@ -64,6 +65,39 @@ async function routes(
       headers: cors,
       ...(result.body ? { json: result.body } : {}),
     });
+  });
+}
+
+test("selector conserva la clínica al volver a la pestaña", async ({ page }) => {
+  let checks = 0;
+  await routes(page, pathname => {
+    if (pathname.endsWith("/me")) { checks++; return { status: 200, body: session }; }
+    return { status: 200, body: { clinic: { ...first, role: "OWNER" } } };
+  });
+  await page.goto("/app");
+  await page.getByRole("button", { name: new RegExp(first.name) }).click();
+  await expect(page.getByRole("link", { name: "Entrar al dashboard" })).toBeVisible();
+  const before = checks;
+  await returnToTab(page);
+  await expect.poll(() => checks).toBeGreaterThan(before);
+  await expect(page.getByRole("link", { name: "Entrar al dashboard" })).toBeVisible();
+});
+
+for (const status of [401, 403]) {
+  test(`volver a la pestaña retira acceso ante ${status}`, async ({ page }) => {
+    let denied = false;
+    await routes(page, pathname => {
+      if (denied && (status === 401 || !pathname.endsWith("/me"))) return { status };
+      return pathname.endsWith("/me") ? { status: 200, body: session } :
+        { status: 200, body: { clinic: { ...first, role: "OWNER" } } };
+    });
+    await page.goto(path());
+    await expect(page.getByRole("heading", { name: first.name })).toBeVisible();
+    denied = true;
+    await returnToTab(page);
+    if (status === 401) await expect(page).toHaveURL(/\/iniciar-sesion$/);
+    else await expect(page.getByRole("heading", { name: "No tienes acceso a esta clínica." })).toBeVisible();
+    await expect(page.getByText(owner.name)).toHaveCount(0);
   });
 }
 

@@ -25,12 +25,19 @@ export function Workspace() {
     signOut: closeSession,
     leaving,
     logoutError,
+    revalidationError,
   } = usePrivateWorkspace();
   const [chosen, setChosen] = useState<{
     access: Awaited<ReturnType<typeof checkClinicAccess>>;
     revision: number;
   } | null>(null);
-  const selected = chosen?.revision === revision ? chosen.access : null;
+  const selected =
+    chosen?.revision === revision && state.kind === "ready" &&
+    state.session.memberships.some(({ clinic, role }) =>
+      clinic.id === chosen.access.id && role === chosen.access.role,
+    )
+      ? chosen.access
+      : null;
   const [checking, setChecking] = useState<string | null>(null);
   const [accessMessage, setMessage] = useState("");
   const message = accessMessage || logoutError;
@@ -109,6 +116,9 @@ export function Workspace() {
           </button>
         </header>
         <main className="workspace-content">
+          {revalidationError && (
+            <div role="status" className="auth-alert">{revalidationError}</div>
+          )}
           <div className="workspace-welcome">
             <span className="auth-kicker">TU ESPACIO DE TRABAJO</span>
             <h1>Hola, {session.name}.</h1>

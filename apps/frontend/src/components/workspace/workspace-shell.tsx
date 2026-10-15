@@ -115,6 +115,7 @@ export function WorkspaceShell({
     signOut,
     leaving,
     logoutError,
+    revalidationError,
     endSession,
     revision,
   } = usePrivateWorkspace(clinicId);
@@ -250,6 +251,9 @@ export function WorkspaceShell({
             <div className="auth-alert" role="alert">
               {logoutError}
             </div>
+          )}
+          {revalidationError && (
+            <div role="status" className="auth-alert">{revalidationError}</div>
           )}
           {children({
             clinicId,

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { returnToTab } from "./support/tab-lifecycle";
 const clinic = {
   id: "90555a74-dffb-4437-a493-c3b15a5d2246",
   name: "Clínica del Parque",
@@ -125,6 +126,82 @@ async function fillTutor(page: Page) {
   await page
     .getByLabel("Teléfono de contacto", { exact: true })
     .fill("+56 9 12345678");
+}
+
+test("un cambio de cuenta nunca hereda el borrador anterior", async ({ page }) => {
+  let changed = false;
+  await mock(page);
+  await page.route("**/api/auth/me", route => route.fulfill({
+    status: 200, headers,
+    json: changed ? { ...profile, id: "a84337ac-f937-4de9-96d9-b2acdb73941b", name: "Otra cuenta QA" } : profile,
+  }));
+  await page.goto(`${base}/tutores/nuevo`);
+  await page.getByLabel("Nombre", { exact: true }).fill("Borrador privado anterior");
+  changed = true;
+  await returnToTab(page);
+  await expect(page.getByText("Otra cuenta QA", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Nombre", { exact: true })).toHaveValue("");
+});
+
+test("búsqueda sin enviar conserva el texto al volver a la pestaña", async ({ page }) => {
+  let checks = 0;
+  await mock(page);
+  page.on("response", response => { if (new URL(response.url()).pathname.endsWith("/access")) checks++; });
+  await page.goto(`${base}/tutores`);
+  await expect(page.getByRole("table")).toBeVisible();
+  await page.getByLabel("Buscar tutores", { exact: true }).fill("Texto pendiente");
+  const before = checks;
+  await returnToTab(page);
+  await expect.poll(() => checks).toBeGreaterThan(before);
+  await expect(page.getByLabel("Buscar tutores", { exact: true })).toHaveValue("Texto pendiente");
+});
+
+test("un fallo temporal al volver a la pestaña conserva la edición y permite recuperar conexión", async ({ page }) => {
+  let offline = false;
+  let accessChecks = 0;
+  await mock(page);
+  await page.route("**/api/auth/me", async route => {
+    if (offline) await route.abort("failed");
+    else await route.fulfill({ status: 200, headers, json: profile });
+  });
+  page.on("response", response => {
+    if (new URL(response.url()).pathname.endsWith("/access")) accessChecks++;
+  });
+  await page.goto(`${base}/tutores/${tutor.id}/editar`);
+  const name = page.getByLabel("Nombre", { exact: true });
+  await name.fill("Edición pendiente");
+  offline = true;
+  await returnToTab(page);
+  await expect(page.getByRole("status")).toContainText("Conservamos lo que estás escribiendo");
+  await expect(name).toHaveValue("Edición pendiente");
+  offline = false;
+  const before = accessChecks;
+  await returnToTab(page);
+  await expect.poll(() => accessChecks).toBeGreaterThan(before);
+  await expect(name).toHaveValue("Edición pendiente");
+  await expect(page.getByText("Conservamos lo que estás escribiendo", { exact: false })).toHaveCount(0);
+});
+
+for (const route of ["tutores/nuevo", `tutores/${tutor.id}/editar`, "pacientes/nuevo", `pacientes/${patient.id}/editar`]) {
+  test(`conserva borrador y foco al volver a la pestaña: ${route}`, async ({ page }) => {
+    let accessChecks = 0;
+    await mock(page);
+    page.on("response", response => {
+      if (new URL(response.url()).pathname.endsWith("/access")) accessChecks++;
+    });
+    await page.goto(`${base}/${route}`);
+    const field = page.getByLabel(route.startsWith("tutores") ? "Nombre" : "Nombre de la mascota", { exact: true });
+    await field.fill("Borrador sin guardar");
+    const before = accessChecks;
+    await returnToTab(page);
+    await expect.poll(() => accessChecks).toBeGreaterThan(before);
+    await expect(field).toHaveValue("Borrador sin guardar");
+    await expect(field).toBeFocused();
+    const again = accessChecks;
+    await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
+    await expect.poll(() => accessChecks).toBeGreaterThan(again);
+    await expect(field).toHaveValue("Borrador sin guardar");
+  });
 }
 
 test("listas reales, búsqueda, estado vacío y paginación sin notas privadas", async ({
