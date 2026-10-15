@@ -48,17 +48,18 @@ const membership = (value: unknown): value is Session["memberships"][number] =>
   typeof value.role === "string" &&
   roles.includes(value.role) &&
   clinic(value.clinic);
-async function request(
+export async function request(
   path: string,
   body?: object,
   signal?: AbortSignal,
+  method?: "GET" | "POST" | "PATCH",
 ): Promise<unknown> {
   const base = process.env.NEXT_PUBLIC_API_URL;
   if (!base) throw new AuthError(0);
   let response: Response;
   try {
     response = await fetch(`${base.replace(/\/$/, "")}${path}`, {
-      method: body ? "POST" : "GET",
+      method: method ?? (body ? "POST" : "GET"),
       credentials: "include",
       cache: "no-store",
       headers: body

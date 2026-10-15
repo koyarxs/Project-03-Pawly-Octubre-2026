@@ -6,6 +6,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./auth/auth.module";
 import { AuthorizationModule } from "./authorization/authorization.module";
 import { HttpSecurityModule } from "./http/http-security.module";
+import { ClinicalModule } from "./clinical/clinical.module";
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { HttpSecurityModule } from "./http/http-security.module";
     HttpSecurityModule,
     AuthModule,
     AuthorizationModule,
+    ClinicalModule,
   ],
 })
 export class AppModule {}

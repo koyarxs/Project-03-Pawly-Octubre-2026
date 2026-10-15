@@ -19,17 +19,46 @@ import { SessionGuard } from "../sessions/session.guard";
 import { SessionsModule } from "../sessions/sessions.module";
 import { AuthenticatedRequest } from "../sessions/sessions.service";
 
-export type Permission = "clinic:read" | "clinic:manage";
+export type Permission =
+  | "clinic:read"
+  | "clinic:manage"
+  | "tutor:read"
+  | "tutor:write"
+  | "patient:read"
+  | "patient:write"
+  | "clinical:archive";
 export const RequirePermissions = (...permissions: Permission[]) =>
   SetMetadata("clinic-permissions", permissions);
 const permissions: Record<Role, readonly Permission[]> = {
-  OWNER: ["clinic:read", "clinic:manage"],
-  ADMIN: ["clinic:read", "clinic:manage"],
-  VETERINARIAN: ["clinic:read"],
-  RECEPTIONIST: ["clinic:read"],
+  OWNER: [
+    "clinic:read",
+    "clinic:manage",
+    "tutor:read",
+    "tutor:write",
+    "patient:read",
+    "patient:write",
+    "clinical:archive",
+  ],
+  ADMIN: [
+    "clinic:read",
+    "clinic:manage",
+    "tutor:read",
+    "tutor:write",
+    "patient:read",
+    "patient:write",
+    "clinical:archive",
+  ],
+  VETERINARIAN: [
+    "clinic:read",
+    "tutor:read",
+    "tutor:write",
+    "patient:read",
+    "patient:write",
+  ],
+  RECEPTIONIST: ["clinic:read", "tutor:read", "tutor:write", "patient:read"],
 };
 type ClinicContext = { id: string; name: string; slug: string; role: Role };
-type ClinicRequest = AuthenticatedRequest & { clinic: ClinicContext };
+export type ClinicRequest = AuthenticatedRequest & { clinic: ClinicContext };
 
 @Injectable()
 export class ClinicAuthorizationService {

@@ -6,6 +6,19 @@ if (api !== "http://localhost:4001/api")
 
 export const test = base.extend({
   context: async ({ context }, runWithContext) => {
+    const unexpectedOrigins: string[] = [];
+    await context.route("**/*", async (route) => {
+      const url = new URL(route.request().url());
+      if (
+        ["http:", "https:"].includes(url.protocol) &&
+        !["http://localhost:3100", "http://localhost:4001"].includes(url.origin)
+      ) {
+        unexpectedOrigins.push(url.origin);
+        await route.abort("blockedbyclient");
+        return;
+      }
+      await route.continue();
+    });
     // Change only the transport destination. Responses, cookies, CORS and CSRF
     // are handled by real browsers and the real Nest API, never mocked.
     await context.addInitScript(
@@ -27,6 +40,10 @@ export const test = base.extend({
       { target: api },
     );
     await runWithContext(context);
+    expect(
+      unexpectedOrigins,
+      "Browser QA must never reach development or external services",
+    ).toEqual([]);
   },
 });
 export { expect };

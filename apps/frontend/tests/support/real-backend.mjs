@@ -68,10 +68,10 @@ async function stop(code = 0) {
     if (ownsSchema) {
       await assertOwned(prisma);
       await control.$executeRawUnsafe(
-        `DROP TABLE IF EXISTS "${schema}"."Session", "${schema}"."ClinicMembership", "${schema}"."User", "${schema}"."VeterinaryClinic", "${schema}"."_prisma_migrations" RESTRICT`,
+        `DROP TABLE IF EXISTS "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership", "${schema}"."User", "${schema}"."VeterinaryClinic", "${schema}"."_prisma_migrations" RESTRICT`,
       );
       await control.$executeRawUnsafe(
-        `DROP TYPE IF EXISTS "${schema}"."UserStatus", "${schema}"."ClinicStatus", "${schema}"."MembershipStatus", "${schema}"."Role" RESTRICT`,
+        `DROP TYPE IF EXISTS "${schema}"."TutorStatus", "${schema}"."PatientStatus", "${schema}"."Species", "${schema}"."PatientSex", "${schema}"."UserStatus", "${schema}"."ClinicStatus", "${schema}"."MembershipStatus", "${schema}"."Role" RESTRICT`,
       );
       await control.$executeRawUnsafe(`DROP SCHEMA "${schema}" RESTRICT`);
       ownsSchema = false;
