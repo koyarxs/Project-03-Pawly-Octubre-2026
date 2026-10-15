@@ -90,7 +90,7 @@ export function configureHttp(app: INestApplication): void {
   app.enableCors({
     origin: origins,
     credentials: true,
-    methods: ["GET", "POST", "OPTIONS"],
+    methods: ["GET", "POST", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "X-Pawly-CSRF"],
   });
   app.useGlobalPipes(

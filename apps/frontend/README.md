@@ -1,5 +1,7 @@
 # 🐾 Pawly — Frontend
 
+Sprint 07: Tutores y Pacientes ya cuentan con listados, registro, fichas, edición y archivado autorizado. Rutas, contratos, permisos, relación multi-clínica y QA están en [Gestión clínica](../../docs/clinical-records.md). Las secciones de Sprint 06 conservan la descripción de su base inicial.
+
 Frontend de **Pawly**, plataforma para la gestión integral del bienestar de mascotas.
 
 ## 🛠️ Stack

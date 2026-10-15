@@ -163,12 +163,12 @@ describe("authentication with isolated PostgreSQL", () => {
         // RESTRICT blocks external dependencies; never cascade into another schema.
         await assertTestConnection();
         await control.$executeRawUnsafe(
-          `DROP TABLE IF EXISTS "${schema}"."Session", "${schema}"."ClinicMembership",
+          `DROP TABLE IF EXISTS "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership",
            "${schema}"."User", "${schema}"."VeterinaryClinic",
            "${schema}"."_prisma_migrations" RESTRICT`,
         );
         await control.$executeRawUnsafe(
-          `DROP TYPE IF EXISTS "${schema}"."UserStatus", "${schema}"."ClinicStatus",
+          `DROP TYPE IF EXISTS "${schema}"."TutorStatus", "${schema}"."PatientStatus", "${schema}"."Species", "${schema}"."PatientSex", "${schema}"."UserStatus", "${schema}"."ClinicStatus",
            "${schema}"."MembershipStatus", "${schema}"."Role" RESTRICT`,
         );
         await control.$executeRawUnsafe(`DROP SCHEMA "${schema}" RESTRICT`);
@@ -202,6 +202,9 @@ describe("authentication with isolated PostgreSQL", () => {
   beforeEach(async () => {
     await assertTestConnection();
     await prisma.$transaction([
+      prisma.patientTutor.deleteMany(),
+      prisma.patient.deleteMany(),
+      prisma.tutor.deleteMany(),
       prisma.session.deleteMany(),
       prisma.clinicMembership.deleteMany(),
       prisma.user.deleteMany(),
@@ -754,6 +757,397 @@ describe("authentication with isolated PostgreSQL", () => {
         .send({ email, password: "bad" })
         .expect(401);
     await post("/api/auth/login").send({ email, password }).expect(429);
+  });
+
+  describe("clinical records and tenant isolation", () => {
+    const tutors = () => `/api/clinics/${clinicId}/tutors`;
+    const patients = () => `/api/clinics/${clinicId}/patients`;
+    const patch = (url: string) =>
+      request(app.getHttpServer())
+        .patch(url)
+        .set("Origin", origin)
+        .set("X-Pawly-CSRF", "1")
+        .set("Cookie", cookie);
+    const tutorInput = {
+      firstName: "Ana",
+      lastName: "Pérez",
+      phone: "+56 9 12345678",
+      email: "ana@example.invalid",
+      address: "Dirección QA",
+      notes: "PRIVATE_NOTES_QA",
+    };
+    async function createTutor() {
+      return (
+        await post(tutors()).set("Cookie", cookie).send(tutorInput).expect(201)
+      ).body as { id: string };
+    }
+    async function createPatient(tutorId: string) {
+      return (
+        await post(patients())
+          .set("Cookie", cookie)
+          .send({
+            name: "Luna",
+            species: "CAT",
+            sex: "FEMALE",
+            tutorIds: [tutorId],
+            weightKg: 4.125,
+            birthDate: "2020-02-29",
+          })
+          .expect(201)
+      ).body as { id: string };
+    }
+    async function foreignRecords() {
+      const tutor = await prisma.tutor.create({
+        data: {
+          clinicId: otherClinicId,
+          ...tutorInput,
+          firstName: "PRIVATE_FOREIGN_TUTOR",
+        },
+      });
+      const patient = await prisma.patient.create({
+        data: {
+          clinicId: otherClinicId,
+          name: "PRIVATE_FOREIGN_PATIENT",
+          species: "DOG",
+          sex: "UNKNOWN",
+        },
+      });
+      await prisma.patientTutor.create({
+        data: {
+          clinicId: otherClinicId,
+          patientId: patient.id,
+          tutorId: tutor.id,
+        },
+      });
+      return { tutor, patient };
+    }
+    it("creates and edits real tutors and patients with multiple responsible adults", async () => {
+      const first = await createTutor();
+      const second = await createTutor();
+      const patient = await createPatient(first.id);
+      const edited = await patch(`${patients()}/${patient.id}`)
+        .send({
+          tutorIds: [first.id, second.id],
+          weightKg: 4.5,
+          notes: "Seguimiento QA",
+        })
+        .expect(200);
+      expect(edited.body.tutors).toHaveLength(2);
+      expect(edited.body.weightKg).toBe(4.5);
+      expect(edited.body.birthDate).toBe("2020-02-29");
+      const detail = await request(app.getHttpServer())
+        .get(`${patients()}/${patient.id}`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(detail.body.notes).toBe("Seguimiento QA");
+      await patch(`${tutors()}/${first.id}`)
+        .send({ phone: "+56 9 87654321", email: null })
+        .expect(200);
+      const linked = await request(app.getHttpServer())
+        .get(`${tutors()}/${first.id}/patients`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(linked.body.items.map((item: { id: string }) => item.id)).toEqual([
+        patient.id,
+      ]);
+      const list = await request(app.getHttpServer())
+        .get(tutors())
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(JSON.stringify(list.body)).not.toContain("PRIVATE_NOTES_QA");
+      expect(list.body.items[0]).not.toHaveProperty("address");
+      const named = await request(app.getHttpServer())
+        .get(`${tutors()}?q=${encodeURIComponent("Ana Pérez")}`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(named.body.total).toBe(2);
+      const byResponsible = await request(app.getHttpServer())
+        .get(`${patients()}?q=${encodeURIComponent("Luna Ana Pérez")}`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(byResponsible.body.total).toBe(1);
+    });
+    it("denies absent sessions and suspended clinic memberships", async () => {
+      await request(app.getHttpServer()).get(tutors()).expect(401);
+      await post(patients()).send({}).expect(401);
+      await prisma.clinicMembership.update({
+        where: { userId_clinicId: { userId, clinicId } },
+        data: { status: "SUSPENDED" },
+      });
+      await request(app.getHttpServer())
+        .get(tutors())
+        .set("Cookie", cookie)
+        .expect(403);
+      await request(app.getHttpServer())
+        .get(patients())
+        .set("Cookie", cookie)
+        .expect(403);
+      await post(tutors()).set("Cookie", cookie).send(tutorInput).expect(403);
+    });
+    it("does not read or mutate a foreign record even for a user in both clinics", async () => {
+      const other = await foreignRecords();
+      await request(app.getHttpServer())
+        .get(`/api/clinics/${otherClinicId}/tutors`)
+        .set("Cookie", cookie)
+        .expect(403);
+      await prisma.clinicMembership.create({
+        data: { userId, clinicId: otherClinicId, role: "OWNER" },
+      });
+      for (const [base, id] of [
+        [tutors(), other.tutor.id],
+        [patients(), other.patient.id],
+      ]) {
+        const denied = await request(app.getHttpServer())
+          .get(`${base}/${id}`)
+          .set("Cookie", cookie)
+          .expect(404);
+        expect(JSON.stringify(denied.body)).not.toContain("PRIVATE_FOREIGN");
+        await patch(`${base}/${id}/archive`).send({}).expect(404);
+      }
+      await patch(`${tutors()}/${other.tutor.id}`)
+        .send({ firstName: "Changed" })
+        .expect(404);
+      await patch(`${patients()}/${other.patient.id}`)
+        .send({ name: "Changed" })
+        .expect(404);
+      await request(app.getHttpServer())
+        .get(`${tutors()}/${other.tutor.id}/patients`)
+        .set("Cookie", cookie)
+        .expect(404);
+      expect(
+        (
+          await prisma.tutor.findUniqueOrThrow({
+            where: { id: other.tutor.id },
+          })
+        ).firstName,
+      ).toBe("PRIVATE_FOREIGN_TUTOR");
+      expect(
+        (
+          await prisma.patient.findUniqueOrThrow({
+            where: { id: other.patient.id },
+          })
+        ).name,
+      ).toBe("PRIVATE_FOREIGN_PATIENT");
+    });
+    it("rejects cross-clinic associations and rolls back replacement atomically", async () => {
+      const own = await createTutor();
+      const patient = await createPatient(own.id);
+      const other = await foreignRecords();
+      await post(patients())
+        .set("Cookie", cookie)
+        .send({
+          name: "Invalid",
+          species: "DOG",
+          sex: "MALE",
+          tutorIds: [other.tutor.id],
+        })
+        .expect(400);
+      await patch(`${patients()}/${patient.id}`)
+        .send({ tutorIds: [own.id, other.tutor.id], name: "Not persisted" })
+        .expect(400);
+      const detail = await request(app.getHttpServer())
+        .get(`${patients()}/${patient.id}`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(detail.body.name).toBe("Luna");
+      expect(detail.body.tutors.map((t: { id: string }) => t.id)).toEqual([
+        own.id,
+      ]);
+      await expect(
+        prisma.patientTutor.create({
+          data: { clinicId, patientId: patient.id, tutorId: other.tutor.id },
+        }),
+      ).rejects.toMatchObject({ code: "P2003" });
+      await expect(
+        prisma.patientTutor.create({
+          data: {
+            clinicId: otherClinicId,
+            patientId: patient.id,
+            tutorId: other.tutor.id,
+          },
+        }),
+      ).rejects.toMatchObject({ code: "P2003" });
+    });
+    it("scopes searches, totals, pagination and associated-patient lists to the clinic", async () => {
+      await foreignRecords();
+      const rows = await prisma.tutor.createManyAndReturn({
+        data: Array.from({ length: 23 }, (_, index) => ({
+          clinicId,
+          firstName: "SearchQA",
+          lastName: `Family${String(index).padStart(2, "0")}`,
+          phone: "+56 9 12345678",
+        })),
+        select: { id: true },
+      });
+      const one = await request(app.getHttpServer())
+        .get(`${tutors()}?q=SearchQA&page=1&limit=10`)
+        .set("Cookie", cookie)
+        .expect(200);
+      const two = await request(app.getHttpServer())
+        .get(`${tutors()}?q=SearchQA&page=2&limit=10`)
+        .set("Cookie", cookie)
+        .expect(200);
+      const three = await request(app.getHttpServer())
+        .get(`${tutors()}?q=SearchQA&page=3&limit=10`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(one.body).toMatchObject({ total: 23, totalPages: 3, limit: 10 });
+      expect(one.body.items).toHaveLength(10);
+      expect(three.body.items).toHaveLength(3);
+      expect(
+        new Set(
+          [...one.body.items, ...two.body.items, ...three.body.items].map(
+            (row: { id: string }) => row.id,
+          ),
+        ).size,
+      ).toBe(23);
+      const patient = await createPatient(rows[0]!.id);
+      const listed = await request(app.getHttpServer())
+        .get(`${patients()}?q=Luna&limit=1`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(listed.body.total).toBe(1);
+      expect(listed.body.items[0].id).toBe(patient.id);
+      const foreignSearch = await request(app.getHttpServer())
+        .get(`${patients()}?q=PRIVATE_FOREIGN`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(foreignSearch.body.total).toBe(0);
+      for (const query of [
+        "limit=51",
+        "page=0",
+        "page=1.1",
+        "page=10001",
+        "q=" + "x".repeat(101),
+        "clinicId=" + otherClinicId,
+      ])
+        await request(app.getHttpServer())
+          .get(`${tutors()}?${query}`)
+          .set("Cookie", cookie)
+          .expect(400);
+    });
+    it.each(["OWNER", "ADMIN", "VETERINARIAN", "RECEPTIONIST"] as const)(
+      "enforces %s role permissions on write and archive",
+      async (role) => {
+        const tutor = await createTutor();
+        const existing = await createPatient(tutor.id);
+        await prisma.clinicMembership.update({
+          where: { userId_clinicId: { userId, clinicId } },
+          data: { role },
+        });
+        await post(tutors()).set("Cookie", cookie).send(tutorInput).expect(201);
+        await request(app.getHttpServer())
+          .get(patients())
+          .set("Cookie", cookie)
+          .expect(200);
+        await post(patients())
+          .set("Cookie", cookie)
+          .send({
+            name: "Second",
+            species: "DOG",
+            sex: "UNKNOWN",
+            tutorIds: [tutor.id],
+          })
+          .expect(role === "RECEPTIONIST" ? 403 : 201);
+        await patch(`${patients()}/${existing.id}`)
+          .send({ name: "Updated" })
+          .expect(role === "RECEPTIONIST" ? 403 : 200);
+        await patch(`${patients()}/${existing.id}/archive`)
+          .send({})
+          .expect(["OWNER", "ADMIN"].includes(role) ? 200 : 403);
+      },
+    );
+    it("archives without deletion, protects linked tutors and makes archived records read-only", async () => {
+      const tutor = await createTutor();
+      const patient = await createPatient(tutor.id);
+      await patch(`${tutors()}/${tutor.id}/archive`).send({}).expect(409);
+      await patch(`${patients()}/${patient.id}/archive`).send({}).expect(200);
+      await patch(`${patients()}/${patient.id}`)
+        .send({ name: "Forbidden edit" })
+        .expect(409);
+      const list = await request(app.getHttpServer())
+        .get(patients())
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(list.body.total).toBe(0);
+      const archived = await request(app.getHttpServer())
+        .get(`${patients()}?status=ARCHIVED`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(archived.body.total).toBe(1);
+      await patch(`${tutors()}/${tutor.id}/archive`).send({}).expect(200);
+      await patch(`${tutors()}/${tutor.id}`)
+        .send({ firstName: "Forbidden" })
+        .expect(409);
+      expect(
+        await prisma.patient.count({ where: { id: patient.id, clinicId } }),
+      ).toBe(1);
+      expect(
+        await prisma.tutor.count({ where: { id: tutor.id, clinicId } }),
+      ).toBe(1);
+      await post(patients())
+        .set("Cookie", cookie)
+        .send({
+          name: "Invalid",
+          species: "DOG",
+          sex: "MALE",
+          tutorIds: [tutor.id],
+        })
+        .expect(400);
+    });
+    it("rejects malformed data and status/tenant injection without reflecting personal data", async () => {
+      const tutor = await createTutor();
+      const patient = await createPatient(tutor.id);
+      for (const body of [
+        { name: null },
+        { tutorIds: [] },
+        { tutorIds: [tutor.id, tutor.id] },
+        { weightKg: -1 },
+        { birthDate: "2999-01-01" },
+        { birthDate: "2026-02-30" },
+        { status: "ARCHIVED" },
+        { clinicId: otherClinicId },
+        { role: "OWNER" },
+      ])
+        await patch(`${patients()}/${patient.id}`).send(body).expect(400);
+      await patch(`${patients()}/${patient.id}`).send({}).expect(400);
+      const malformed = await patch(`${patients()}/${patient.id}`)
+        .set("Content-Type", "application/json")
+        .send('{"notes":"PRIVATE_MALFORMED')
+        .expect(400);
+      expect(JSON.stringify(malformed.body)).not.toContain("PRIVATE_MALFORMED");
+      expect(malformed.headers["cache-control"]).toBe("no-store");
+      await request(app.getHttpServer())
+        .patch(`${patients()}/${patient.id}`)
+        .set("Cookie", cookie)
+        .send({ name: "CSRF" })
+        .expect(403);
+      await patch(`${patients()}/${patient.id}`)
+        .set("Origin", "https://evil.invalid")
+        .send({ name: "CSRF" })
+        .expect(403);
+    });
+    it("keeps microchips unique per clinic, without disclosing another clinic's patient", async () => {
+      const tutor = await createTutor();
+      const other = await foreignRecords();
+      await prisma.patient.update({
+        where: { id: other.patient.id },
+        data: { microchip: "QA-CHIP" },
+      });
+      const input = {
+        name: "Luna",
+        species: "CAT",
+        sex: "FEMALE",
+        tutorIds: [tutor.id],
+        microchip: "qa-chip",
+      };
+      await post(patients()).set("Cookie", cookie).send(input).expect(201);
+      const duplicate = await post(patients())
+        .set("Cookie", cookie)
+        .send(input)
+        .expect(409);
+      expect(JSON.stringify(duplicate.body)).not.toContain("QA-CHIP");
+    });
   });
 
   it("sets CORS credentials only for allowed browser origins", async () => {

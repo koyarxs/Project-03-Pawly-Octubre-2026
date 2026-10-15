@@ -43,6 +43,52 @@ export async function isolatedClinics() {
     throw error;
   }
   return {
+    async seedOwner(input: {
+      name: string;
+      email: string;
+      password: string;
+      clinicName: string;
+    }) {
+      await assertTarget();
+      const argon2 =
+        require("argon2") as typeof import("../../../backend/node_modules/argon2");
+      const passwordHash = await argon2.hash(input.password, {
+        type: argon2.argon2id,
+        memoryCost: 19456,
+        timeCost: 2,
+        parallelism: 1,
+      });
+      await assertTarget();
+      const user = await client.user.create({
+        data: {
+          name: input.name,
+          email: input.email,
+          normalizedEmail: input.email.toLowerCase(),
+          passwordHash,
+          memberships: {
+            create: {
+              role: "OWNER",
+              clinic: {
+                create: { name: input.clinicName, slug: `qa-${randomUUID()}` },
+              },
+            },
+          },
+        },
+        include: { memberships: { include: { clinic: true } } },
+      });
+      return { userId: user.id, clinic: user.memberships[0]!.clinic };
+    },
+    async setRole(
+      userId: string,
+      clinicId: string,
+      role: "OWNER" | "ADMIN" | "VETERINARIAN" | "RECEPTIONIST",
+    ) {
+      await assertTarget();
+      await client.clinicMembership.update({
+        where: { userId_clinicId: { userId, clinicId } },
+        data: { role },
+      });
+    },
     async additionalClinic(userId: string) {
       await assertTarget();
       return client.veterinaryClinic.create({

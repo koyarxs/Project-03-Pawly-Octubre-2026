@@ -54,6 +54,8 @@ model VeterinaryClinic {
   createdAt   DateTime           @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime           @updatedAt @db.Timestamptz(3)
   memberships ClinicMembership[]
+  tutors      Tutor[]
+  patients    Patient[]
 }
 
 model ClinicMembership {
@@ -83,4 +85,87 @@ model Session {
 
   @@index([userId, revokedAt, expiresAt])
   @@index([expiresAt])
+}
+
+enum TutorStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum PatientStatus {
+  ACTIVE
+  DECEASED
+  ARCHIVED
+}
+
+enum Species {
+  DOG
+  CAT
+  BIRD
+  RABBIT
+  RODENT
+  REPTILE
+  HORSE
+  OTHER
+}
+
+enum PatientSex {
+  FEMALE
+  MALE
+  UNKNOWN
+}
+
+model Tutor {
+  id         String           @id @default(uuid()) @db.Uuid
+  clinicId   String           @db.Uuid
+  firstName  String           @db.VarChar(100)
+  lastName   String           @db.VarChar(100)
+  email      String?          @db.VarChar(254)
+  phone      String           @db.VarChar(32)
+  address    String?          @db.VarChar(500)
+  notes      String?          @db.VarChar(2000)
+  status     TutorStatus      @default(ACTIVE)
+  createdAt  DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime         @updatedAt @db.Timestamptz(3)
+  clinic     VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  patients   PatientTutor[]
+
+  @@unique([id, clinicId])
+  @@index([clinicId, status, lastName, firstName])
+}
+
+model Patient {
+  id         String           @id @default(uuid()) @db.Uuid
+  clinicId   String           @db.Uuid
+  name       String           @db.VarChar(100)
+  species    Species
+  breed      String?          @db.VarChar(100)
+  sex        PatientSex       @default(UNKNOWN)
+  birthDate  DateTime?         @db.Date
+  weightKg   Decimal?         @db.Decimal(8, 3)
+  color      String?          @db.VarChar(100)
+  microchip  String?          @db.VarChar(64)
+  status     PatientStatus    @default(ACTIVE)
+  notes      String?          @db.VarChar(2000)
+  createdAt  DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime         @updatedAt @db.Timestamptz(3)
+  clinic     VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  tutors     PatientTutor[]
+
+  @@unique([id, clinicId])
+  @@unique([clinicId, microchip])
+  @@index([clinicId, status, name])
+}
+
+// Both composite foreign keys include the same clinicId: cross-clinic links
+// are rejected by PostgreSQL even if an application validation is bypassed.
+model PatientTutor {
+  clinicId  String  @db.Uuid
+  patientId String  @db.Uuid
+  tutorId   String  @db.Uuid
+  patient   Patient @relation(fields: [patientId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  tutor     Tutor   @relation(fields: [tutorId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([clinicId, patientId, tutorId])
+  @@index([clinicId, tutorId])
 }

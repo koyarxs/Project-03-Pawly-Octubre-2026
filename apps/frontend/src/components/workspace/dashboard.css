@@ -59,7 +59,7 @@
   background: transparent;
   color: inherit;
 }
-.pawly-dashboard nav a {
+.pawly-dashboard nav a[aria-current="page"] {
   background: #24454f;
   color: #e7fff7;
   font-weight: 600;
@@ -600,4 +600,17 @@
     gap: 10px;
     flex-wrap: wrap;
   }
+}
+
+.dashboard-available {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: #147d83;
+  font-size: 11px;
+  text-decoration: none;
+}
+.pawly-dashboard nav a:not([aria-current="page"]):hover {
+  background: #1a3b46;
 }
