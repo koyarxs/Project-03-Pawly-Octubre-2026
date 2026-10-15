@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AuthError,
@@ -28,28 +28,48 @@ export function usePrivateWorkspace(clinicId?: string) {
   const [ending, setEnding] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [logoutError, setLogoutError] = useState("");
+  const [revalidationError, setRevalidationError] = useState("");
+  const verifiedUser = useRef<string | null>(null);
   const pending = useRef<AbortController | null>(null);
   const logoutLock = useRef(false);
-  function endSession() {
+  const endSession = useCallback(() => {
     pending.current?.abort();
     setEnding(true);
     router.replace("/iniciar-sesion");
-  }
+  }, [router]);
   useEffect(() => {
-    const controller = new AbortController();
-    pending.current = controller;
-    async function verify() {
+    let controller = new AbortController();
+    let checking = false;
+    async function verify(background = false) {
+      if (checking) return;
+      checking = true;
+      controller = new AbortController();
+      pending.current = controller;
       try {
         const session = await getSession(controller.signal);
+        if (controller.signal.aborted) return;
+        // Clear the previous account's UI before requesting any new access.
+        if (
+          background && verifiedUser.current &&
+          verifiedUser.current !== session.id
+        ) {
+          setRevision((value) => value + 1);
+          return;
+        }
+        if (clinicId && !session.memberships.some(({ clinic }) => clinic.id === clinicId))
+          throw new AuthError(403);
         const access = clinicId
           ? await checkClinicAccess(clinicId, controller.signal)
           : null;
-        if (!controller.signal.aborted)
+        if (!controller.signal.aborted) {
+          verifiedUser.current = session.id;
+          setRevalidationError("");
           setSnapshot({
             key: clinicId,
             revision,
             value: { kind: "ready", session, access },
           });
+        }
       } catch (error) {
         if (controller.signal.aborted) return;
         if (error instanceof AuthError && error.status === 401) {
@@ -58,10 +78,16 @@ export function usePrivateWorkspace(clinicId?: string) {
           return;
         }
         const denied = Boolean(
-          clinicId &&
           error instanceof AuthError &&
-          [400, 403, 404].includes(error.status),
+          (error.status === 403 ||
+            (clinicId && [400, 404].includes(error.status))),
         );
+        if (background && verifiedUser.current && !denied) {
+          setRevalidationError(
+            "No pudimos volver a verificar tu sesión. Conservamos lo que estás escribiendo; vuelve a la pestaña para reintentar.",
+          );
+          return;
+        }
         setSnapshot({
           key: clinicId,
           revision,
@@ -73,14 +99,16 @@ export function usePrivateWorkspace(clinicId?: string) {
               : authErrorMessage(error, "workspace"),
           },
         });
+      } finally {
+        checking = false;
       }
     }
     void verify();
     const refresh = () => {
       if (document.visibilityState === "visible") {
-        controller.abort();
-        setLogoutError("");
-        setRevision((v) => v + 1);
+        // Recheck permissions without unmounting the current form or changing
+        // its revision. Initial entry and explicit refresh still fail closed.
+        void verify(true);
       }
     };
     const restore = (event: PageTransitionEvent) => {
@@ -127,5 +155,6 @@ export function usePrivateWorkspace(clinicId?: string) {
     signOut,
     leaving,
     logoutError,
+    revalidationError,
   };
 }

@@ -1,4 +1,5 @@
 ﻿import { expect, test, type Page } from "@playwright/test";
+import { returnToTab } from "./support/tab-lifecycle";
 const user = {
   id: "1f603846-d722-49ef-bb7f-07e129ae4fd8",
   name: "Responsable de pruebas",
@@ -13,6 +14,29 @@ const clinic = {
 };
 const session = { ...user, memberships: [{ role: "OWNER", clinic }] };
 const password = "Una frase privada de pruebas";
+for (const mode of ["registrarse", "iniciar-sesion"] as const) {
+  test(`${mode} conserva campos al cambiar de pestaña antes del dashboard`, async ({ page }) => {
+    let calls = 0;
+    await mock(page, () => { calls++; return { status: 401 }; });
+    await page.goto(`/${mode}`);
+    if (mode === "registrarse") await fillRegistration(page);
+    else {
+      await page.getByLabel("Correo electrónico").fill(user.email);
+      await page.getByLabel("Contraseña", { exact: true }).fill(password);
+    }
+    await returnToTab(page);
+    await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
+    await expect(page.getByLabel("Correo electrónico")).toHaveValue(user.email);
+    await expect(page.getByLabel("Contraseña", { exact: true })).toHaveValue(password);
+    if (mode === "registrarse") {
+      await expect(page.getByLabel("Nombre del responsable")).toHaveValue(user.name);
+      await expect(page.getByLabel("Confirmar contraseña", { exact: true })).toHaveValue(password);
+      await expect(page.getByLabel("Nombre de la clínica veterinaria")).toHaveValue(clinic.name);
+    }
+    expect(calls).toBe(0);
+    expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
+  });
+}
 async function mock(
   page: Page,
   handler: (path: string, method: string) => { status: number; body?: object },
