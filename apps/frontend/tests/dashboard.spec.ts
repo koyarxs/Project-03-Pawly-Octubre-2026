@@ -293,7 +293,6 @@ test("dashboard responsive, menú accesible y módulos claramente pendientes", a
   await expect(page.getByRole("dialog")).toBeVisible();
   const nav = page.getByRole("dialog").getByRole("navigation");
   for (const name of [
-    "Consultas",
     "Vacunación",
     "Inventario",
     "Reportes",
@@ -302,6 +301,7 @@ test("dashboard responsive, menú accesible y módulos claramente pendientes", a
     await expect(
       nav.getByRole("button", { name: `${name} Próximamente`, exact: true }),
     ).toBeDisabled();
+  await expect(nav.getByRole("link", {name:"Consultas", exact:true})).toHaveAttribute("href", /\/consultas$/);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await expect(toggle).toBeFocused();

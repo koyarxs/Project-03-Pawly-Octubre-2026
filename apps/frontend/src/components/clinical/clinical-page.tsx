@@ -1,4 +1,5 @@
 "use client";
+import { ClinicalHistory } from "@/components/consultations/consultation-list";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Archive, ArrowLeft, LoaderCircle, Pencil } from "lucide-react";
@@ -309,6 +310,13 @@ function ClinicalDetail({
             ))}
           </div>
         </section>
+      )}
+      {kind === "pacientes" && (
+        <ClinicalHistory
+          context={context}
+          patientId={record.id}
+          active={record.status === "ACTIVE"}
+        />
       )}
       {kind === "tutores" && (
         <ClinicalList context={context} kind="pacientes" tutorId={record.id} />

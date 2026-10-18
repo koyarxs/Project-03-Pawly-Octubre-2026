@@ -154,15 +154,21 @@ export function VeterinaryDashboard({ clinicId }: { clinicId: string }) {
                         <h3>{name}</h3>
                         <p>{description}</p>
                       </div>
-                      {name === "Tutores y pacientes" ? (
+                      {name === "Tutores y pacientes" ||
+                      access.role !== "RECEPTIONIST" ? (
                         <Link
                           className="dashboard-available"
-                          href={workspacePath(clinicId, "tutores")}
+                          href={workspacePath(
+                            clinicId,
+                            name === "Tutores y pacientes"
+                              ? "tutores"
+                              : "consultas",
+                          )}
                         >
                           Disponible <ArrowRight size={14} />
                         </Link>
                       ) : (
-                        <span>Próximamente</span>
+                        <span>Acceso clínico</span>
                       )}
                     </div>
                   ))}

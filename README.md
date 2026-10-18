@@ -1,19 +1,19 @@
 ﻿# Pawly
 
-Plataforma de gestión veterinaria en desarrollo para clínicas y profesionales en Chile. Incluye landing pública, autenticación, workspace multi-clínica, tutores, pacientes y agenda veterinaria.
+Plataforma de gestión veterinaria en desarrollo para clínicas y profesionales en Chile. Incluye landing pública, autenticación, workspace multi-clínica, tutores, pacientes, agenda veterinaria y consultas con historia de atenciones.
 
 ## Estado actual
 
 Actualizado: 18 de octubre de 2026.
 
-El estado se describe por funcionalidades verificables, sin porcentajes de avance. Contratos y pruebas: [gestión clínica](docs/clinical-records.md) y [agenda](docs/appointments.md).
+El estado se describe por funcionalidades verificables, sin porcentajes de avance. Contratos y pruebas: [gestión clínica](docs/clinical-records.md) y [agenda](docs/appointments.md) y [consultas e historia clínica](docs/consultations.md).
 
 | Área | Implementado | Pendiente |
 | --- | --- | --- |
 | Landing | Identidad Pawly, navegación responsive, carrusel automático de 15 fotos, notebook conceptual, recorrido visual de atención, funcionalidades, soluciones, oferta comercial provisional, FAQ y contacto | Revisión final, dominio y recepción real de solicitudes |
 | Demostración pública | Vistas promocionales con datos ficticios, separadas del sistema privado | Revisión de contenido comercial |
-| Frontend | Landing, autenticación, workspace, tutores, pacientes y agenda diaria/semanal | Consultas, vacunación, inventario, reportes y suscripciones |
-| Backend | NestJS modular, sesiones, autorización por clínica/rol, gestión clínica y agenda con historial | Correo verificado, recuperación de contraseña y módulos restantes |
+| Frontend | Landing, autenticación, workspace, tutores, pacientes, agenda y consultas con historia clínica | Vacunación, inventario, reportes y suscripciones |
+| Backend | NestJS modular, sesiones, autorización por clínica/rol, gestión clínica, agenda y consultas con historial inmutable | Correo verificado, recuperación de contraseña y módulos restantes |
 | Persistencia | PostgreSQL 17, Prisma, migraciones versionadas y FK multi-clínica | Respaldos y operación de producción |
 | Calidad | TypeScript, ESLint, builds, unitarias, integración PostgreSQL y Playwright | CI/CD, despliegue y cobertura de módulos futuros |
 
@@ -116,7 +116,7 @@ Verificación del 14 de octubre de 2026: frontend con TypeScript, ESLint, build 
 ## Próximos pasos
 
 1. Verificación de correo y recuperación de contraseña; el registro público permanece bloqueado en producción.
-2. Consultas e historia de atenciones, vacunación e inventario.
+2. Vacunación, inventario y extensión de la historia clínica.
 3. Gestión de integrantes y disponibilidad laboral de profesionales.
 4. Reportes, facturación y suscripciones.
 5. Recepción real de contacto, CI/CD, despliegue, observabilidad y respaldos antes del uso comercial.

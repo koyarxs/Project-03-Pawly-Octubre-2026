@@ -12,6 +12,7 @@ export interface Professional {
   user: { name: string };
 }
 export interface Appointment {
+  consultation?: { id: string; status: "DRAFT" | "FINALIZED" } | null;
   id: string;
   clinicId: string;
   patientId: string;
@@ -53,6 +54,12 @@ function appointment(v: unknown, clinicId: string): v is Appointment {
   return (
     record(v) &&
     v.clinicId === clinicId &&
+    (v.consultation === undefined ||
+      v.consultation === null ||
+      (record(v.consultation) &&
+        typeof v.consultation.id === "string" &&
+        (v.consultation.status === "DRAFT" ||
+          v.consultation.status === "FINALIZED"))) &&
     [v.id, v.patientId, v.tutorId, v.startsAt, v.endsAt, v.reason].every(
       (x) => typeof x === "string",
     ) &&

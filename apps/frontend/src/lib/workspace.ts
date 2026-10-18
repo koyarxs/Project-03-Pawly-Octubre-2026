@@ -8,7 +8,8 @@ export const roleNames: Record<ClinicRole, string> = {
 export function dashboardPath(clinicId: string): string {
   return `/app/clinicas/${encodeURIComponent(clinicId)}/dashboard`;
 }
-export type WorkspaceSection = "dashboard" | "tutores" | "pacientes" | "agenda";
+export type WorkspaceSection =
+  "dashboard" | "tutores" | "pacientes" | "agenda" | "consultas";
 export function workspacePath(
   clinicId: string,
   section: WorkspaceSection,

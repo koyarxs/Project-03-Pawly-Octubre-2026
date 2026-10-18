@@ -4,9 +4,9 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 // Resolve relative to the source tree, independent of the caller's current directory.
 const cwd = fileURLToPath(new URL("../../", import.meta.url));
-// Each viewport project owns its API/schema and real in-memory rate limits.
+// Each spec and viewport owns its API/schema and real in-memory rate limits.
 // Do not weaken production controls or share exhausted counters across projects.
-async function runProject(project) {
+async function runProject(project, spec) {
   const backend = spawn(
     process.execPath,
     [fileURLToPath(new URL("./real-backend.mjs", import.meta.url))],
@@ -52,6 +52,7 @@ async function runProject(project) {
         "test",
         "--config",
         "playwright.real.config.ts",
+        spec,
         "--project",
         project,
       ],
@@ -77,10 +78,25 @@ async function runProject(project) {
   }
   return code;
 }
-for (const project of ["desktop", "mobile"]) {
-  const code = await runProject(project);
-  if (code !== 0) {
-    process.exitCode = code;
-    break;
+const specs = [
+  "authentication.real.spec.ts",
+  "dashboard.real.spec.ts",
+  "clinical.real.spec.ts",
+  "appointments.real.spec.ts",
+  "consultations.real.spec.ts",
+];
+const requested = process.argv.slice(2);
+if (requested.some((spec) => !specs.includes(spec)))
+  throw new Error("Unknown real test spec");
+const selected = requested.length
+  ? specs.filter((spec) => requested.includes(spec))
+  : specs;
+outer: for (const project of ["desktop", "mobile"]) {
+  for (const spec of selected) {
+    const code = await runProject(project, spec);
+    if (code !== 0) {
+      process.exitCode = code;
+      break outer;
+    }
   }
 }

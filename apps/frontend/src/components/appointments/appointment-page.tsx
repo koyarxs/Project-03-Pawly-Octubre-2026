@@ -1,4 +1,6 @@
 "use client";
+import Link from "next/link";
+import { canReadClinical, consultationPath } from "@/lib/consultations";
 import {
   useCallback,
   useEffect,
@@ -421,7 +423,9 @@ function AppointmentEditor({
     [events, setEvents] = useState<AppointmentEvent[] | null>(null),
     [historyError, setHistoryError] = useState("");
   const terminal =
-    appointment?.status === "COMPLETED" || appointment?.status === "CANCELLED";
+    appointment?.status === "COMPLETED" ||
+    appointment?.status === "CANCELLED" ||
+    Boolean(appointment?.consultation);
   useEffect(() => {
     dialog.current?.showModal();
     return () => pending.current?.abort();
@@ -678,7 +682,33 @@ function AppointmentEditor({
             </label>
           )}
         </fieldset>
-        {terminal && (
+        {appointment?.consultation && (
+          <p className="agenda-notice">
+            Atención vinculada: el estado y profesional se gestionan desde la
+            consulta clínica.
+          </p>
+        )}
+        {appointment &&
+          canReadClinical(context.access.role) &&
+          (appointment.consultation || !terminal) && (
+            <p className="agenda-notice">
+              <Link
+                href={
+                  appointment.consultation
+                    ? consultationPath(
+                        context.clinicId,
+                        appointment.consultation.id,
+                      )
+                    : `${consultationPath(context.clinicId)}/nueva?appointmentId=${appointment.id}`
+                }
+              >
+                {appointment.consultation
+                  ? "Abrir consulta clínica"
+                  : "Iniciar consulta clínica"}
+              </Link>
+            </p>
+          )}
+        {terminal && !appointment?.consultation && (
           <p className="agenda-notice">
             {appointmentStates[appointment!.status]}. La cita y su historial se
             conservan y no admiten edición.

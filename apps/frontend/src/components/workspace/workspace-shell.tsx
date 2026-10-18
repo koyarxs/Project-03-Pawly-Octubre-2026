@@ -57,9 +57,11 @@ const modules = [
 function Navigation({
   clinicId,
   section,
+  clinical,
 }: {
   clinicId: string;
   section: WorkspaceSection;
+  clinical: boolean;
 }) {
   return (
     <nav aria-label="Navegación de la clínica">
@@ -71,15 +73,31 @@ function Navigation({
         Dashboard
       </Link>
       {modules.map(([name, Icon]) =>
-        name === "Tutores" || name === "Pacientes" || name === "Agenda" ? (
+        name === "Tutores" ||
+        name === "Pacientes" ||
+        name === "Agenda" ||
+        (name === "Consultas" && clinical) ? (
           <Link
             key={name}
             href={workspacePath(
               clinicId,
-              name === "Agenda" ? "agenda" : name === "Tutores" ? "tutores" : "pacientes",
+              name === "Consultas"
+                ? "consultas"
+                : name === "Agenda"
+                  ? "agenda"
+                  : name === "Tutores"
+                    ? "tutores"
+                    : "pacientes",
             )}
             aria-current={
-              section === (name === "Agenda" ? "agenda" : name === "Tutores" ? "tutores" : "pacientes")
+              section ===
+              (name === "Consultas"
+                ? "consultas"
+                : name === "Agenda"
+                  ? "agenda"
+                  : name === "Tutores"
+                    ? "tutores"
+                    : "pacientes")
                 ? "page"
                 : undefined
             }
@@ -91,7 +109,9 @@ function Navigation({
           <button key={name} disabled>
             <Icon size={19} aria-hidden="true" />
             <span>{name}</span>
-            <small>Próximamente</small>
+            <small>
+              {name === "Consultas" ? "Acceso clínico" : "Próximamente"}
+            </small>
           </button>
         ),
       )}
@@ -162,7 +182,11 @@ export function WorkspaceShell({
       <aside className="dashboard-sidebar">
         <Brand inverse />
         <span className="dashboard-eyebrow">WORKSPACE</span>
-        <Navigation clinicId={clinicId} section={section} />
+        <Navigation
+          clinicId={clinicId}
+          section={section}
+          clinical={access.role !== "RECEPTIONIST"}
+        />
         <div className="dashboard-sidebar-note">
           <ShieldCheck size={21} />
           <p>
@@ -187,7 +211,11 @@ export function WorkspaceShell({
             <X size={22} />
           </button>
         </div>
-        <Navigation clinicId={clinicId} section={section} />
+        <Navigation
+          clinicId={clinicId}
+          section={section}
+          clinical={access.role !== "RECEPTIONIST"}
+        />
         <Link className="dashboard-back" href="/app">
           Mis clínicas <ArrowRight size={16} />
         </Link>
@@ -253,7 +281,9 @@ export function WorkspaceShell({
             </div>
           )}
           {revalidationError && (
-            <div role="status" className="auth-alert">{revalidationError}</div>
+            <div role="status" className="auth-alert">
+              {revalidationError}
+            </div>
           )}
           {children({
             clinicId,

@@ -68,11 +68,21 @@ async function stop(code = 0) {
     if (ownsSchema) {
       await assertOwned(prisma);
       await control.$executeRawUnsafe(
-        `DROP TABLE IF EXISTS "${schema}"."AppointmentEvent", "${schema}"."Appointment", "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership", "${schema}"."User", "${schema}"."VeterinaryClinic", "${schema}"."_prisma_migrations" RESTRICT`,
+        `DROP TABLE IF EXISTS "${schema}"."ConsultationEvent", "${schema}"."ConsultationAmendment", "${schema}"."Consultation", "${schema}"."AppointmentEvent", "${schema}"."Appointment", "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership", "${schema}"."User", "${schema}"."VeterinaryClinic", "${schema}"."_prisma_migrations" RESTRICT`,
       );
       await control.$executeRawUnsafe(
-        `DROP TYPE IF EXISTS "${schema}"."AppointmentStatus", "${schema}"."TutorStatus", "${schema}"."PatientStatus", "${schema}"."Species", "${schema}"."PatientSex", "${schema}"."UserStatus", "${schema}"."ClinicStatus", "${schema}"."MembershipStatus", "${schema}"."Role" RESTRICT`,
+        `DROP TYPE IF EXISTS "${schema}"."ConsultationStatus", "${schema}"."DiagnosisType", "${schema}"."AppointmentStatus", "${schema}"."TutorStatus", "${schema}"."PatientStatus", "${schema}"."Species", "${schema}"."PatientSex", "${schema}"."UserStatus", "${schema}"."ClinicStatus", "${schema}"."MembershipStatus", "${schema}"."Role" RESTRICT`,
       );
+      for (const fn of [
+        "protectFinalizedConsultation",
+        "protectClinicalAppendOnly",
+        "requireFinalizedForAmendment",
+        "checkClinicalAppointment",
+      ]) {
+        await control.$executeRawUnsafe(
+          `DROP FUNCTION "${schema}"."${fn}"() RESTRICT`,
+        );
+      }
       await control.$executeRawUnsafe(`DROP SCHEMA "${schema}" RESTRICT`);
       ownsSchema = false;
       console.info("Owned browser test schema removed with RESTRICT.");

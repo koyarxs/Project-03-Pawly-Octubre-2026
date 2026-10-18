@@ -101,6 +101,7 @@ async function mock(page: Page, handler?: Handler, role = "OWNER") {
 }
 function defaultResponse(url: URL): Reply {
   const path = url.pathname;
+  if (path.endsWith("/consultations")) return {status:200,body:{items:[],page:1,total:0,totalPages:0}};
   if (path.endsWith(`/tutors/${tutor.id}`)) return { status: 200, body: tutor };
   if (path.endsWith(`/patients/${patient.id}`))
     return { status: 200, body: patient };
