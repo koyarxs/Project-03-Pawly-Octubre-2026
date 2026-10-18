@@ -48,6 +48,14 @@ class AppointmentsController {
   ) {
     return this.appointments.history(req.clinic.id, id);
   }
+  @Get(":id")
+  @RequirePermissions("appointment:read")
+  detail(
+    @Req() req: ClinicRequest,
+    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
+  ) {
+    return this.appointments.detail(req.clinic.id, id);
+  }
   @Post()
   @RequirePermissions("appointment:write")
   create(@Req() req: ClinicRequest, @Body() dto: AppointmentInput) {

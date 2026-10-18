@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { AppointmentStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { appointmentSnapshot } from "./appointment-snapshot";
 import {
   AppointmentInput,
   AppointmentQueryDto,
@@ -14,6 +15,7 @@ import {
 } from "./appointments.dto";
 
 const include = {
+  consultation: { select: { id: true, status: true } },
   patient: { select: { id: true, name: true } },
   tutor: { select: { id: true, firstName: true, lastName: true } },
   professional: { select: { id: true, user: { select: { name: true } } } },
@@ -48,6 +50,14 @@ export function assertTransition(
 @Injectable()
 export class AppointmentsService {
   constructor(private readonly prisma: PrismaService) {}
+  async detail(clinicId: string, id: string) {
+    const record = await this.prisma.appointment.findUnique({
+      where: { id_clinicId: { id, clinicId } },
+      include,
+    });
+    if (!record) throw new NotFoundException();
+    return record;
+  }
   async list(clinicId: string, q: AppointmentQueryDto) {
     const from = utcDate(q.from),
       to = utcDate(q.to);
@@ -128,6 +138,13 @@ export class AppointmentsService {
               })
             : null;
           if (id && !old) throw new NotFoundException();
+          if (
+            old &&
+            (await tx.consultation.findFirst({
+              where: { clinicId, appointmentId: old.id },
+            }))
+          )
+            throw new ConflictException();
           const update = dto instanceof UpdateAppointmentDto ? dto : null;
           if (old && (!update || old.version !== update.version))
             throw new ConflictException();
@@ -222,34 +239,13 @@ export class AppointmentsService {
                 data: { ...data, clinicId },
                 include,
               });
-          const snapshot = (r: {
-            startsAt: Date;
-            endsAt: Date;
-            patientId: string;
-            tutorId: string;
-            professionalMembershipId: string | null;
-            reason: string;
-            status: AppointmentStatus;
-            cancellationReason: string | null;
-            version: number;
-          }): Prisma.InputJsonObject => ({
-            patientId: r.patientId,
-            tutorId: r.tutorId,
-            professionalMembershipId: r.professionalMembershipId,
-            startsAt: r.startsAt.toISOString(),
-            endsAt: r.endsAt.toISOString(),
-            reason: r.reason,
-            status: r.status,
-            cancellationReason: r.cancellationReason,
-            version: r.version,
-          });
           await tx.appointmentEvent.create({
             data: {
               clinicId,
               appointmentId: record.id,
               actorMembershipId: actor.id,
-              ...(old ? { before: snapshot(old) } : {}),
-              after: snapshot(record),
+              ...(old ? { before: appointmentSnapshot(old) } : {}),
+              after: appointmentSnapshot(record),
             },
           });
           return record;

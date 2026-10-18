@@ -8,6 +8,7 @@ import { AuthorizationModule } from "./authorization/authorization.module";
 import { HttpSecurityModule } from "./http/http-security.module";
 import { ClinicalModule } from "./clinical/clinical.module";
 import { AppointmentsModule } from "./appointments/appointments.module";
+import { ConsultationsModule } from "./consultations/consultations.module";
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { AppointmentsModule } from "./appointments/appointments.module";
     AuthorizationModule,
     ClinicalModule,
     AppointmentsModule,
+    ConsultationsModule,
   ],
 })
 export class AppModule {}

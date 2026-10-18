@@ -46,31 +46,37 @@ model User {
 }
 
 model VeterinaryClinic {
-  id           String             @id @default(uuid()) @db.Uuid
-  name         String             @db.VarChar(160)
-  slug         String             @unique @db.VarChar(100)
-  status       ClinicStatus       @default(ACTIVE)
-  timezone     String             @default("America/Santiago") @db.VarChar(100)
-  createdAt    DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime           @updatedAt @db.Timestamptz(3)
-  memberships  ClinicMembership[]
-  tutors       Tutor[]
-  patients     Patient[]
-  appointments Appointment[]
+  id            String             @id @default(uuid()) @db.Uuid
+  name          String             @db.VarChar(160)
+  slug          String             @unique @db.VarChar(100)
+  status        ClinicStatus       @default(ACTIVE)
+  timezone      String             @default("America/Santiago") @db.VarChar(100)
+  createdAt     DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime           @updatedAt @db.Timestamptz(3)
+  memberships   ClinicMembership[]
+  tutors        Tutor[]
+  patients      Patient[]
+  appointments  Appointment[]
+  consultations Consultation[]
 }
 
 model ClinicMembership {
-  id                String             @id @default(uuid()) @db.Uuid
-  userId            String             @db.Uuid
-  clinicId          String             @db.Uuid
-  role              Role
-  status            MembershipStatus   @default(ACTIVE)
-  createdAt         DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime           @updatedAt @db.Timestamptz(3)
-  user              User               @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  clinic            VeterinaryClinic   @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  appointments      Appointment[]      @relation("AppointmentProfessional")
-  appointmentEvents AppointmentEvent[]
+  id                     String                  @id @default(uuid()) @db.Uuid
+  userId                 String                  @db.Uuid
+  clinicId               String                  @db.Uuid
+  role                   Role
+  status                 MembershipStatus        @default(ACTIVE)
+  createdAt              DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime                @updatedAt @db.Timestamptz(3)
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  clinic                 VeterinaryClinic        @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  appointments           Appointment[]           @relation("AppointmentProfessional")
+  appointmentEvents      AppointmentEvent[]
+  consultations          Consultation[]          @relation("ConsultationProfessional")
+  createdConsultations   Consultation[]          @relation("ConsultationCreator")
+  finalizedConsultations Consultation[]          @relation("ConsultationFinalizer")
+  consultationEvents     ConsultationEvent[]
+  consultationAmendments ConsultationAmendment[]
 
   @@unique([userId, clinicId])
   @@unique([id, clinicId])
@@ -140,23 +146,24 @@ model Tutor {
 }
 
 model Patient {
-  id           String           @id @default(uuid()) @db.Uuid
-  clinicId     String           @db.Uuid
-  name         String           @db.VarChar(100)
-  species      Species
-  breed        String?          @db.VarChar(100)
-  sex          PatientSex       @default(UNKNOWN)
-  birthDate    DateTime?        @db.Date
-  weightKg     Decimal?         @db.Decimal(8, 3)
-  color        String?          @db.VarChar(100)
-  microchip    String?          @db.VarChar(64)
-  status       PatientStatus    @default(ACTIVE)
-  notes        String?          @db.VarChar(2000)
-  createdAt    DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime         @updatedAt @db.Timestamptz(3)
-  clinic       VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  tutors       PatientTutor[]
-  appointments Appointment[]
+  id            String           @id @default(uuid()) @db.Uuid
+  clinicId      String           @db.Uuid
+  name          String           @db.VarChar(100)
+  species       Species
+  breed         String?          @db.VarChar(100)
+  sex           PatientSex       @default(UNKNOWN)
+  birthDate     DateTime?        @db.Date
+  weightKg      Decimal?         @db.Decimal(8, 3)
+  color         String?          @db.VarChar(100)
+  microchip     String?          @db.VarChar(64)
+  status        PatientStatus    @default(ACTIVE)
+  notes         String?          @db.VarChar(2000)
+  createdAt     DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime         @updatedAt @db.Timestamptz(3)
+  clinic        VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  tutors        PatientTutor[]
+  appointments  Appointment[]
+  consultations Consultation[]
 
   @@unique([id, clinicId])
   @@unique([clinicId, microchip])
@@ -203,8 +210,10 @@ model Appointment {
   tutor                    Tutor              @relation(fields: [tutorId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
   professional             ClinicMembership?  @relation("AppointmentProfessional", fields: [professionalMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
   events                   AppointmentEvent[]
+  consultation             Consultation?
 
   @@unique([id, clinicId])
+  @@unique([id, patientId, clinicId])
   @@index([clinicId, startsAt])
   @@index([clinicId, professionalMembershipId, startsAt, endsAt])
 }
@@ -221,4 +230,89 @@ model AppointmentEvent {
   actor             ClinicMembership @relation(fields: [actorMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([clinicId, appointmentId, createdAt])
+}
+
+enum ConsultationStatus {
+  DRAFT
+  FINALIZED
+}
+
+enum DiagnosisType {
+  PRESUMPTIVE
+  DEFINITIVE
+}
+
+model Consultation {
+  id                       String                  @id @default(uuid()) @db.Uuid
+  clinicId                 String                  @db.Uuid
+  patientId                String                  @db.Uuid
+  appointmentId            String?                 @unique @db.Uuid
+  requestId                String                  @db.Uuid
+  professionalMembershipId String                  @db.Uuid
+  createdByMembershipId    String                  @db.Uuid
+  finalizedByMembershipId  String?                 @db.Uuid
+  attendedAt               DateTime                @db.Timestamptz(3)
+  reason                   String                  @db.VarChar(1000)
+  anamnesis                String                  @default("") @db.VarChar(8000)
+  physicalExam             String                  @default("") @db.VarChar(8000)
+  findings                 String                  @default("") @db.VarChar(8000)
+  diagnosis                String                  @default("") @db.VarChar(4000)
+  diagnosisType            DiagnosisType?
+  treatment                String                  @default("") @db.VarChar(8000)
+  instructions             String                  @default("") @db.VarChar(8000)
+  notes                    String                  @default("") @db.VarChar(4000)
+  weightKg                 Decimal?                @db.Decimal(8, 3)
+  temperatureC             Decimal?                @db.Decimal(4, 1)
+  heartRate                Int?
+  respiratoryRate          Int?
+  nextControlAt            DateTime?               @db.Timestamptz(3)
+  status                   ConsultationStatus      @default(DRAFT)
+  version                  Int                     @default(1)
+  createdAt                DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime                @updatedAt @db.Timestamptz(3)
+  finalizedAt              DateTime?               @db.Timestamptz(3)
+  clinic                   VeterinaryClinic        @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  patient                  Patient                 @relation(fields: [patientId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  appointment              Appointment?            @relation(fields: [appointmentId, patientId, clinicId], references: [id, patientId, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  professional             ClinicMembership        @relation("ConsultationProfessional", fields: [professionalMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  creator                  ClinicMembership        @relation("ConsultationCreator", fields: [createdByMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  finalizer                ClinicMembership?       @relation("ConsultationFinalizer", fields: [finalizedByMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  events                   ConsultationEvent[]
+  amendments               ConsultationAmendment[]
+
+  @@unique([id, clinicId])
+  @@unique([clinicId, requestId])
+  @@unique([appointmentId, patientId, clinicId])
+  @@index([clinicId, patientId, attendedAt])
+  @@index([clinicId, status, attendedAt])
+}
+
+model ConsultationEvent {
+  id                String           @id @default(uuid()) @db.Uuid
+  clinicId          String           @db.Uuid
+  consultationId    String           @db.Uuid
+  actorMembershipId String           @db.Uuid
+  kind              String           @db.VarChar(32)
+  snapshot          Json
+  createdAt         DateTime         @default(now()) @db.Timestamptz(3)
+  consultation      Consultation     @relation(fields: [consultationId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  actor             ClinicMembership @relation(fields: [actorMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([clinicId, consultationId, createdAt])
+}
+
+model ConsultationAmendment {
+  id                String           @id @default(uuid()) @db.Uuid
+  clinicId          String           @db.Uuid
+  consultationId    String           @db.Uuid
+  actorMembershipId String           @db.Uuid
+  requestId         String           @db.Uuid
+  reason            String           @db.VarChar(1000)
+  correction        String           @db.VarChar(8000)
+  createdAt         DateTime         @default(now()) @db.Timestamptz(3)
+  consultation      Consultation     @relation(fields: [consultationId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  actor             ClinicMembership @relation(fields: [actorMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([clinicId, requestId])
+  @@index([clinicId, consultationId, createdAt])
 }
