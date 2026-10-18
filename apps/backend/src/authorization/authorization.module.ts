@@ -20,6 +20,8 @@ import { SessionsModule } from "../sessions/sessions.module";
 import { AuthenticatedRequest } from "../sessions/sessions.service";
 
 export type Permission =
+  | "appointment:read"
+  | "appointment:write"
   | "clinic:read"
   | "clinic:manage"
   | "tutor:read"
@@ -31,6 +33,8 @@ export const RequirePermissions = (...permissions: Permission[]) =>
   SetMetadata("clinic-permissions", permissions);
 const permissions: Record<Role, readonly Permission[]> = {
   OWNER: [
+    "appointment:read",
+    "appointment:write",
     "clinic:read",
     "clinic:manage",
     "tutor:read",
@@ -40,6 +44,8 @@ const permissions: Record<Role, readonly Permission[]> = {
     "clinical:archive",
   ],
   ADMIN: [
+    "appointment:read",
+    "appointment:write",
     "clinic:read",
     "clinic:manage",
     "tutor:read",
@@ -49,13 +55,22 @@ const permissions: Record<Role, readonly Permission[]> = {
     "clinical:archive",
   ],
   VETERINARIAN: [
+    "appointment:read",
+    "appointment:write",
     "clinic:read",
     "tutor:read",
     "tutor:write",
     "patient:read",
     "patient:write",
   ],
-  RECEPTIONIST: ["clinic:read", "tutor:read", "tutor:write", "patient:read"],
+  RECEPTIONIST: [
+    "clinic:read",
+    "tutor:read",
+    "tutor:write",
+    "patient:read",
+    "appointment:read",
+    "appointment:write",
+  ],
 };
 type ClinicContext = { id: string; name: string; slug: string; role: Role };
 export type ClinicRequest = AuthenticatedRequest & { clinic: ClinicContext };

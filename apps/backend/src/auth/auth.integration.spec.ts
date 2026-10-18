@@ -163,12 +163,12 @@ describe("authentication with isolated PostgreSQL", () => {
         // RESTRICT blocks external dependencies; never cascade into another schema.
         await assertTestConnection();
         await control.$executeRawUnsafe(
-          `DROP TABLE IF EXISTS "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership",
+          `DROP TABLE IF EXISTS "${schema}"."AppointmentEvent", "${schema}"."Appointment", "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership",
            "${schema}"."User", "${schema}"."VeterinaryClinic",
            "${schema}"."_prisma_migrations" RESTRICT`,
         );
         await control.$executeRawUnsafe(
-          `DROP TYPE IF EXISTS "${schema}"."TutorStatus", "${schema}"."PatientStatus", "${schema}"."Species", "${schema}"."PatientSex", "${schema}"."UserStatus", "${schema}"."ClinicStatus",
+          `DROP TYPE IF EXISTS "${schema}"."AppointmentStatus", "${schema}"."TutorStatus", "${schema}"."PatientStatus", "${schema}"."Species", "${schema}"."PatientSex", "${schema}"."UserStatus", "${schema}"."ClinicStatus",
            "${schema}"."MembershipStatus", "${schema}"."Role" RESTRICT`,
         );
         await control.$executeRawUnsafe(`DROP SCHEMA "${schema}" RESTRICT`);
@@ -202,6 +202,8 @@ describe("authentication with isolated PostgreSQL", () => {
   beforeEach(async () => {
     await assertTestConnection();
     await prisma.$transaction([
+      prisma.appointmentEvent.deleteMany(),
+      prisma.appointment.deleteMany(),
       prisma.patientTutor.deleteMany(),
       prisma.patient.deleteMany(),
       prisma.tutor.deleteMany(),
@@ -1147,6 +1149,358 @@ describe("authentication with isolated PostgreSQL", () => {
         .send(input)
         .expect(409);
       expect(JSON.stringify(duplicate.body)).not.toContain("QA-CHIP");
+    });
+  });
+
+  describe("appointments", () => {
+    const endpoint = () => `/api/clinics/${clinicId}/appointments`;
+    const range = "?from=2030-01-07T00:00:00Z&to=2030-01-14T00:00:00Z";
+    const patch = (id: string) =>
+      request(app.getHttpServer())
+        .patch(`${endpoint()}/${id}`)
+        .set("Cookie", cookie)
+        .set("Origin", origin)
+        .set("X-Pawly-CSRF", "1");
+    async function fixture(target = clinicId) {
+      const tutor = await prisma.tutor.create({
+        data: {
+          clinicId: target,
+          firstName: "Tutor QA",
+          lastName: "Agenda",
+          phone: "+56912345678",
+        },
+      });
+      const patient = await prisma.patient.create({
+        data: {
+          clinicId: target,
+          name: "Paciente QA Agenda",
+          species: "CAT",
+          tutors: { create: { tutorId: tutor.id } },
+        },
+      });
+      const member = await prisma.clinicMembership.findFirstOrThrow({
+        where: { clinicId: target },
+      });
+      return {
+        patientId: patient.id,
+        tutorId: tutor.id,
+        professionalMembershipId: member.id,
+        startsAt: "2030-01-07T12:00:00.000Z",
+        durationMinutes: 30,
+        reason: "Control QA",
+      };
+    }
+    async function create(input: Awaited<ReturnType<typeof fixture>>) {
+      return (
+        await post(endpoint()).set("Cookie", cookie).send(input).expect(201)
+      ).body as { id: string; version: number; status: string };
+    }
+    it("creates, reschedules, confirms, progresses and retains complete history", async () => {
+      const input = await fixture();
+      const created = await create(input);
+      const updated = await patch(created.id)
+        .send({
+          ...input,
+          startsAt: "2030-01-07T13:00:00.000Z",
+          version: 1,
+          status: "CONFIRMED",
+        })
+        .expect(200);
+      expect(updated.body.version).toBe(2);
+      await patch(created.id)
+        .send({
+          ...input,
+          startsAt: "2030-01-07T13:00:00.000Z",
+          version: 2,
+          status: "IN_PROGRESS",
+        })
+        .expect(200);
+      await patch(created.id)
+        .send({
+          ...input,
+          startsAt: "2030-01-07T13:00:00.000Z",
+          version: 3,
+          status: "COMPLETED",
+        })
+        .expect(200);
+      await patch(created.id)
+        .send({ ...input, version: 4, status: "CONFIRMED" })
+        .expect(409);
+      const history = await request(app.getHttpServer())
+        .get(`${endpoint()}/${created.id}/history`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(history.body).toHaveLength(4);
+      expect(history.body[1].before.startsAt).toBe(input.startsAt);
+      expect(history.body[3].after.status).toBe("COMPLETED");
+    });
+    it("cancels without deletion and frees the professional slot", async () => {
+      const input = await fixture();
+      const a = await create(input);
+      await patch(a.id)
+        .send({ ...input, version: 1, status: "CANCELLED" })
+        .expect(400);
+      await patch(a.id)
+        .send({
+          ...input,
+          version: 1,
+          status: "CANCELLED",
+          cancellationReason: "Tutor cancela QA",
+        })
+        .expect(200);
+      await create(input);
+      expect(await prisma.appointment.count()).toBe(2);
+      expect(await prisma.appointmentEvent.count()).toBe(3);
+      await patch(a.id)
+        .send({ ...input, version: 2, status: "SCHEDULED" })
+        .expect(409);
+    });
+    it("rejects overlaps, permits adjacent slots and protects stale edits", async () => {
+      const input = await fixture();
+      const a = await create(input);
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({ ...input, startsAt: "2030-01-07T12:15:00Z" })
+        .expect(409);
+      const b = await create({ ...input, startsAt: "2030-01-07T12:30:00Z" });
+      await patch(b.id)
+        .send({ ...input, version: 1, status: "SCHEDULED" })
+        .expect(409);
+      await patch(a.id)
+        .send({ ...input, version: 1, status: "CONFIRMED" })
+        .expect(200);
+      await patch(a.id)
+        .send({
+          ...input,
+          version: 1,
+          status: "CANCELLED",
+          cancellationReason: "stale",
+        })
+        .expect(409);
+    });
+    it("serializes simultaneous bookings with one winner and no duplicate history", async () => {
+      const input = await fixture();
+      const results = await Promise.all([
+        post(endpoint()).set("Cookie", cookie).send(input),
+        post(endpoint()).set("Cookie", cookie).send(input),
+      ]);
+      expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+      expect(await prisma.appointment.count()).toBe(1);
+      expect(await prisma.appointmentEvent.count()).toBe(1);
+    });
+    it("allows unassigned appointments without inventing professionals", async () => {
+      const input = await fixture();
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({ ...input, professionalMembershipId: null })
+        .expect(201);
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({ ...input, professionalMembershipId: null })
+        .expect(201);
+    });
+    it("validates real dates, duration, past dates, bounds and injected scope", async () => {
+      const input = await fixture();
+      for (const invalid of [
+        { startsAt: "2030-02-30T12:00:00Z" },
+        { startsAt: "2030-01-07T09:00:00-03:00" },
+        { startsAt: "2020-01-01T00:00:00Z" },
+        { durationMinutes: 0 },
+        { durationMinutes: 481 },
+        { reason: " " },
+        { clinicId: otherClinicId },
+      ])
+        await post(endpoint())
+          .set("Cookie", cookie)
+          .send({ ...input, ...invalid })
+          .expect(400);
+      await request(app.getHttpServer())
+        .get(endpoint() + "?from=2030-01-01T00:00:00Z&to=2030-05-01T00:00:00Z")
+        .set("Cookie", cookie)
+        .expect(400);
+    });
+    it("enforces patient/tutor association and active eligible professionals", async () => {
+      const input = await fixture();
+      const extra = await prisma.tutor.create({
+        data: {
+          clinicId,
+          firstName: "No asociado",
+          lastName: "QA",
+          phone: "+56912345678",
+        },
+      });
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({ ...input, tutorId: extra.id })
+        .expect(400);
+      const unqualified = await prisma.user.create({
+        data: {
+          name: "Recepcion QA",
+          email: "reception-agenda@example.invalid",
+          normalizedEmail: "reception-agenda@example.invalid",
+          passwordHash: fixtureHash,
+          memberships: { create: { clinicId, role: "RECEPTIONIST" } },
+        },
+        include: { memberships: true },
+      });
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({
+          ...input,
+          professionalMembershipId: unqualified.memberships[0]!.id,
+        })
+        .expect(400);
+      const professionals = await request(app.getHttpServer())
+        .get(endpoint() + "/professionals")
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(professionals.body.map((p: { id: string }) => p.id)).not.toContain(
+        unqualified.memberships[0]!.id,
+      );
+      await prisma.user.update({
+        where: { id: userId },
+        data: { status: "SUSPENDED" },
+      });
+      await post(endpoint()).set("Cookie", cookie).send(input).expect(401);
+    });
+    it("restricts clinical states for reception, checks suspension and missing session", async () => {
+      const input = await fixture();
+      const a = await create(input);
+      await prisma.clinicMembership.update({
+        where: { userId_clinicId: { userId, clinicId } },
+        data: { role: "RECEPTIONIST" },
+      });
+      await patch(a.id)
+        .send({
+          ...input,
+          professionalMembershipId: null,
+          version: 1,
+          status: "IN_PROGRESS",
+        })
+        .expect(403);
+      await patch(a.id)
+        .send({
+          ...input,
+          professionalMembershipId: null,
+          version: 1,
+          status: "CONFIRMED",
+        })
+        .expect(200);
+      await prisma.clinicMembership.update({
+        where: { userId_clinicId: { userId, clinicId } },
+        data: { status: "SUSPENDED" },
+      });
+      await request(app.getHttpServer())
+        .get(endpoint() + range)
+        .set("Cookie", cookie)
+        .expect(403);
+      await request(app.getHttpServer())
+        .get(endpoint() + range)
+        .expect(401);
+    });
+    it("isolates listing, history and mutations even for a user in both clinics", async () => {
+      const input = await fixture();
+      const foreign = await fixture(otherClinicId);
+      const a = await create(input);
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({
+          ...input,
+          patientId: foreign.patientId,
+          tutorId: foreign.tutorId,
+        })
+        .expect(400);
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({
+          ...input,
+          professionalMembershipId: foreign.professionalMembershipId,
+        })
+        .expect(400);
+      const path = `/api/clinics/${otherClinicId}/appointments`;
+      await request(app.getHttpServer())
+        .get(path + range)
+        .set("Cookie", cookie)
+        .expect(403);
+      await prisma.clinicMembership.create({
+        data: { clinicId: otherClinicId, userId, role: "VETERINARIAN" },
+      });
+      const list = await request(app.getHttpServer())
+        .get(path + range)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(list.body.total).toBe(0);
+      await request(app.getHttpServer())
+        .get(`${path}/${a.id}/history`)
+        .set("Cookie", cookie)
+        .expect(404);
+      await request(app.getHttpServer())
+        .patch(`${path}/${a.id}`)
+        .set("Cookie", cookie)
+        .set("Origin", origin)
+        .set("X-Pawly-CSRF", "1")
+        .send({ ...foreign, version: 1, status: "CONFIRMED" })
+        .expect(404);
+      expect(await prisma.appointmentEvent.count()).toBe(1);
+    });
+    it("enforces composite foreign keys and bounds in PostgreSQL independently of API", async () => {
+      const input = await fixture(),
+        foreign = await fixture(otherClinicId);
+      const a = await create(input);
+      await expect(
+        prisma.appointment.update({
+          where: { id: a.id },
+          data: { patientId: foreign.patientId },
+        }),
+      ).rejects.toThrow();
+      await expect(
+        prisma.appointment.update({
+          where: { id: a.id },
+          data: { tutorId: foreign.tutorId },
+        }),
+      ).rejects.toThrow();
+      await expect(
+        prisma.appointment.update({
+          where: { id: a.id },
+          data: { professionalMembershipId: foreign.professionalMembershipId },
+        }),
+      ).rejects.toThrow();
+      await expect(
+        prisma.appointment.update({
+          where: { id: a.id },
+          data: { endsAt: new Date(input.startsAt) },
+        }),
+      ).rejects.toThrow();
+      await expect(
+        prisma.appointment.update({
+          where: { id: a.id },
+          data: { status: "CANCELLED" },
+        }),
+      ).rejects.toThrow();
+    });
+    it("filters by period, status and professional and keeps CSRF/no-store", async () => {
+      const input = await fixture();
+      await create(input);
+      const list = await request(app.getHttpServer())
+        .get(
+          endpoint() +
+            range +
+            `&status=SCHEDULED&professionalMembershipId=${input.professionalMembershipId}`,
+        )
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(list.body.total).toBe(1);
+      expect(list.headers["cache-control"]).toBe("no-store");
+      const empty = await request(app.getHttpServer())
+        .get(endpoint() + range + "&status=CANCELLED")
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(empty.body.total).toBe(0);
+      await request(app.getHttpServer())
+        .post(endpoint())
+        .set("Cookie", cookie)
+        .send(input)
+        .expect(403);
     });
   });
 

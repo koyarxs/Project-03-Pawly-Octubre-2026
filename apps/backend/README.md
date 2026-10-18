@@ -1,5 +1,7 @@
 # API de identidad y clínicas
 
+El backend también incluye tutores/pacientes y agenda. Contratos actuales: [gestión clínica](../../docs/clinical-records.md) y [agenda veterinaria](../../docs/appointments.md). Las notas históricas de autenticación de este documento conservan sus fechas de validación.
+
 Base local: `http://localhost:3001/api`. La landing no cambia. Para producción se recomienda publicar frontend y `/api` bajo el mismo origen mediante un reverse proxy HTTPS.
 
 ## Contrato HTTP
@@ -44,7 +46,7 @@ La limpieza elimina exclusivamente tablas y tipos conocidos, calificados con el 
 
 Validación local del 14 de octubre de 2026: Prisma generate/validate aprobados en la validación inicial; TypeScript, lint y build aprobados tras la corrección del parser; 5 suites y 31 pruebas unitarias aprobadas; 26 escenarios HTTP/PostgreSQL aprobados. Incluyen JSON malformado antes de los guards, ausencia de fragmentos de credenciales en respuestas y logs, no-store temprano, validación con nombres de propiedades hostiles, errores de tamaño/charset, nombres largos y especiales, una colisión real de slug con rollback y reintento, registro concurrente, controles de producción, cookies, sesiones, CSRF (también con rutas en mayúsculas), CORS, límites por IP y aislamiento de clínicas. La estructura y las huellas de datos de `public` permanecieron iguales y el esquema temporal se eliminó con `RESTRICT`. El escenario de concurrencia también se ejecutó por separado en la validación inicial, sin necesitar los anteriores.
 
-Pendiente para uso comercial: verificación y recuperación de correo/contraseña, límites distribuidos, revisión operacional de dependencias, auditoría, backups y política de conservación. Las interfaces de login/registro y dashboard todavía no están implementadas.
+Pendiente para uso comercial: verificación y recuperación de correo/contraseña, límites distribuidos, revisión operacional de dependencias, auditoría global, backups y política de conservación. Login, registro, dashboard, tutores, pacientes y agenda tienen interfaces conectadas a la API.
 
 ## Auditoría de dependencias — 14 de octubre de 2026
 
