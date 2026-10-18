@@ -293,7 +293,6 @@ test("dashboard responsive, menú accesible y módulos claramente pendientes", a
   await expect(page.getByRole("dialog")).toBeVisible();
   const nav = page.getByRole("dialog").getByRole("navigation");
   for (const name of [
-    "Agenda",
     "Consultas",
     "Vacunación",
     "Inventario",

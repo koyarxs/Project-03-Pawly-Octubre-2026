@@ -71,15 +71,15 @@ function Navigation({
         Dashboard
       </Link>
       {modules.map(([name, Icon]) =>
-        name === "Tutores" || name === "Pacientes" ? (
+        name === "Tutores" || name === "Pacientes" || name === "Agenda" ? (
           <Link
             key={name}
             href={workspacePath(
               clinicId,
-              name === "Tutores" ? "tutores" : "pacientes",
+              name === "Agenda" ? "agenda" : name === "Tutores" ? "tutores" : "pacientes",
             )}
             aria-current={
-              section === (name === "Tutores" ? "tutores" : "pacientes")
+              section === (name === "Agenda" ? "agenda" : name === "Tutores" ? "tutores" : "pacientes")
                 ? "page"
                 : undefined
             }

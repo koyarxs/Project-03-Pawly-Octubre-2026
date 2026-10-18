@@ -1,23 +1,23 @@
 ﻿# Pawly
 
-Plataforma de gestión veterinaria en desarrollo para clínicas y profesionales en Chile. Incluye una landing pública y la infraestructura inicial del futuro sistema privado.
+Plataforma de gestión veterinaria en desarrollo para clínicas y profesionales en Chile. Incluye landing pública, autenticación, workspace multi-clínica, tutores, pacientes y agenda veterinaria.
 
-## Estado y porcentaje de avance
+## Estado actual
 
-Actualizado: 11 de octubre de 2026.
+Actualizado: 18 de octubre de 2026.
 
-**Avance estimado del producto inicial: 30 %.** Es una estimación de planificación, no una medición de funcionalidades entregadas. Se calcula con seis áreas de igual peso: landing (90 %), infraestructura local (90 %), acceso y permisos (0 %), pacientes y tutores (0 %), agenda y fichas (0 %) e inventario (0 %). Debe revisarse al definir los requisitos del sistema privado.
+El estado se describe por funcionalidades verificables, sin porcentajes de avance. Contratos y pruebas: [gestión clínica](docs/clinical-records.md) y [agenda](docs/appointments.md).
 
 | Área | Implementado | Pendiente |
 | --- | --- | --- |
 | Landing | Identidad Pawly, navegación responsive, carrusel automático de 15 fotos, notebook conceptual, recorrido visual de atención, funcionalidades, soluciones, oferta comercial provisional, FAQ y contacto | Revisión final, dominio y recepción real de solicitudes |
-| Demostración | Dashboard, agenda, pacientes y ficha clínica con datos ficticios | Funcionalidades reales y conexión a la API |
-| Frontend | Componentes reutilizables, responsive, accesibilidad básica, movimiento reducido, metadatos y vista previa social | Sistema privado y revisión adicional de accesibilidad |
-| Backend | NestJS, configuración validada, CORS, ValidationPipe, puerto 3001 y GET /api/health | Autenticación, permisos y módulos de negocio |
-| Persistencia | PostgreSQL 17 Alpine en Compose, volumen persistente, healthcheck, esquema inicial y PrismaService | Modelos de negocio, migraciones revisadas y respaldos |
-| Calidad | TypeScript, ESLint, build, prueba unitaria de salud y suite Playwright | CI/CD, despliegue y pruebas de funcionalidades futuras |
+| Demostración pública | Vistas promocionales con datos ficticios, separadas del sistema privado | Revisión de contenido comercial |
+| Frontend | Landing, autenticación, workspace, tutores, pacientes y agenda diaria/semanal | Consultas, vacunación, inventario, reportes y suscripciones |
+| Backend | NestJS modular, sesiones, autorización por clínica/rol, gestión clínica y agenda con historial | Correo verificado, recuperación de contraseña y módulos restantes |
+| Persistencia | PostgreSQL 17, Prisma, migraciones versionadas y FK multi-clínica | Respaldos y operación de producción |
+| Calidad | TypeScript, ESLint, builds, unitarias, integración PostgreSQL y Playwright | CI/CD, despliegue y cobertura de módulos futuros |
 
-El inicio de sesión es informativo. El formulario **descarga una solicitud local y no la envía**. Las vistas del producto son demostraciones conceptuales; no representan módulos operativos, clientes existentes ni precios aprobados.
+El acceso privado usa datos de la API real. El formulario público de demo **descarga una solicitud local y no la envía**. Las vistas promocionales del producto son demostraciones conceptuales; no representan clientes existentes ni precios aprobados.
 
 ## Tecnologías
 
@@ -28,7 +28,7 @@ El inicio de sesión es informativo. El formulario **descarga una solicitud loca
 | Iconos y animación | Lucide React 1.55.0 y Motion 14.1.0 |
 | Backend | NestJS 11.2.7, TypeScript estricto, Express, ConfigModule, Joi, class-validator y class-transformer |
 | Persistencia | PostgreSQL 17 Alpine y Prisma / Prisma Client 6.19.3 |
-| Entorno | Node.js, npm, Docker y Docker Compose; se recomienda Node.js 22 LTS como entorno común |
+| Entorno | Node.js 24, npm, Docker y Docker Compose; las pruebas unitarias frontend utilizan transformación TypeScript de Node 24 |
 | Verificación | ESLint 9, Jest, Supertest y Playwright |
 
 Cada aplicación tiene su propio package.json y package-lock.json.
@@ -38,14 +38,18 @@ Cada aplicación tiene su propio package.json y package-lock.json.
 ```text
 apps/
   frontend/            Frontend Next.js y landing
-    src/app/           Página pública, estilos y acceso informativo
+    src/app/           Landing, autenticación y rutas privadas por clínica
     src/components/    Header, carrusel, demos y formulario
     public/images/     Fotografías y registro de licencias
     tests/             Pruebas Playwright
   backend/             Backend NestJS
-    src/health/        Endpoint de salud
+    src/health/        Salud del servidor y disponibilidad de PostgreSQL
+    src/auth/          Registro y autenticación
+    src/authorization/ Permisos y aislamiento por membresía
+    src/clinical/      Tutores y pacientes
+    src/appointments/  Citas, conflictos e historial
     src/prisma/        Servicio y módulo de conexión
-    prisma/            Esquema inicial sin modelos de negocio
+    prisma/            Modelos y migraciones versionadas
 docker-compose.yml     PostgreSQL local
 .env.example           Plantilla de entorno para PostgreSQL
 ```
@@ -82,7 +86,7 @@ npm run dev
 
 Frontend: http://localhost:3000. Backend: http://localhost:3001/api/health. Configurar `NEXT_PUBLIC_API_URL=http://localhost:3001/api` y CORS_ORIGINS con el origen de la web. Si 3000 está ocupado, elegir otro puerto y actualizar CORS. En PowerShell usar npm.cmd si la política local bloquea npm.ps1.
 
-El esquema Prisma no contiene modelos de negocio. No ejecutar migraciones ni db push para esta base inicial. El backend inicia sin exigir una conexión inmediata a PostgreSQL. `GET /api/health` comprueba que el servidor responde; `GET /api/health/ready` consulta PostgreSQL y devuelve 503 con instrucciones cuando no está disponible. Las operaciones con datos requieren la base conectada. `npm ci` genera automáticamente Prisma Client.
+Antes del primer uso, desde `apps/backend`, comprobar `npx.cmd --no-install prisma migrate status`. Las migraciones existentes se aplican con `npx.cmd --no-install prisma migrate deploy`, previa revisión y autorización si la base contiene datos. No utilizar reset ni db push. `GET /api/health` comprueba el servidor; `GET /api/health/ready` consulta PostgreSQL. Las operaciones con datos requieren las migraciones aplicadas. `npm ci` genera automáticamente Prisma Client.
 
 Configurar `SITE_URL` en `apps/frontend/.env.local` con el dominio público al desplegar; en desarrollo usa `http://localhost:3000` para las imágenes sociales. El prefijo HTTP `/api` y `NEXT_PUBLIC_API_URL` se conservan porque identifican la interfaz HTTP, no las carpetas de las aplicaciones.
 
@@ -111,12 +115,11 @@ Verificación del 14 de octubre de 2026: frontend con TypeScript, ESLint, build 
 
 ## Próximos pasos
 
-1. Terminar revisión visual y contenido, configurar dominio y recepción real de contacto.
-2. Definir alcance del sistema privado, roles y separación de datos entre clínicas.
-3. Implementar autenticación y permisos con pruebas de seguridad.
-4. Incorporar pacientes y tutores; después agenda e historia clínica.
-5. Añadir inventario con modelos y migraciones revisadas, preservando datos.
-6. Preparar CI/CD, despliegue, observabilidad y respaldos antes de uso comercial.
+1. Verificación de correo y recuperación de contraseña; el registro público permanece bloqueado en producción.
+2. Consultas e historia de atenciones, vacunación e inventario.
+3. Gestión de integrantes y disponibilidad laboral de profesionales.
+4. Reportes, facturación y suscripciones.
+5. Recepción real de contacto, CI/CD, despliegue, observabilidad y respaldos antes del uso comercial.
 
 ## Recursos y seguridad
 

@@ -62,7 +62,7 @@ export function VeterinaryDashboard({ clinicId }: { clinicId: string }) {
                 [
                   "Agenda",
                   CalendarDays,
-                  "Las citas estarán disponibles con el módulo de agenda.",
+                  "Organiza las citas y la disponibilidad de tu equipo.",
                 ],
                 [
                   "Consultas",
@@ -78,7 +78,7 @@ export function VeterinaryDashboard({ clinicId }: { clinicId: string }) {
                       <IndicatorIcon size={20} aria-hidden="true" />
                     </div>
                     <strong>
-                      {name === "Pacientes" ? "Disponible" : "No disponible"}
+                      {name !== "Consultas" ? "Disponible" : "No disponible"}
                     </strong>
                     <p>{String(description)}</p>
                     {name === "Pacientes" && (
@@ -87,6 +87,14 @@ export function VeterinaryDashboard({ clinicId }: { clinicId: string }) {
                         href={workspacePath(clinicId, "pacientes")}
                       >
                         Ver pacientes <ArrowRight size={15} />
+                      </Link>
+                    )}
+                    {name === "Agenda" && (
+                      <Link
+                        className="dashboard-refresh"
+                        href={workspacePath(clinicId, "agenda")}
+                      >
+                        Abrir agenda <ArrowRight size={15} />
                       </Link>
                     )}
                   </article>
@@ -104,12 +112,17 @@ export function VeterinaryDashboard({ clinicId }: { clinicId: string }) {
                 </div>
                 <div className="dashboard-empty">
                   <CalendarDays size={30} aria-hidden="true" />
-                  <h3>La agenda está por llegar.</h3>
+                  <h3>Planifica las próximas atenciones.</h3>
                   <p>
-                    Aquí podrás organizar las citas de tu clínica cuando el
-                    módulo esté disponible.
+                    Consulta el día o la semana y coordina las citas de tu
+                    clínica.
                   </p>
-                  <span className="dashboard-soon">Próximo desarrollo</span>
+                  <Link
+                    className="dashboard-available"
+                    href={workspacePath(clinicId, "agenda")}
+                  >
+                    Ver agenda
+                  </Link>
                 </div>
               </section>
               <section
@@ -131,8 +144,8 @@ export function VeterinaryDashboard({ clinicId }: { clinicId: string }) {
                       "La base para conocer a cada familia.",
                     ],
                     [
-                      "Agenda y consultas",
-                      "Organiza el día y el seguimiento clínico.",
+                      "Consultas clínicas",
+                      "Registra la atención y el seguimiento clínico.",
                     ],
                   ].map(([name, description]) => (
                     <div key={name}>
