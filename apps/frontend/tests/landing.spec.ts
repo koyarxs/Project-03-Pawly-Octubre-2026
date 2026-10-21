@@ -1,337 +1,355 @@
-import { expect, test } from "@playwright/test";
+﻿import { expect, test } from "@playwright/test";
 
-test("el carrusel recorre 15 fotos distintas sin contador visible", async ({
+test("la landing presenta el producto actual con metadatos y destinos válidos", async ({
   page,
-}, testInfo) => {
-  test.setTimeout(90_000);
+}) => {
   await page.goto("/");
-  const carousel = page.getByRole("region", { name: "La propuesta de Pawly" });
-  await carousel.getByRole("button", { name: /Pausar rotaci/ }).click();
-  await expect(carousel.locator(".carousel-controls")).toHaveCount(0);
-  const sources = new Set<string>();
-  for (let number = 1; number <= 15; number++) {
-    await expect(carousel.getByRole("status")).toHaveText(
-      `Imagen ${number} de 15`,
-    );
-    const picture = carousel.getByRole("img");
-    await expect
-      .poll(() =>
-        picture.evaluate(
-          (element) => (element as HTMLImageElement).naturalWidth,
-        ),
-      )
-      .toBeGreaterThan(0);
-    sources.add((await picture.getAttribute("src"))!);
-    await expect(carousel.locator(".carousel-photo-layer")).toHaveCount(1);
-    await carousel.locator(".animal-photo").screenshot({ path: `.next/qa/${testInfo.project.name}-face-${number}.png` });
-    if ([2, 7, 15].includes(number))
-      await carousel.screenshot({
-        path: `.next/qa/${testInfo.project.name}-slide-${number}.png`,
-      });
-    await carousel
-      .getByRole("button", { name: "Diapositiva siguiente" })
-      .click();
-  }
-  expect(sources.size).toBe(15);
-  await expect(carousel.getByRole("status")).toHaveText("Imagen 1 de 15");
-  await page.keyboard.press("ArrowLeft");
-  await expect(carousel.getByRole("status")).toHaveText("Imagen 15 de 15");
-  for (const width of [320, 390, 768, 1024, 1100, 1199, 1440]) {
-    await page.setViewportSize({ width, height: 1000 });
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth > window.innerWidth,
-      ),
-    ).toBe(false);
-  }
-});
-
-test("la rotacion automatica se puede pausar", async ({ page }) => {
-  test.setTimeout(60_000);
-  await page.goto("/");
-  const carousel = page.getByRole("region", { name: "La propuesta de Pawly" });
-  await expect(carousel.getByRole("status")).toHaveText("Imagen 1 de 15");
-  await carousel.hover({ position: { x: 10, y: 10 } });
-  await expect(carousel.getByRole("status")).toHaveText("Imagen 2 de 15", {
-    timeout: 12_000,
-  });
-  await carousel.getByRole("button", { name: "Diapositiva siguiente" }).click();
-  await expect(carousel.getByRole("status")).toHaveText("Imagen 3 de 15");
-  await expect(carousel.getByRole("status")).toHaveText("Imagen 4 de 15", {
-    timeout: 12_000,
-  });
-  await carousel.getByRole("button", { name: /Pausar rotaci/ }).click();
-  await expect(
-    carousel.getByRole("button", { name: /Activar rotaci/ }),
-  ).toBeVisible();
-  await page.clock.install();
-  await page.clock.runFor(15000);
-  await expect(carousel.getByRole("status")).toHaveText("Imagen 4 de 15");
-});
-
-test("header y hero conservan sus acciones y una composición contenida", async ({
-  page,
-}, testInfo) => {
-  await page.goto("/");
-  const hero = page.locator("#inicio");
-  await expect(
-    hero.locator(".animal-slide:not([hidden]) .hero-description"),
-  ).toHaveText(
-    "Organiza pacientes, citas e historiales clínicos en un solo lugar. Más claridad para tu equipo, más tiempo para cuidar.",
+  await expect(page).toHaveTitle(
+    "Pawly · Tu clínica conectada. Más tiempo para cuidar.",
   );
-  await expect(
-    hero.getByRole("link", { name: "Solicitar demostración" }),
-  ).toHaveAttribute("href", "#contacto");
-  await expect(
-    hero.getByRole("link", { name: "Explorar funcionalidades" }),
-  ).toHaveAttribute("href", "#funcionalidades");
-  await expect(hero.locator("figcaption")).toHaveCount(0);
-  await expect(hero.locator(".compact-disclaimer")).toContainText(
-    "Datos ficticios",
-  );
-  for (const width of [320, 390, 768, 1024, 1100, 1199, 1440]) {
-    await page.setViewportSize({ width, height: 1000 });
-    const bounds = await page.evaluate(() => {
-      const header = document
-        .querySelector(".header-inner")!
-        .getBoundingClientRect();
-      const mockup = document
-        .querySelector(".hero-interface")!
-        .getBoundingClientRect();
-      const next = document.querySelector("#desafios")!.getBoundingClientRect();
-      return {
-        headerHeight: header.height,
-        separate: mockup.bottom < next.top,
-      };
-    });
-    expect(bounds.headerHeight).toBeLessThanOrEqual(132);
-    await expect
-      .poll(() =>
-        page.evaluate(() => {
-          const visual = document
-            .querySelector("#inicio")!
-            .getBoundingClientRect();
-          const mockup = document
-            .querySelector(".hero-interface")!
-            .getBoundingClientRect();
-          return mockup.bottom <= visual.bottom + 1;
-        }),
-      )
-      .toBe(true);
-    expect(bounds.separate).toBe(true);
-    if (width === 1024)
-      await page.screenshot({
-        path: `.next/qa/${testInfo.project.name}-tablet-hero.png`,
-      });
-  }
-  await page.setViewportSize(testInfo.project.use.viewport!);
-  if (testInfo.project.name === "mobile")
-    await page.getByRole("button", { name: "Abrir menú" }).click();
-  await page
-    .locator(".site-header")
-    .getByRole("link", { name: "Solicitar demo", exact: true })
-    .click();
-  await expect(page).toHaveURL(/#contacto$/);
-});
-
-test("la landing tiene destinos reales, metadatos y no desborda", async ({
-  page,
-}, testInfo) => {
-  const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "Menos gestión.Más cuidado.",
+    /Más tiempo\s*para cuidar\./,
   );
-  await expect(page).toHaveTitle("Pawly · Menos gestión. Más cuidado.");
-  const missing = await page
+  await expect(page.locator("html")).toHaveAttribute("lang", "es");
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    "content",
+    /pacientes.*tutores.*agenda.*historia clínica/i,
+  );
+  await expect(page.locator('meta[property="og:locale"]')).toHaveAttribute(
+    "content",
+    "es_CL",
+  );
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+    "content",
+    "Pawly · Tu clínica conectada. Más tiempo para cuidar.",
+  );
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+    "content",
+    "summary_large_image",
+  );
+  const canonical = new URL(
+    (await page.locator('link[rel="canonical"]').getAttribute("href"))!,
+  );
+  expect(canonical.protocol).toMatch(/^https?:$/);
+  expect(canonical.pathname).toBe("/");
+  expect(canonical.search).toBe("");
+  expect(canonical.hash).toBe("");
+  for (const id of [
+    "inicio",
+    "plataforma",
+    "funcionalidades",
+    "como-funciona",
+    "nosotros",
+    "preguntas",
+    "comenzar",
+    "contenido",
+  ]) {
+    await expect(page.locator(`[id="${id}"]`)).toHaveCount(1);
+  }
+  const missingAnchors = await page
     .locator('a[href^="#"]')
     .evaluateAll((links) =>
       links
         .map((link) => link.getAttribute("href")!)
         .filter((href) => !document.getElementById(href.slice(1))),
     );
-  expect(missing).toEqual([]);
-  for (const width of [320, 390, 768, 1024, 1100, 1199, 1440]) {
-    await page.setViewportSize({ width, height: 1000 });
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth > window.innerWidth,
-    );
-    expect(
-      overflow,
-      `No debe existir desplazamiento horizontal a ${width}px`,
-    ).toBe(false);
+  expect(missingAnchors).toEqual([]);
+  await expect(
+    page
+      .locator("#inicio")
+      .getByRole("link", { name: "Registrar mi clínica", exact: true }),
+  ).toHaveAttribute("href", "/registrarse");
+  await expect(
+    page
+      .locator("#inicio")
+      .getByRole("link", { name: "Conocer Pawly", exact: true }),
+  ).toHaveAttribute("href", "#plataforma");
+  if (
+    await page
+      .getByRole("button", { name: "Abrir menú", exact: true })
+      .isVisible()
+  ) {
+    await page.getByRole("button", { name: "Abrir menú", exact: true }).click();
   }
-  await page.setViewportSize(testInfo.project.use.viewport!);
-  await page.screenshot({ path: `.next/qa/${testInfo.project.name}.png` });
-  await page.locator(".features-grid").screenshot({
-    path: `.next/qa/${testInfo.project.name}-features.png`,
-    style: ".site-header { visibility: hidden !important; }",
-  });
-  await page.locator(".contact-grid").screenshot({
-    path: `.next/qa/${testInfo.project.name}-contact.png`,
-    style: ".site-header { visibility: hidden !important; }",
-  });
-  for (const [selector, name] of [
-    [".product-introduction", "product-introduction"],
-    [".showcase-workspace", "demo"],
-    [".solutions-layout", "solutions"],
-  ]) {
-    await page.locator(selector).screenshot({
-      path: `.next/qa/${testInfo.project.name}-${name}.png`,
-      style: ".site-header { visibility: hidden !important; }",
-    });
-  }
-  expect(errors).toEqual([]);
+  await expect(
+    page
+      .getByRole("banner")
+      .getByRole("link", { name: "Crear cuenta", exact: true })
+      .first(),
+  ).toHaveAttribute("href", "/registrarse");
+  await expect(
+    page
+      .getByRole("banner")
+      .getByRole("link", { name: "Iniciar sesión", exact: true })
+      .first(),
+  ).toHaveAttribute("href", "/iniciar-sesion");
 });
 
-test("el menú móvil funciona con teclado y enlaces", async ({ page }) => {
+test("la composición se adapta sin desbordamientos y conserva sus acciones", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/");
+  for (const width of [320, 360, 390, 768, 1080, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await expect
+      .poll(
+        () =>
+          page.evaluate(
+            () => document.documentElement.scrollWidth <= window.innerWidth,
+          ),
+        {
+          message: `La página debe caber a ${width}px sin desplazamiento horizontal`,
+        },
+      )
+      .toBe(true);
+    await expect(
+      page
+        .locator("#inicio")
+        .getByRole("link", { name: "Registrar mi clínica", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.locator("#inicio").getByRole("heading", { level: 1 }),
+    ).toBeVisible();
+  }
+  await page.setViewportSize(testInfo.project.use.viewport!);
+  await page
+    .locator("#inicio")
+    .screenshot({ path: `.next/qa/${testInfo.project.name}-landing-hero.png` });
+  for (const id of ["plataforma", "funcionalidades", "nosotros", "comenzar"]) {
+    await page.locator(`#${id}`).screenshot({
+      path: `.next/qa/${testInfo.project.name}-landing-${id}.png`,
+    });
+  }
+});
+
+test("el menú móvil se cierra con Escape y al elegir un enlace", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  const trigger = page.getByRole("button", { name: "Abrir menú" });
-  await trigger.click();
+  const trigger = page.getByRole("button", { name: "Abrir menú", exact: true });
   const navigation = page.getByRole("navigation", { name: "Navegación móvil" });
+  await expect(navigation).toBeHidden();
+  await trigger.click();
+  await expect(
+    page.getByRole("button", { name: "Cerrar menú", exact: true }),
+  ).toHaveAttribute("aria-expanded", "true");
   await expect(navigation).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(navigation).toBeHidden();
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
   await expect(trigger).toBeFocused();
-  await trigger.click();
-  await navigation.getByRole("link", { name: "Funcionalidades" }).click();
+  await page.keyboard.press("Enter");
+  await navigation
+    .getByRole("link", { name: "Funcionalidades", exact: true })
+    .click();
   await expect(page).toHaveURL(/#funcionalidades$/);
   await expect(navigation).toBeHidden();
 });
 
-test("la demo y las preguntas responden sin simular datos reales", async ({
+test("el menú conserva navegación por Tab y se cierra al pasar a escritorio", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const navigation = page.getByRole("navigation", { name: "Navegación móvil" });
+  await page.getByRole("button", { name: "Abrir menú", exact: true }).click();
+  const signup = navigation.getByRole("link", {
+    name: "Crear cuenta",
+    exact: true,
+  });
+  await signup.focus();
+  await page.keyboard.press("Tab");
+  await expect(navigation).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "Abrir menú", exact: true }),
+  ).toHaveAttribute("aria-expanded", "false");
+  await page.getByRole("button", { name: "Abrir menú", exact: true }).click();
+  await page.setViewportSize({ width: 1080, height: 1000 });
+  await expect(navigation).toBeHidden();
+  await expect(
+    page.getByRole("navigation", { name: "Navegación principal" }),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    page.getByRole("button", { name: "Abrir menú", exact: true }),
+  ).toHaveAttribute("aria-expanded", "false");
+  await expect(navigation).toBeHidden();
+});
+
+test("las preguntas frecuentes se pueden abrir y cerrar con teclado", async ({
   page,
 }) => {
   await page.goto("/");
-  const demo = page.locator("#demostracion");
-  const tabs = demo.getByRole("tab");
-  await expect(tabs).toHaveCount(4);
-  const panel = demo.getByRole("tabpanel");
-  await expect(panel.getByRole("img")).toHaveAttribute(
-    "aria-label",
-    /Atenciones ficticias/,
+  const questions = page.locator("#preguntas details");
+  await expect(questions).toHaveCount(7);
+  const pricing = questions.filter({
+    has: page.locator("summary", { hasText: "¿Cuánto cuesta Pawly?" }),
+  });
+  await expect(pricing).not.toHaveAttribute("open", "");
+  await pricing.locator("summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(pricing).toHaveAttribute("open", "");
+  await expect(pricing.locator("p")).toBeVisible();
+  await expect(pricing).toContainText(
+    /preparación|definición|definir|precios/i,
   );
-  await demo.getByRole("tab", { name: "Pacientes", exact: true }).click();
-  await expect(
-    demo.getByRole("tab", { name: "Pacientes", exact: true }),
-  ).toHaveAttribute("aria-selected", "true");
-  await expect(panel.locator(".demo-patient-grid article")).toHaveCount(3);
-  await demo.getByRole("tab", { name: "Agenda", exact: true }).click();
-  await expect(
-    panel.getByRole("heading", { name: "14 de octubre" }),
-  ).toBeVisible();
-  await page.keyboard.press("End");
-  await expect(demo.getByRole("tab", { name: "Ficha clínica" })).toBeFocused();
-  await expect(
-    panel.getByRole("heading", { name: "Control preventivo" }),
-  ).toBeVisible();
-  await page.keyboard.press("Home");
-  await expect(demo.getByRole("tab", { name: "Dashboard" })).toBeFocused();
-  await page.keyboard.press("ArrowRight");
-  await expect(
-    demo.getByRole("tab", { name: "Agenda", exact: true }),
-  ).toHaveAttribute("aria-selected", "true");
-  const question = page
-    .locator("details")
-    .filter({ hasText: "¿Cuánto costará Pawly?" });
-  await question.locator("summary").click();
-  await expect(question).toHaveAttribute("open", "");
-  await expect(question.locator("p")).toBeVisible();
-  await question.locator("summary").click();
-  await expect(question).not.toHaveAttribute("open", "");
+  await page.keyboard.press("Space");
+  await expect(pricing).not.toHaveAttribute("open", "");
 });
 
-test("la solicitud valida y descarga, sin envío remoto", async ({ page }) => {
-  const submitted: string[] = [];
+test("los accesos llevan a formularios reales y permiten volver sin enviar datos", async ({
+  page,
+}) => {
+  const mutations: string[] = [];
   page.on("request", (request) => {
-    if (["POST", "PUT", "PATCH"].includes(request.method()))
-      submitted.push(request.url());
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method()))
+      mutations.push(request.url());
   });
-  await page.goto("/#contacto");
-  const submit = page.getByRole("button", {
-    name: "Descargar solicitud de demo",
-  });
-  await submit.click();
-  expect(
-    await page
-      .locator(".demo-form")
-      .evaluate((form) => (form as HTMLFormElement).checkValidity()),
-  ).toBe(false);
+  await page.goto("/");
   await page
-    .getByLabel("Nombre (requerido)", { exact: true })
-    .fill("Persona de prueba");
-  await page
-    .getByLabel("Correo (requerido)", { exact: true })
-    .fill("prueba@example.com");
-  await page
-    .getByLabel("Clínica o consulta (requerido)", { exact: true })
-    .fill("Clínica de prueba");
-  const downloadPromise = page.waitForEvent("download");
-  await submit.click();
-  const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe("solicitud-demo-pawly.txt");
+    .locator("#inicio")
+    .getByRole("link", { name: "Registrar mi clínica", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/registrarse$/);
   await expect(
-    page.getByRole("status").filter({ hasText: "Solicitud preparada" }),
+    page.getByRole("form", { name: "Registro de clínica" }),
   ).toBeVisible();
-  expect(submitted).toEqual([]);
+  await expect(
+    page.getByRole("button", { name: "Crear cuenta y clínica", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Volver a Pawly", exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  if (
+    await page
+      .getByRole("button", { name: "Abrir menú", exact: true })
+      .isVisible()
+  ) {
+    await page.getByRole("button", { name: "Abrir menú", exact: true }).click();
+    await page
+      .getByRole("navigation", { name: "Navegación móvil" })
+      .getByRole("link", { name: "Iniciar sesión", exact: true })
+      .click();
+  } else {
+    await page
+      .getByRole("banner")
+      .getByRole("link", { name: "Iniciar sesión", exact: true })
+      .click();
+  }
+  await expect(page).toHaveURL(/\/iniciar-sesion$/);
+  await expect(
+    page.getByRole("form", { name: "Inicio de sesión" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Qué bueno verte de nuevo.",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Volver a Pawly", exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  expect(mutations).toEqual([]);
 });
 
-test("el acceso tiene formulario y se respeta movimiento reducido", async ({
+test("el enlace de salto y el movimiento reducido permiten acceso directo al contenido", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
+  await page.keyboard.press("Tab");
+  const skip = page.getByRole("link", {
+    name: "Saltar al contenido",
+    exact: true,
+  });
+  await expect(skip).toBeFocused();
+  await expect(skip).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/#contenido$/);
   expect(
     await page.evaluate(
       () => getComputedStyle(document.documentElement).scrollBehavior,
     ),
   ).toBe("auto");
-  await page.keyboard.press("Tab");
-  await expect(
-    page.getByRole("link", { name: "Saltar al contenido" }),
-  ).toBeFocused();
-  await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/#contenido$/);
-  await page.goto("/iniciar-sesion");
-  await expect(
-    page.getByRole("heading", { name: "Qué bueno verte de nuevo." }),
-  ).toBeVisible();
-  await expect(page.locator("input")).toHaveCount(2);
-  await page.getByRole("link", { name: "Volver a Pawly" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect
+    .poll(() =>
+      page
+        .locator("main")
+        .evaluate(
+          (main) =>
+            main
+              .getAnimations({ subtree: true })
+              .filter((animation) => animation.playState === "running").length,
+        ),
+    )
+    .toBe(0);
 });
 
-test("fotografías locales optimizadas y vista previa social", async ({
+test("las fotografías y capturas son locales, optimizadas y se cargan sin errores", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  await page.goto("/");
+  await expect(page.locator("main img")).toHaveCount(5);
+  const allSources = new Set<string>();
+  for (const image of await page.locator("main").getByRole("img").all()) {
+    await image.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() =>
+        image.evaluate(
+          (element) =>
+            (element as HTMLImageElement).complete &&
+            (element as HTMLImageElement).naturalWidth > 0,
+        ),
+      )
+      .toBe(true);
+    expect((await image.getAttribute("alt"))?.trim()).toBeTruthy();
+    const source = await image.getAttribute("src");
+    expect(source).toMatch(/^\/_next\/image\?/);
+    const localSource = new URL(source!, page.url()).searchParams.get("url");
+    expect(localSource).toMatch(/^\/images\/.+\.webp$/);
+    allSources.add(localSource!);
+  }
+  await page
+    .getByRole("tab", { name: "Consulta e historia", exact: true })
+    .click();
+  const clinicalImage = page
+    .getByRole("tabpanel", { name: "Consulta e historia", exact: true })
+    .getByRole("img");
+  await clinicalImage.scrollIntoViewIfNeeded();
+  await expect
+    .poll(() =>
+      clinicalImage.evaluate(
+        (element) => (element as HTMLImageElement).naturalWidth,
+      ),
+    )
+    .toBeGreaterThan(0);
+  const clinicalSource = new URL(
+    (await clinicalImage.getAttribute("src"))!,
+    page.url(),
+  ).searchParams.get("url");
+  allSources.add(clinicalSource!);
+  expect(allSources.size).toBe(5);
+  expect(errors).toEqual([]);
+});
+
+test("la imagen social se publica y corresponde a una imagen válida", async ({
   page,
   request,
 }) => {
   await page.goto("/");
-  const photos = page.locator(
-    ".animal-slide:not([hidden]) .hero-photo img, .practice-photo img",
-  );
-  await expect(photos).toHaveCount(2);
-  const sources: string[] = [];
-  for (const photo of await photos.all()) {
-    await photo.scrollIntoViewIfNeeded();
-    await expect
-      .poll(() =>
-        photo.evaluate((element) => (element as HTMLImageElement).naturalWidth),
-      )
-      .toBeGreaterThan(0);
-    expect(await photo.getAttribute("alt")).toBeTruthy();
-    sources.push((await photo.getAttribute("src"))!);
-  }
-  expect(new Set(sources).size).toBe(2);
-  expect(sources.every((source) => source.startsWith("/_next/image"))).toBe(
-    true,
-  );
   const social = await page
     .locator('meta[property="og:image"]')
     .getAttribute("content");
   expect(social).toContain("opengraph-image");
-  const response = await request.get(new URL(social!, page.url()).pathname);
+  const socialUrl = new URL(social!, page.url());
+  const response = await request.get(
+    `${socialUrl.pathname}${socialUrl.search}`,
+  );
   expect(response.ok()).toBe(true);
   expect(response.headers()["content-type"]).toContain("image/png");
 });

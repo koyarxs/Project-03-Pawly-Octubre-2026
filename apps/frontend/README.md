@@ -1,5 +1,7 @@
 # 🐾 Pawly — Frontend
 
+Landing pública: diseño fotográfico responsive, funciones verificadas y capturas de la interfaz real con datos ilustrativos. Componentes, procedencia de recursos y verificaciones en [Landing pública](../../docs/landing.md).
+
 Agenda veterinaria: `/app/clinicas/:clinicId/agenda`, con vistas diaria/semanal, filtros, creación, reprogramación, estados, cancelación e historial. Contrato, zona horaria, permisos y pruebas en [Agenda](../../docs/appointments.md).
 
 Sprint 07: Tutores y Pacientes ya cuentan con listados, registro, fichas, edición y archivado autorizado. Rutas, contratos, permisos, relación multi-clínica y QA están en [Gestión clínica](../../docs/clinical-records.md). Las secciones de Sprint 06 conservan la descripción de su base inicial.

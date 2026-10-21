@@ -1,5 +1,6 @@
 {
   "retrievedOn": "2026-10-13",
+  "licenseVerifiedOn": "2026-10-19",
   "license": "Pexels License",
   "licenseUrl": "https://www.pexels.com/license/",
   "usage": "Photographs illustrate veterinary practice. Subjects are not represented as Pawly staff or customers.",
@@ -8,19 +9,19 @@
       "file": "landing-cat-care.webp",
       "author": "Gustavo Fring",
       "source": "https://www.pexels.com/photo/cat-at-the-veterinarian-6816859/",
-      "placement": "About Pawly: care at the center"
+      "placement": "Patient feature card: care at the center"
     },
     {
       "file": "landing-team-care.webp",
       "author": "Tima Miroshnichenko",
       "source": "https://www.pexels.com/photo/a-woman-bringing-her-pet-to-a-veterinarian-6234611/",
-      "placement": "Practice solutions"
+      "placement": "About Pawly: the people behind veterinary care"
     },
     {
       "file": "landing-clinical-care.webp",
       "author": "Tima Miroshnichenko",
       "source": "https://www.pexels.com/photo/a-veterinarian-sitting-beside-a-black-dog-lying-on-the-table-6234618/",
-      "placement": "Workflow and contact"
+      "placement": "Connected care workflow"
     }
   ]
 }
