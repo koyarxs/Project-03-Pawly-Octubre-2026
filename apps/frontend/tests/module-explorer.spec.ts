@@ -30,9 +30,11 @@ test("un sitio sin publicación muestra preparación y no un borrador privado", 
 }) => {
   await mockPublicWebsite(page, null);
   await page.goto("/");
-  await expect(page.getByRole("status")).toContainText(
-    "El sitio público está en preparación",
-  );
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "El sitio público está en preparación" }),
+  ).toContainText("El sitio público está en preparación");
   await expect(
     page.getByRole("link", { name: "Acceso del equipo" }),
   ).toBeVisible();

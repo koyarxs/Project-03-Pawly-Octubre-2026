@@ -34,6 +34,7 @@ export interface WebsiteContent {
   showAbout: boolean;
   showHours: boolean;
   services: { title: string; description: string }[];
+  testimonials?: { author: string; companion: string; quote: string }[];
 }
 export interface WebsiteState {
   clinicId: string;
@@ -72,6 +73,21 @@ export function isWebsiteContent(value: unknown): value is WebsiteContent {
   )
     return false;
   return (
+    (value.testimonials === undefined ||
+      (Array.isArray(value.testimonials) &&
+        value.testimonials.length <= 12 &&
+        value.testimonials.every(
+          (item) =>
+            record(item) &&
+            typeof item.author === "string" &&
+            item.author.trim().length > 0 &&
+            item.author.length <= 100 &&
+            typeof item.companion === "string" &&
+            item.companion.length <= 100 &&
+            typeof item.quote === "string" &&
+            item.quote.trim().length > 0 &&
+            item.quote.length <= 600,
+        ))) &&
     ["showServices", "showAbout", "showHours"].every(
       (key) => typeof value[key] === "boolean",
     ) &&

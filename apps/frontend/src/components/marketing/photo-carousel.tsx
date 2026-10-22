@@ -65,9 +65,11 @@ function getVisibleDocument() {
 export function PhotoCarousel({
   intervalMs = 6000,
   photoIds,
+  variant,
 }: {
   intervalMs?: number;
   photoIds?: readonly string[];
+  variant?: "cover";
 }) {
   const chosen = photoIds
     ?.map((id) => availablePhotographs.find((photo) => photo.id === id))
@@ -174,7 +176,7 @@ export function PhotoCarousel({
   return (
     <div
       ref={carousel}
-      className={styles.carousel}
+      className={`${styles.carousel}${variant === "cover" ? ` ${styles.cover}` : ""}`}
       role="region"
       aria-roledescription="carrusel"
       aria-label="Carrusel de cuidado veterinario"

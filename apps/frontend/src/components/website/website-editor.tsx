@@ -60,7 +60,7 @@ export function WebsiteEditor({ clinicId }: { clinicId: string }) {
 }
 
 type TextKey = {
-  [K in keyof WebsiteContent]: WebsiteContent[K] extends string ? K : never;
+  [K in keyof WebsiteContent]-?: WebsiteContent[K] extends string ? K : never;
 }[keyof WebsiteContent];
 function EditorContent({ context }: { context: WorkspaceContext }) {
   const { clinicId, endSession, refresh } = context;
@@ -551,10 +551,114 @@ function EditorContent({ context }: { context: WorkspaceContext }) {
             </section>
             <section
               className="website-editor-section"
-              aria-labelledby="website-contact-heading"
+              aria-labelledby="website-testimonials-heading"
             >
               <div className="website-section-heading">
                 <span>04</span>
+                <div>
+                  <h2 id="website-testimonials-heading">Testimonios reales</h2>
+                  <p>
+                    Añade únicamente opiniones auténticas que tengas permiso
+                    para publicar. No incluyas información clínica privada.
+                  </p>
+                </div>
+              </div>
+              {(values.testimonials ?? []).map((item, index) => (
+                <div className="website-service-editor" key={index}>
+                  <h3>Testimonio {index + 1}</h3>
+                  {(
+                    [
+                      ["author", "Nombre para mostrar", 100],
+                      ["companion", "Mascota o contexto", 100],
+                      ["quote", "Opinión del cliente", 600],
+                    ] as const
+                  ).map(([key, label, max]) => (
+                    <div className="website-field" key={key}>
+                      <label htmlFor={`website-testimonial-${index}-${key}`}>
+                        {label} {index + 1}
+                      </label>
+                      {key === "quote" ? (
+                        <textarea
+                          id={`website-testimonial-${index}-${key}`}
+                          rows={4}
+                          maxLength={max}
+                          required
+                          value={item[key]}
+                          onChange={(event) =>
+                            update(
+                              "testimonials",
+                              (values.testimonials ?? []).map((current, i) =>
+                                i === index
+                                  ? { ...current, [key]: event.target.value }
+                                  : current,
+                              ),
+                            )
+                          }
+                        />
+                      ) : (
+                        <input
+                          id={`website-testimonial-${index}-${key}`}
+                          maxLength={max}
+                          required={key === "author"}
+                          value={item[key]}
+                          onChange={(event) =>
+                            update(
+                              "testimonials",
+                              (values.testimonials ?? []).map((current, i) =>
+                                i === index
+                                  ? { ...current, [key]: event.target.value }
+                                  : current,
+                              ),
+                            )
+                          }
+                        />
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="website-remove"
+                    onClick={() =>
+                      update(
+                        "testimonials",
+                        (values.testimonials ?? []).filter(
+                          (_, i) => i !== index,
+                        ),
+                      )
+                    }
+                  >
+                    <Trash2 size={15} aria-hidden="true" />
+                    Quitar testimonio {index + 1}
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="website-secondary"
+                disabled={(values.testimonials?.length ?? 0) >= 12}
+                onClick={() =>
+                  update("testimonials", [
+                    ...(values.testimonials ?? []),
+                    { author: "", companion: "", quote: "" },
+                  ])
+                }
+              >
+                <Plus size={17} aria-hidden="true" />
+                Añadir testimonio
+              </button>
+              <p className="website-help">
+                Sin opiniones publicadas, se muestran ejemplos claramente
+                rotulados como ficticios. Al publicar testimonios reales, estos
+                reemplazan la demostración. No se generan puntuaciones
+                automáticas.
+              </p>
+            </section>
+            <section
+              className="website-editor-section"
+              aria-labelledby="website-contact-heading"
+            >
+              <div className="website-section-heading">
+                <span>05</span>
                 <div>
                   <h2 id="website-contact-heading">Contacto y horarios</h2>
                   <p>
@@ -573,7 +677,9 @@ function EditorContent({ context }: { context: WorkspaceContext }) {
                 type: "email",
                 hint: "Se mostrará en el sitio. No tiene que ser el correo privado de tu cuenta.",
               })}
-              {field("address", "Dirección de la veterinaria", 300)}
+              {field("address", "Dirección de la veterinaria", 300, {
+                hint: "Incluye calle, número, comuna y ciudad. El mapa usará exactamente esta dirección; se carga solo al elegir explorarlo.",
+              })}
               <label className="website-toggle">
                 <input
                   type="checkbox"
@@ -627,7 +733,7 @@ function EditorContent({ context }: { context: WorkspaceContext }) {
           <p>
             {published
               ? "Las personas ven la última versión que publicaste. Guardar un borrador no cambia el sitio público."
-              : "El contenido del borrador es privado. El sitio mostrará una página de preparación hasta que publiques."}
+              : "El borrador es privado. La portada muestra únicamente el diseño editorial de preparación, sin tus contactos ni servicios, hasta que publiques."}
           </p>
           {baseline.publishedAt && (
             <p className="website-published-time">

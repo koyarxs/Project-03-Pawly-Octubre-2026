@@ -12,7 +12,7 @@ El backend debe permitir el origen exacto en CORS. Mantener `localhost` en ambos
 
 | Ruta | Contenido |
 | --- | --- |
-| `/` | Solo contenido publicado, o pantalla de preparación |
+| `/` | Contenido publicado; sin publicación, diseño editorial con aviso de preparación |
 | `/iniciar-sesion` | Acceso del personal |
 | `/app` | Selector de clínicas autorizadas |
 | `/app/clinicas/:clinicId/dashboard` | Indicadores reales de API, con carga, errores y restricciones por rol |

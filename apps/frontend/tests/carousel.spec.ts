@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
-import { mockPublicWebsite } from "./support/website-fixtures";
+import {
+  mockPublicWebsite,
+  publicWebsiteFixture,
+} from "./support/website-fixtures";
 
 function careCarousel(page: Page) {
   return page.getByRole("region", {
@@ -10,6 +13,9 @@ function careCarousel(page: Page) {
 
 async function openLanding(page: Page) {
   await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    publicWebsiteFixture.heroTitle,
+  );
   const carousel = careCarousel(page);
   await carousel.scrollIntoViewIfNeeded();
   await expect(carousel).toBeVisible();
@@ -89,7 +95,7 @@ test("la reproducción automática respeta el intervalo, el hover y la pausa exp
   await page.clock.fastForward(6100);
   await showPhotograph(page, 2);
   await expect(carousel.getByRole("status")).toBeEmpty();
-  await carousel.hover({ position: { x: 20, y: 20 } });
+  await carousel.hover();
   await page.clock.fastForward(18000);
   await showPhotograph(page, 2);
   await page.mouse.move(0, 0);

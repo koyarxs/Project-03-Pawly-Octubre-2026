@@ -44,6 +44,20 @@ test("sitio real: borrador privado, vista previa, publicación, retirada y permi
       .getByLabel("Correo de contacto público", { exact: false })
       .fill("clinic@example.invalid");
     await page
+      .getByRole("button", { name: "Añadir testimonio", exact: true })
+      .click();
+    await page
+      .getByLabel("Nombre para mostrar 1", { exact: true })
+      .fill("Responsable ficticio QA");
+    await page
+      .getByLabel("Mascota o contexto 1", { exact: true })
+      .fill("Mascota ficticia QA");
+    await page
+      .getByLabel("Opinión del cliente 1", { exact: true })
+      .fill(
+        "Una opinión ficticia utilizada solo dentro del esquema de pruebas.",
+      );
+    await page
       .getByRole("button", { name: "Guardar borrador", exact: true })
       .click();
     await expect(
@@ -80,6 +94,12 @@ test("sitio real: borrador privado, vista previa, publicación, retirada y permi
       "clinic@example.invalid",
     );
     await expect(page).toHaveTitle("Veterinaria QA Publicada");
+    await expect(page.locator("#testimonios")).toContainText(
+      "Una opinión ficticia utilizada solo dentro del esquema de pruebas.",
+    );
+    await expect(page.locator("#testimonios")).not.toContainText(
+      "TESTIMONIOS FICTICIOS",
+    );
     await page.goto(editor);
     await page.getByRole("button", { name: "Retirar publicación" }).click();
     await page

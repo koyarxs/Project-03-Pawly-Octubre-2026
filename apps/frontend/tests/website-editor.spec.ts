@@ -151,6 +151,58 @@ test("guardar el borrador no publica, y publicar exige confirmación explícita"
     "Una portada nueva para Porvenir.",
   );
 });
+test("los testimonios se editan en privado y solo se muestran después de publicar", async ({
+  page,
+}) => {
+  const state = await mockEditor(page);
+  await page.goto(target);
+  await page
+    .getByRole("button", { name: "Añadir testimonio", exact: true })
+    .click();
+  await page
+    .getByLabel("Nombre para mostrar 1", { exact: true })
+    .fill("Responsable QA");
+  await page
+    .getByLabel("Mascota o contexto 1", { exact: true })
+    .fill("Mascota QA");
+  await page
+    .getByLabel("Opinión del cliente 1", { exact: true })
+    .fill("Contenido ficticio usado para probar el editor.");
+  await page.getByRole("button", { name: "Vista previa", exact: true }).click();
+  await expect(
+    page
+      .getByRole("dialog", { name: "Así se verá tu sitio" })
+      .locator("#testimonios"),
+  ).toContainText("Contenido ficticio usado para probar el editor.");
+  expect(state.published).toBeNull();
+  await page.keyboard.press("Escape");
+  await page
+    .getByRole("button", { name: "Guardar borrador", exact: true })
+    .click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Borrador guardado" }),
+  ).toBeVisible();
+  expect(state.published).toBeNull();
+  await page
+    .getByRole("button", { name: "Publicar sitio", exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "¿Publicar el contenido del sitio?" })
+    .getByRole("button", { name: "Confirmar publicación" })
+    .click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Contenido publicado correctamente" }),
+  ).toBeVisible();
+  await page.goto("/");
+  await expect(page.locator("#testimonios")).toContainText(
+    "Contenido ficticio usado para probar el editor.",
+  );
+  await expect(page.locator("#testimonios")).not.toContainText(
+    "TESTIMONIOS FICTICIOS",
+  );
+});
 test("la vista previa usa cambios sin guardar y restaura el foco sin publicar", async ({
   page,
 }) => {
@@ -187,7 +239,9 @@ test("un conflicto al guardar conserva los textos y no informa un éxito fictici
   await page
     .getByRole("button", { name: "Guardar borrador", exact: true })
     .click();
-  await expect(page.locator(".website-workspace").getByRole("alert")).toContainText("cambió en otra sesión");
+  await expect(
+    page.locator(".website-workspace").getByRole("alert"),
+  ).toContainText("cambió en otra sesión");
   await expect(input).toHaveValue("Mi borrador debe conservarse.");
   expect(state.published).toBeNull();
   await expect(

@@ -224,7 +224,8 @@
   margin-bottom: 22px;
   min-width: 0;
 }
-.website-service-editor legend {
+.website-service-editor legend,
+.website-service-editor h3 {
   padding-inline: 8px;
   font-size: 12px;
   font-weight: 600;

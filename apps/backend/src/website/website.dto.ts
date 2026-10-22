@@ -34,6 +34,11 @@ export class WebsiteServiceDto {
   @Text(100, true) title!: string;
   @Text(500, true) description!: string;
 }
+export class WebsiteTestimonialDto {
+  @Text(100, true) author!: string;
+  @Text(100) companion!: string;
+  @Text(600, true) quote!: string;
+}
 export class WebsiteContentDto {
   @Text(160, true) clinicName!: string;
   @Text(80, true) tagline!: string;
@@ -65,6 +70,12 @@ export class WebsiteContentDto {
   @ValidateNested({ each: true })
   @Type(() => WebsiteServiceDto)
   services!: WebsiteServiceDto[];
+  @ValidateIf((_dto, value: unknown) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(12)
+  @ValidateNested({ each: true })
+  @Type(() => WebsiteTestimonialDto)
+  testimonials?: WebsiteTestimonialDto[];
 }
 export class WebsiteVersionDto {
   @IsInt() @Min(0) @Max(2147483646) version!: number;
@@ -89,11 +100,15 @@ export function initialWebsiteContent(clinicName: string): WebsiteContentDto {
     phone: "",
     email: "",
     whatsapp: "",
-    address: "",
+    address:
+      clinicName === "Clínica Veterinaria Porvenir"
+        ? "C. Veinticinco 26, Valparaíso"
+        : "",
     hours: "",
     showServices: false,
     showAbout: false,
     showHours: false,
     services: [],
+    testimonials: [],
   };
 }

@@ -14,6 +14,78 @@
   outline: 3px solid #47845b;
   outline-offset: 5px;
 }
+.cover {
+  border: 0;
+  border-radius: 170px 170px 24px 24px;
+  background: #163f35;
+  box-shadow: 0 25px 60px #163f3512;
+}
+.cover .frame {
+  aspect-ratio: auto;
+  height: 500px;
+}
+.cover .slide {
+  position: absolute;
+  inset: 0;
+}
+.cover .photoCanvas {
+  position: absolute;
+  inset: 0;
+  aspect-ratio: auto;
+}
+.cover .caption {
+  position: absolute;
+  inset: auto 0 0;
+  background: linear-gradient(transparent, #10332cf5);
+  padding: 75px 28px 26px;
+  min-height: 0;
+}
+.cover .toolbar {
+  background: #163f35;
+  padding-inline: 22px;
+}
+.cover .toolbar button {
+  color: #edf0db;
+}
+.cover .toolbar button:hover {
+  background: #ffffff14;
+}
+.cover .toolbar button:disabled {
+  color: #b2c7ad;
+}
+.cover .indicator span {
+  background: #94ab8e;
+}
+.cover .indicator[aria-pressed="true"] span {
+  background: #f3e0bc;
+}
+@media (max-width: 1000px) {
+  .cover .frame {
+    height: 470px;
+  }
+  .cover {
+    border-radius: 130px 130px 22px 22px;
+  }
+}
+@media (max-width: 767px) {
+  .cover .frame {
+    height: 400px;
+  }
+  .cover .caption {
+    padding: 80px 22px 22px;
+  }
+  .cover .toolbar {
+    padding-inline: 12px;
+  }
+}
+@media (max-width: 359px) {
+  .cover .frame {
+    height: 340px;
+  }
+  .cover .toolbar {
+    padding-inline: 12px;
+  }
+}
 
 .frame {
   position: relative;

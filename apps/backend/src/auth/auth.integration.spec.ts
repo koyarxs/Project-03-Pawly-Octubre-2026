@@ -343,6 +343,50 @@ describe("authentication with isolated PostgreSQL", () => {
           .heroTitle,
       ).toBe("Borrador todavía privado");
     });
+    it("keeps legacy content compatible and publishes testimonials only with the saved draft", async () => {
+      const legacy = { ...content() };
+      delete legacy.testimonials;
+      await save(0, legacy).expect(200);
+      const testimonials = [
+        {
+          author: "Responsable ficticio QA",
+          companion: "Mascota QA",
+          quote: "Texto de ejemplo para una prueba aislada.",
+        },
+      ];
+      await save(1, { ...content(), testimonials }).expect(200);
+      expect(
+        (await request(app.getHttpServer()).get("/api/website")).body.content,
+      ).toBeNull();
+      await publish(2).expect(201);
+      expect(
+        (await request(app.getHttpServer()).get("/api/website")).body.content
+          .testimonials,
+      ).toEqual(testimonials);
+    });
+    it("rejects invalid and oversized testimonials without writing content", async () => {
+      for (const testimonials of [
+        null,
+        [{}],
+        [{ author: "", companion: "", quote: "Texto" }],
+        [{ author: "QA", companion: "", quote: "x".repeat(601) }],
+        [{ author: "QA", companion: "", quote: "Texto", role: "ADMIN" }],
+        Array.from({ length: 13 }, () => ({
+          author: "QA",
+          companion: "",
+          quote: "Texto",
+        })),
+      ]) {
+        await request(app.getHttpServer())
+          .patch(sitePath())
+          .set("Cookie", cookie)
+          .set("Origin", origin)
+          .set("X-Pawly-CSRF", "1")
+          .send({ version: 0, content: { ...content(), testimonials } })
+          .expect(400);
+      }
+      expect(await prisma.veterinaryWebsite.count()).toBe(0);
+    });
     it("rejects missing content, unknown nested fields, unsafe links and invalid versions", async () => {
       for (const invalid of [
         { version: 0 },
