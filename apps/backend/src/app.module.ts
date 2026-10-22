@@ -9,6 +9,7 @@ import { HttpSecurityModule } from "./http/http-security.module";
 import { ClinicalModule } from "./clinical/clinical.module";
 import { AppointmentsModule } from "./appointments/appointments.module";
 import { ConsultationsModule } from "./consultations/consultations.module";
+import { WebsiteModule } from "./website/website.module";
 
 @Module({
   imports: [
@@ -24,6 +25,8 @@ import { ConsultationsModule } from "./consultations/consultations.module";
           .max(604800)
           .default(28800),
         PORT: Joi.number().port().default(3001),
+        WEBSITE_CLINIC_ID: Joi.string().guid({ version: "uuidv4" }).optional(),
+        WEBSITE_PUBLIC_NAME: Joi.string().max(160).optional(),
         CORS_ORIGINS: Joi.string()
           .default("http://localhost:3000,http://127.0.0.1:3000")
           .custom((value: string, helpers) => {
@@ -59,6 +62,7 @@ import { ConsultationsModule } from "./consultations/consultations.module";
     ClinicalModule,
     AppointmentsModule,
     ConsultationsModule,
+    WebsiteModule,
   ],
 })
 export class AppModule {}

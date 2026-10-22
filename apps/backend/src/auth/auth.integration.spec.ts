@@ -11,6 +11,7 @@ import * as argon2 from "argon2";
 import { configureHttp } from "../http/configure-http";
 import { ClinicAuthorizationService } from "../authorization/authorization.module";
 import { PrismaService } from "../prisma/prisma.service";
+import { initialWebsiteContent } from "../website/website.dto";
 
 // Capture structure and row fingerprints without printing credentials or real rows.
 async function publicSnapshot(client: PrismaClient) {
@@ -68,6 +69,8 @@ describe("authentication with isolated PostgreSQL", () => {
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
     CORS_ORIGINS: process.env.CORS_ORIGINS,
+    WEBSITE_CLINIC_ID: process.env.WEBSITE_CLINIC_ID,
+    WEBSITE_PUBLIC_NAME: process.env.WEBSITE_PUBLIC_NAME,
   };
   let cookie: string;
   let userId: string;
@@ -163,7 +166,7 @@ describe("authentication with isolated PostgreSQL", () => {
         // RESTRICT blocks external dependencies; never cascade into another schema.
         await assertTestConnection();
         await control.$executeRawUnsafe(
-          `DROP TABLE IF EXISTS "${schema}"."ConsultationEvent", "${schema}"."ConsultationAmendment", "${schema}"."Consultation", "${schema}"."AppointmentEvent", "${schema}"."Appointment", "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership",
+          `DROP TABLE IF EXISTS "${schema}"."VeterinaryWebsite", "${schema}"."ConsultationEvent", "${schema}"."ConsultationAmendment", "${schema}"."Consultation", "${schema}"."AppointmentEvent", "${schema}"."Appointment", "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership",
            "${schema}"."User", "${schema}"."VeterinaryClinic",
            "${schema}"."_prisma_migrations" RESTRICT`,
         );
@@ -215,6 +218,7 @@ describe("authentication with isolated PostgreSQL", () => {
       `TRUNCATE TABLE "${schema}"."ConsultationEvent", "${schema}"."ConsultationAmendment", "${schema}"."Consultation" RESTRICT`,
     );
     await prisma.$transaction([
+      prisma.veterinaryWebsite.deleteMany(),
       prisma.appointmentEvent.deleteMany(),
       prisma.appointment.deleteMany(),
       prisma.patientTutor.deleteMany(),
@@ -247,6 +251,7 @@ describe("authentication with isolated PostgreSQL", () => {
     });
     userId = owner.id;
     clinicId = owner.memberships[0]!.clinicId;
+    app.get(ConfigService).set("WEBSITE_CLINIC_ID", clinicId);
     const other = await prisma.user.create({
       data: {
         name: "Other owner",
@@ -275,6 +280,244 @@ describe("authentication with isolated PostgreSQL", () => {
     cookie = String(login.get("set-cookie")?.[0]).split(";")[0]!;
     // Every scenario has fresh fixtures and independent counters, with limits enabled.
     app.get<ThrottlerStorageService>(ThrottlerStorage).onApplicationShutdown();
+  });
+
+  describe("single-clinic public website administration", () => {
+    const content = () => ({
+      ...initialWebsiteContent("Clínica Veterinaria Porvenir"),
+      heroDescription: "Contenido ficticio para verificar el editor.",
+      email: "contact@example.invalid",
+      showServices: true,
+      services: [
+        {
+          title: "Servicio de ejemplo",
+          description:
+            "Prestación ficticia usada solamente en pruebas aisladas.",
+        },
+      ],
+    });
+    const sitePath = () => `/api/clinics/${clinicId}/website`;
+    const save = (version = 0, draft = content()) =>
+      request(app.getHttpServer())
+        .patch(sitePath())
+        .set("Cookie", cookie)
+        .set("Origin", origin)
+        .set("X-Pawly-CSRF", "1")
+        .send({ version, content: draft });
+    const publish = (version: number) =>
+      post(`${sitePath()}/publish`).set("Cookie", cookie).send({ version });
+    it("keeps drafts private and publishes only an explicitly confirmed version", async () => {
+      const initial = await request(app.getHttpServer())
+        .get(sitePath())
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(initial.body.version).toBe(0);
+      expect(await prisma.veterinaryWebsite.count()).toBe(0);
+      const saved = await save().expect(200);
+      expect(saved.body.version).toBe(1);
+      const hidden = await request(app.getHttpServer())
+        .get("/api/website")
+        .expect(200);
+      expect(hidden.body).toEqual({ content: null, publishedAt: null });
+      await publish(1).expect(201);
+      const visible = await request(app.getHttpServer())
+        .get("/api/website")
+        .expect(200);
+      expect(visible.body.content).toEqual(content());
+      expect(Object.keys(visible.body).sort()).toEqual([
+        "content",
+        "publishedAt",
+      ]);
+      expect(visible.headers["cache-control"]).toBe("no-store");
+      await save(2, {
+        ...content(),
+        heroTitle: "Borrador todavía privado",
+      }).expect(200);
+      expect(
+        (await request(app.getHttpServer()).get("/api/website")).body.content
+          .heroTitle,
+      ).toBe(content().heroTitle);
+      await publish(3).expect(201);
+      expect(
+        (await request(app.getHttpServer()).get("/api/website")).body.content
+          .heroTitle,
+      ).toBe("Borrador todavía privado");
+    });
+    it("rejects missing content, unknown nested fields, unsafe links and invalid versions", async () => {
+      for (const invalid of [
+        { version: 0 },
+        { version: "0", content: content() },
+        { version: 0, content: { ...content(), clinicId: otherClinicId } },
+        {
+          version: 0,
+          content: {
+            ...content(),
+            heroPhotos: ["https://untrusted.invalid/image.svg"],
+          },
+        },
+        {
+          version: 0,
+          content: { ...content(), whatsapp: "javascript:alert(1)" },
+        },
+        {
+          version: 0,
+          content: { ...content(), heroDescription: "x".repeat(601) },
+        },
+        {
+          version: 0,
+          content: {
+            ...content(),
+            services: [
+              { title: "Servicio", description: "Texto", role: "ADMIN" },
+            ],
+          },
+        },
+      ])
+        await request(app.getHttpServer())
+          .patch(sitePath())
+          .set("Cookie", cookie)
+          .set("Origin", origin)
+          .set("X-Pawly-CSRF", "1")
+          .send(invalid)
+          .expect(400);
+      expect(await prisma.veterinaryWebsite.count()).toBe(0);
+    });
+    it("requires a real contact and complete enabled sections before publishing", async () => {
+      const incomplete = {
+        ...content(),
+        email: "",
+        showServices: true,
+        services: [],
+      };
+      await save(0, incomplete).expect(200);
+      await publish(1).expect(400);
+      await save(1, { ...content(), showAbout: true, aboutText: "" }).expect(
+        200,
+      );
+      await publish(2).expect(400);
+      await save(2, { ...content(), showHours: true, hours: "" }).expect(200);
+      await publish(3).expect(400);
+      expect(
+        (await request(app.getHttpServer()).get("/api/website")).body.content,
+      ).toBeNull();
+    });
+    it("protects stale saves and concurrent updates without overwriting another editor", async () => {
+      await save().expect(200);
+      const results = await Promise.all([
+        save(1, { ...content(), heroTitle: "Versión A" }),
+        save(1, { ...content(), heroTitle: "Versión B" }),
+      ]);
+      expect(results.map((result) => result.status).sort()).toEqual([200, 409]);
+      await save(1).expect(409);
+      await publish(1).expect(409);
+      const row = await prisma.veterinaryWebsite.findUniqueOrThrow({
+        where: { id: "main" },
+      });
+      expect(row.version).toBe(2);
+      expect(row.published).toBeNull();
+    });
+    it("allows only owner and administration to edit or publish", async () => {
+      await save().expect(200);
+      for (const role of ["VETERINARIAN", "RECEPTIONIST"] as const) {
+        await prisma.clinicMembership.update({
+          where: { userId_clinicId: { userId, clinicId } },
+          data: { role },
+        });
+        await request(app.getHttpServer())
+          .get(sitePath())
+          .set("Cookie", cookie)
+          .expect(403);
+        await save(1).expect(403);
+        await publish(1).expect(403);
+      }
+      await prisma.clinicMembership.update({
+        where: { userId_clinicId: { userId, clinicId } },
+        data: { role: "ADMIN" },
+      });
+      await save(1).expect(200);
+      await publish(2).expect(201);
+    });
+    it("cannot control the configured site through a different authorized clinic", async () => {
+      await prisma.clinicMembership.create({
+        data: { userId, clinicId: otherClinicId, role: "OWNER" },
+      });
+      const foreign = `/api/clinics/${otherClinicId}/website`;
+      await request(app.getHttpServer())
+        .get(foreign)
+        .set("Cookie", cookie)
+        .expect(403);
+      await request(app.getHttpServer())
+        .patch(foreign)
+        .set("Cookie", cookie)
+        .set("Origin", origin)
+        .set("X-Pawly-CSRF", "1")
+        .send({ version: 0, content: content() })
+        .expect(403);
+      await save().expect(200);
+      const otherMember = await prisma.clinicMembership.findUniqueOrThrow({
+        where: { userId_clinicId: { userId, clinicId: otherClinicId } },
+      });
+      await expect(
+        prisma.veterinaryWebsite.update({
+          where: { id: "main" },
+          data: { updatedByMembershipId: otherMember.id },
+        }),
+      ).rejects.toMatchObject({ code: "P2003" });
+    });
+    it("withdraws publication while preserving the draft and clinical records", async () => {
+      await save().expect(200);
+      await publish(1).expect(201);
+      await post(`${sitePath()}/unpublish`)
+        .set("Cookie", cookie)
+        .send({ version: 2 })
+        .expect(201);
+      const result = await request(app.getHttpServer())
+        .get("/api/website")
+        .expect(200);
+      expect(result.body).toEqual({ content: null, publishedAt: null });
+      const saved = await request(app.getHttpServer())
+        .get(sitePath())
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(saved.body.content).toEqual(content());
+      expect(saved.body.version).toBe(3);
+      expect(await prisma.veterinaryClinic.count()).toBe(2);
+    });
+    it("removes public content when the clinic is suspended and fails closed without binding", async () => {
+      await save().expect(200);
+      await publish(1).expect(201);
+      await prisma.veterinaryClinic.update({
+        where: { id: clinicId },
+        data: { status: "SUSPENDED" },
+      });
+      expect(
+        (await request(app.getHttpServer()).get("/api/website")).body.content,
+      ).toBeNull();
+      await request(app.getHttpServer())
+        .get(sitePath())
+        .set("Cookie", cookie)
+        .expect(403);
+      app.get(ConfigService).set("WEBSITE_CLINIC_ID", undefined);
+      expect(
+        (await request(app.getHttpServer()).get("/api/website")).body.content,
+      ).toBeNull();
+    });
+    it("requires a session and preserves origin and CSRF protections on writes", async () => {
+      await request(app.getHttpServer()).get(sitePath()).expect(401);
+      await request(app.getHttpServer())
+        .patch(sitePath())
+        .set("Cookie", cookie)
+        .send({ version: 0, content: content() })
+        .expect(403);
+      await request(app.getHttpServer())
+        .patch(sitePath())
+        .set("Cookie", cookie)
+        .set("Origin", "https://untrusted.invalid")
+        .set("X-Pawly-CSRF", "1")
+        .send({ version: 0, content: content() })
+        .expect(403);
+      expect(await prisma.veterinaryWebsite.count()).toBe(0);
+    });
   });
 
   it("rejects unauthenticated requests and invalid input, including arbitrary roles", async () => {

@@ -58,6 +58,7 @@ model VeterinaryClinic {
   patients      Patient[]
   appointments  Appointment[]
   consultations Consultation[]
+  website       VeterinaryWebsite?
 }
 
 model ClinicMembership {
@@ -77,10 +78,29 @@ model ClinicMembership {
   finalizedConsultations Consultation[]          @relation("ConsultationFinalizer")
   consultationEvents     ConsultationEvent[]
   consultationAmendments ConsultationAmendment[]
+  websiteEdits           VeterinaryWebsite[]     @relation("WebsiteEditor")
+  websitePublications    VeterinaryWebsite[]     @relation("WebsitePublisher")
 
   @@unique([userId, clinicId])
   @@unique([id, clinicId])
   @@index([clinicId, status, role])
+}
+
+// One explicitly configured clinic controls the deployment's public website.
+// Drafts and published content are independent; clinical data is never public.
+model VeterinaryWebsite {
+  id                      String            @id @default("main") @db.VarChar(32)
+  clinicId                String            @unique @db.Uuid
+  draft                   Json              @db.JsonB
+  published               Json?             @db.JsonB
+  version                 Int               @default(1)
+  publishedAt             DateTime?         @db.Timestamptz(3)
+  updatedAt               DateTime          @updatedAt @db.Timestamptz(3)
+  updatedByMembershipId   String            @db.Uuid
+  publishedByMembershipId String?           @db.Uuid
+  clinic                  VeterinaryClinic  @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  editor                  ClinicMembership  @relation("WebsiteEditor", fields: [updatedByMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  publisher               ClinicMembership? @relation("WebsitePublisher", fields: [publishedByMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
 }
 
 model Session {
