@@ -1,7 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt =
-  "Pawly · Tu clínica conectada. Más tiempo para cuidar. Software veterinario en desarrollo para Chile.";
+export const alt = "Clínica Veterinaria Porvenir · Un espacio para cuidar.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -26,10 +25,10 @@ export default function OpenGraphImage() {
         }}
       >
         <span style={{ fontSize: 50, fontWeight: 700, color: "#D7E4BE" }}>
-          pawly.
+          Porvenir.
         </span>
         <span style={{ fontSize: 17, color: "#D7E4BE" }}>
-          GESTIÓN VETERINARIA PARA CHILE
+          CLÍNICA VETERINARIA
         </span>
       </div>
       <div
@@ -43,8 +42,8 @@ export default function OpenGraphImage() {
           letterSpacing: "-3px",
         }}
       >
-        <span>Tu clínica, conectada.</span>
-        <span style={{ color: "#D7E4BE" }}>Más tiempo para cuidar.</span>
+        <span>Cerca de ti.</span>
+        <span style={{ color: "#D7E4BE" }}>Cerca de quienes quieres.</span>
       </div>
       <div
         style={{
@@ -57,8 +56,10 @@ export default function OpenGraphImage() {
           fontSize: 20,
         }}
       >
-        <span>Pacientes, agenda e historia clínica.</span>
-        <span style={{ color: "#D7E4BE", fontSize: 17 }}>En desarrollo</span>
+        <span>Clínica Veterinaria Porvenir</span>
+        <span style={{ color: "#D7E4BE", fontSize: 17 }}>
+          Un espacio para cuidar.
+        </span>
       </div>
     </div>,
     size,

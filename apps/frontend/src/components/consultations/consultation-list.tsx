@@ -12,6 +12,13 @@ import {
 import { calendarRange } from "@/lib/appointment-time";
 import { useClinicalResource } from "./use-clinical-resource";
 import "./consultations.css";
+import {
+  EmptyState,
+  LoadingState,
+  PageHeader,
+  RecordIdentity,
+  StatusBadge,
+} from "@/components/ui/workspace-ui";
 export function ClinicalHistory({
   context,
   patientId,
@@ -90,28 +97,20 @@ export function ConsultationList({
         patientId ? "Historia clínica del paciente" : "Consultas veterinarias"
       }
     >
-      <header className="medical-heading">
-        <div>
-          <span className="dashboard-eyebrow">
-            {patientId ? "CONTINUIDAD DE LA ATENCIÓN" : "REGISTRO CLÍNICO"}
-          </span>
-          {patientId ? (
-            <h2>Historia clínica</h2>
-          ) : (
-            <h1>Consultas veterinarias</h1>
-          )}
-          <p>
-            Atenciones de tu clínica, con autoría e historial. Más recientes
-            primero.
-          </p>
-        </div>
-        {canCreate && (
-          <Link className="medical-primary" href={newPath}>
-            <Plus size={17} />
-            Nueva consulta
-          </Link>
-        )}
-      </header>
+      <PageHeader
+        eyebrow={patientId ? "CONTINUIDAD DE LA ATENCIÓN" : "REGISTRO CLÍNICO"}
+        title={patientId ? "Historia clínica" : "Consultas veterinarias"}
+        level={patientId ? 2 : 1}
+        description="Cada atención forma parte de una historia. Consulta los registros más recientes de tu clínica."
+        actions={
+          canCreate && (
+            <Link className="medical-primary" href={newPath}>
+              <Plus size={17} aria-hidden="true" />
+              Nueva consulta
+            </Link>
+          )
+        }
+      />
       <form className="medical-filters" onSubmit={apply}>
         <label>
           Estado clínico
@@ -172,9 +171,7 @@ export function ConsultationList({
           <button onClick={context.refresh}>Verificar mi acceso</button>
         </div>
       ) : !result.data ? (
-        <p className="medical-empty" role="status">
-          Cargando historia clínica…
-        </p>
+        <LoadingState label="Cargando historia clínica…" />
       ) : (
         <>
           <p className="medical-count" aria-live="polite">
@@ -184,14 +181,11 @@ export function ConsultationList({
               : "atenciones registradas"}
           </p>
           {result.data.items.length === 0 ? (
-            <div className="medical-empty">
-              <ClipboardList size={28} />
-              <h3>Aún no hay atenciones con estos filtros.</h3>
-              <p>
-                Crea una consulta o inicia la atención desde una cita de la
-                agenda.
-              </p>
-            </div>
+            <EmptyState
+              icon={ClipboardList}
+              title="Aún no hay atenciones con estos filtros."
+              description="Crea una consulta o inicia la atención desde una cita de la agenda."
+            />
           ) : (
             <ol className="medical-timeline">
               {result.data.items.map((r) => (
@@ -205,30 +199,35 @@ export function ConsultationList({
                           timeStyle: "short",
                         }).format(new Date(r.attendedAt))}
                       </time>
-                      <span
-                        className={`medical-status medical-${r.status.toLowerCase()}`}
+                      <StatusBadge
+                        tone={r.status === "DRAFT" ? "warning" : "positive"}
                       >
                         {consultationStates[r.status]}
-                      </span>
+                      </StatusBadge>
                     </div>
                     <h3>
                       <Link href={consultationPath(clinicId, r.id)}>
                         {r.reason}
                       </Link>
                     </h3>
-                    <p>
-                      {r.patient.name} · {r.professional.user.name}
-                    </p>
-                    {r.diagnosis && (
-                      <p className="medical-preview">
-                        <strong>Diagnóstico:</strong> {r.diagnosis}
-                      </p>
-                    )}
-                    {r.treatment && (
-                      <p className="medical-preview">
-                        <strong>Tratamiento:</strong> {r.treatment}
-                      </p>
-                    )}
+                    <div className="medical-entry-patient">
+                      <RecordIdentity
+                        name={r.patient.name}
+                        subtitle={r.professional.user.name}
+                      />
+                    </div>
+                    <div className="medical-entry-summary">
+                      {r.diagnosis && (
+                        <p className="medical-preview">
+                          <strong>Diagnóstico:</strong> {r.diagnosis}
+                        </p>
+                      )}
+                      {r.treatment && (
+                        <p className="medical-preview">
+                          <strong>Tratamiento:</strong> {r.treatment}
+                        </p>
+                      )}
+                    </div>
                     <div className="medical-entry-footer">
                       <span>
                         {r.appointmentId

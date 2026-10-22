@@ -1,16 +1,22 @@
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { randomUUID } from "node:crypto";
 const require = createRequire(import.meta.url);
 // Resolve relative to the source tree, independent of the caller's current directory.
 const cwd = fileURLToPath(new URL("../../", import.meta.url));
 // Each spec and viewport owns its API/schema and real in-memory rate limits.
 // Do not weaken production controls or share exhausted counters across projects.
 async function runProject(project, spec) {
+  const websiteClinicId = randomUUID();
   const backend = spawn(
     process.execPath,
     [fileURLToPath(new URL("./real-backend.mjs", import.meta.url))],
-    { cwd, stdio: ["pipe", "pipe", "pipe"] },
+    {
+      cwd,
+      stdio: ["pipe", "pipe", "pipe"],
+      env: { ...process.env, PAWLY_QA_WEBSITE_CLINIC_ID: websiteClinicId },
+    },
   );
   const backendExit = new Promise((resolve) =>
     backend.once("exit", (code) => resolve(code ?? 1)),
@@ -63,6 +69,7 @@ async function runProject(project, spec) {
           ...process.env,
           PAWLY_TEST_SCHEMA: schema,
           PAWLY_QA_API_URL: "http://localhost:4001/api",
+          PAWLY_QA_WEBSITE_CLINIC_ID: websiteClinicId,
         },
       },
     );
@@ -84,6 +91,7 @@ const specs = [
   "clinical.real.spec.ts",
   "appointments.real.spec.ts",
   "consultations.real.spec.ts",
+  "website.real.spec.ts",
 ];
 const requested = process.argv.slice(2);
 if (requested.some((spec) => !specs.includes(spec)))

@@ -1,0 +1,73 @@
+{
+  "createdOn": "2026-10-21",
+  "licenseReviewedOn": "2026-10-21",
+  "commercialUseSource": "https://help.pexels.com/hc/en-us/articles/360042295214-Can-I-use-the-photos-and-videos-for-a-commercial-project",
+  "usage": "Licensed editorial stock photographs illustrating veterinary care and companion animals. People are not represented as Pawly employees, customers or endorsers. These photographs must not be used as real patient records, user avatars, testimonials or brand logos.",
+  "processing": "Downloaded from the official Pexels image CDN and converted locally to WebP using the already installed sharp dependency, preserving aspect ratio and without generative AI.",
+  "assets": [
+    {
+      "file": "hero-consultation.webp",
+      "id": 6235107,
+      "author": "Tima Miroshnichenko",
+      "sourceUrl": "https://www.pexels.com/photo/a-pomeranian-inside-a-veterinary-clinic-6235107/",
+      "purpose": "Editorial photograph showing a veterinary consultation with a tutor and dog.",
+      "downloadUrl": "https://images.pexels.com/photos/6235107/pexels-photo-6235107.jpeg?auto=compress&cs=tinysrgb&w=2400",
+      "license": "Pexels License",
+      "licenseUrl": "https://www.pexels.com/license/",
+      "reviewedOn": "2026-10-21",
+      "width": 1600,
+      "height": 1067,
+      "bytes": 108186,
+      "downloadedWidth": 2400,
+      "downloadedHeight": 1600
+    },
+    {
+      "file": "auth-cat-examination.webp",
+      "id": 28644631,
+      "author": "Sueda Güzeldere",
+      "sourceUrl": "https://www.pexels.com/photo/veterinarian-examining-cat-in-clinic-28644631/",
+      "purpose": "Portrait photograph for authentication side panels showing a cat receiving a clinical examination.",
+      "downloadUrl": "https://images.pexels.com/photos/28644631/pexels-photo-28644631.jpeg?auto=compress&cs=tinysrgb&w=2400",
+      "license": "Pexels License",
+      "licenseUrl": "https://www.pexels.com/license/",
+      "reviewedOn": "2026-10-21",
+      "width": 1000,
+      "height": 1500,
+      "bytes": 69108,
+      "downloadedWidth": 2400,
+      "downloadedHeight": 3600
+    },
+    {
+      "file": "pets-and-family.webp",
+      "id": 6821106,
+      "author": "Nadia Vasil'eva",
+      "sourceUrl": "https://www.pexels.com/photo/person-holding-a-brown-dog-and-a-cat-6821106/",
+      "purpose": "Warm companion-animal photograph for editorial sections or welcome states, not patient avatars.",
+      "downloadUrl": "https://images.pexels.com/photos/6821106/pexels-photo-6821106.jpeg?auto=compress&cs=tinysrgb&w=2400",
+      "license": "Pexels License",
+      "licenseUrl": "https://www.pexels.com/license/",
+      "reviewedOn": "2026-10-21",
+      "width": 1400,
+      "height": 834,
+      "bytes": 92006,
+      "downloadedWidth": 2400,
+      "downloadedHeight": 1429
+    },
+    {
+      "file": "veterinary-care.webp",
+      "id": 7469213,
+      "author": "Mikhail Nilov",
+      "sourceUrl": "https://www.pexels.com/photo/a-veterinarian-vaccinating-a-dog-7469213/",
+      "purpose": "General editorial veterinary-care library asset; does not represent an available vaccination module.",
+      "downloadUrl": "https://images.pexels.com/photos/7469213/pexels-photo-7469213.jpeg?auto=compress&cs=tinysrgb&w=2400",
+      "license": "Pexels License",
+      "licenseUrl": "https://www.pexels.com/license/",
+      "reviewedOn": "2026-10-21",
+      "width": 1400,
+      "height": 933,
+      "bytes": 57978,
+      "downloadedWidth": 2400,
+      "downloadedHeight": 1600
+    }
+  ]
+}

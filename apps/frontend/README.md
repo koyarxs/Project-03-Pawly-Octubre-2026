@@ -1,87 +1,45 @@
-# 🐾 Pawly — Frontend
+# Pawly — Frontend
 
-Landing pública: diseño fotográfico responsive, funciones verificadas y capturas de la interfaz real con datos ilustrativos. Componentes, procedencia de recursos y verificaciones en [Landing pública](../../docs/landing.md).
-
-Agenda veterinaria: `/app/clinicas/:clinicId/agenda`, con vistas diaria/semanal, filtros, creación, reprogramación, estados, cancelación e historial. Contrato, zona horaria, permisos y pruebas en [Agenda](../../docs/appointments.md).
-
-Sprint 07: Tutores y Pacientes ya cuentan con listados, registro, fichas, edición y archivado autorizado. Rutas, contratos, permisos, relación multi-clínica y QA están en [Gestión clínica](../../docs/clinical-records.md). Las secciones de Sprint 06 conservan la descripción de su base inicial.
-
-Frontend de **Pawly**, plataforma para la gestión integral del bienestar de mascotas.
-
-## 🛠️ Stack
-
-- Next.js 16
-- React 19
-- TypeScript
-- Tailwind CSS
-- ESLint
-- App Router
-
-## 📁 Ubicación
-
-El frontend se encuentra dentro de la estructura principal del proyecto:
-
-```text
-apps/frontend/
-├── public/
-├── src/
-│   └── app/
-├── package.json
-├── tsconfig.json
-├── next.config.ts
-└── eslint.config.mjs
-```
+Next.js 16.3.5, React 19 y TypeScript. Sitio público autoadministrable de Clínica Veterinaria Porvenir y gestión interna con autenticación, dashboard, agenda, tutores, pacientes e historia clínica. Sin planes ni contratación SaaS.
 
 ## Desarrollo
 
-Desde `apps/frontend`, ejecutar `npm ci` y `npm run dev`. Copiar `.env.example` a `.env.local` para configurar la URL del backend y el dominio del sitio. La guía completa y las verificaciones están en el [README principal](../../README.md).
+Configurar `.env.local` a partir de `.env.example`. Usar `NEXT_PUBLIC_API_URL=http://localhost:3001/api` y `SITE_URL=http://localhost:3000`. Desde esta carpeta: `npm.cmd ci` y `npm.cmd run dev`. No iniciar otra instancia si Pawly ya ocupa 3000; las comprobaciones de producción usan 3100 y pueden coexistir con el servidor de desarrollo.
 
-## Autenticación y Workspace
+El backend debe permitir el origen exacto en CORS. Mantener `localhost` en ambos servicios para las cookies SameSite=Lax. Las llamadas privadas usan cookies HttpOnly gestionadas por Nest, `credentials: include`, `no-store` y CSRF en escrituras; no se almacenan credenciales ni tokens en localStorage/sessionStorage. En producción se requiere HTTPS y proxy del mismo origen; el registro público continúa bloqueado mientras falta verificación de correo. La recuperación de contraseña no está implementada.
 
-`/registrarse` crea un responsable, una clínica y su membresía OWNER mediante la API real. La confirmación de contraseña se valida localmente y no se envía; las contraseñas no se recortan. Solo se presenta éxito tras una respuesta válida de la API. El registro no inicia sesión automáticamente. `/iniciar-sesion` autentica y navega a `/app`. El Workspace comprueba `/auth/me` antes de mostrar perfil o clínicas, verifica cada selección con `/clinics/:clinicId/access` y cierra la sesión mediante `/auth/logout`. No contiene pacientes, inventario, consultas ni agenda.
+## Rutas
 
-Las páginas usan los colores, Geist y marca existentes, con CSS limitado a `.pawly-auth` y `.pawly-workspace`. La landing y sus componentes permanecen intactos. El acceso anterior era informativo y ahora contiene el formulario funcional.
+| Ruta | Contenido |
+| --- | --- |
+| `/` | Solo contenido publicado, o pantalla de preparación |
+| `/iniciar-sesion` | Acceso del personal |
+| `/app` | Selector de clínicas autorizadas |
+| `/app/clinicas/:clinicId/dashboard` | Indicadores reales de API, con carga, errores y restricciones por rol |
+| `/app/clinicas/:clinicId/tutores` y `/pacientes` | Directorios, fichas y formularios |
+| `/app/clinicas/:clinicId/agenda` | Citas diarias/semanales, estados y reprogramación |
+| `/app/clinicas/:clinicId/consultas` | Borradores, finalización y rectificaciones clínicas |
+| `/app/clinicas/:clinicId/sitio-web` | Editor, vista previa privada y publicación para OWNER/ADMIN |
 
-### Conexión con la API
+El workspace valida sesión y acceso antes de mostrar datos; revalida al regresar a la pestaña. Un 401 redirige al acceso; fallos transitorios ofrecen reintento. Cambiar la URL o la selección no concede permisos. Los módulos sin implementación permanecen deshabilitados. El diseño comparte `design-tokens.css` y componentes de `ui/workspace-ui` sin sustituir los permisos del backend.
 
-Configurar `NEXT_PUBLIC_API_URL=http://localhost:3001/api` antes del build; Next incorpora las variables públicas al JavaScript generado. `SITE_URL=http://localhost:3000` configura los metadatos. El backend debe estar disponible con `CORS_ORIGINS` incluyendo exactamente `http://localhost:3000` para desarrollo. La configuración existente ya lo permite.
+Contratos: [sitio de Porvenir](../../docs/porvenir-site.md), [gestión clínica](../../docs/clinical-records.md), [agenda](../../docs/appointments.md) y [consultas](../../docs/consultations.md). Fotografías y carrusel: [sitio público](../../docs/landing.md).
 
-Las llamadas se hacen desde el navegador, sin BFF ni endpoints adicionales. Usan `credentials: "include"`, `cache: "no-store"` y, en POST, JSON y `X-Pawly-CSRF: 1`. El navegador genera `Origin`; no se falsifica desde el frontend. Las cookies HttpOnly las crea, valida y elimina exclusivamente Nest. No se guardan tokens ni contraseñas en localStorage/sessionStorage, ni se leen tokens desde JavaScript.
+## Verificación
 
-Usar el mismo hostname en ambos servicios: `localhost` con `localhost`, no frontend en `127.0.0.1` y API en `localhost`. Compartir hostname permite las cookies SameSite=Lax entre puertos. Para producción, servir Next y `/api` mediante un reverse proxy HTTPS del mismo origen y construir con `NEXT_PUBLIC_API_URL=/api`; esta implementación no admite cookies entre sitios distintos. No se requieren cambios del backend. Configurar explícitamente su `NODE_ENV=production`, TLS y el origen HTTPS exacto.
+Desde esta carpeta:
 
-El registro público continúa deshabilitado en producción mientras falta verificación de correo: el frontend presenta un mensaje seguro ante 503. Los usuarios no verificados reciben el error genérico de login del backend. No hay recuperación de contraseña ni verificación de correo en esta versión.
+```powershell
+npm.cmd run typecheck
+npm.cmd run lint
+npm.cmd run test:unit
+npm.cmd run build
+npm.cmd run test:e2e
+npm.cmd run test:e2e:real
+```
 
-### Seguridad y estados
+Unitarias: runner de Node 24 con transformación TypeScript. Playwright: Edge instalado en Windows, escritorio y móvil, servidor de producción propio en 3100. Requiere build previo. Las pruebas controladas simulan respuestas únicamente dentro de tests para errores, concurrencia, roles y estados. Evidencias en `.next/qa`, excluidas de Git; un nuevo build puede limpiarlas.
 
-El HTML de `/app` contiene únicamente la pantalla de comprobación; no obtiene ni serializa datos privados en el servidor. Ante 401 redirige únicamente a `/iniciar-sesion`. Un fallo de red o 5xx presenta reintento, sin bucles ni falsa pérdida de sesión. No se aceptan destinos de redirección proporcionados por URL. La sesión se vuelve a comprobar al regresar a la pestaña o restaurar la página desde la caché del navegador. Una respuesta de acceso antigua se cancela al cambiar la selección. La selección de clínica es temporal, se verifica contra el servidor y no otorga permisos por sí sola.
+La suite real requiere build del backend y la base local `pawly` en loopback:5433/public, fuera de producción. Reserva 4001 para Nest y 3100 para Next, sin detener ni reutilizar otros servicios. Cada spec/viewport crea un esquema aleatorio `pawly_frontend_test_<uuid>`, comprueba la conexión y aplica las migraciones solo allí. Los fixtures son ficticios, con correos `example.invalid`. Selección por spec: `npm.cmd run test:e2e:real -- website.real.spec.ts`.
 
-Los formularios presentan errores asociados a cada campo, foco accesible, mostrar/ocultar contraseña, carga y bloqueo de envíos duplicados. Los errores de API se traducen a mensajes definidos por estado; no se muestran cuerpos internos ni se registran credenciales. Las respuestas exitosas se validan antes de usarlas. Cerrar sesión solo navega al login cuando Nest confirma logout o indica que la sesión ya no existe; ante otros fallos permite reintentar.
-
-### Verificación
-
-- `npm run typecheck`, `npm run lint`, `npm run build`.
-- `npm run test:e2e`: suite Playwright con Edge en Windows, escritorio y móvil. Incluye landing y pruebas de autenticación con respuestas controladas para validación, 400/401/403/409/429/503, errores de conexión, acceso denegado, logout fallido, estados vacíos y protección previa a la sesión. Estos mocks existen solo en los tests.
-- `npm run test:e2e:real`: flujo de navegador contra Nest y PostgreSQL reales. Requiere dependencias y build del backend (`cd ../backend && npm run build`) y build del frontend con API `http://localhost:3001/api`. Reservar puertos 4001 y 3100 para esta ejecución; no reutiliza servicios ajenos.
-
-La verificación real exige la base local `pawly` en loopback:5433/public y un entorno distinto de producción. Su proceso crea un esquema nuevo `pawly_frontend_test_<uuid>` sin reutilizar ninguno existente; comprueba el esquema tanto en Prisma de pruebas como en la API, aplica las migraciones existentes únicamente allí y configura CORS para `http://localhost:3100`. Las cuentas son fixtures identificadas como QA, con correos `example.invalid`. Comprueba persistencia tras recarga, cookie HttpOnly/SameSite, ausencia de tokens en almacenamiento del navegador, rechazo de una clínica ajena, CSRF y revocación al salir.
-
-El runner espera el cierre de la API, elimina exclusivamente tablas/tipos/funciones conocidos y el esquema propio con `RESTRICT`, sin `CASCADE`, y compara estructura y huellas de todas las filas de las tablas de `public` con una captura inicial de solo lectura. Un fallo de limpieza o cambio en `public` hace fallar el comando. Una interrupción forzada del proceso podría dejar su esquema temporal pendiente de revisión; no limpia esquemas de otras ejecuciones. Screenshots y trazas se guardan en `.next/qa`, excluido de Git, y contienen únicamente datos de pruebas.
-
-## Dashboard veterinario (Sprint 06)
-
-`/app` conserva el selector de clínicas. Tras verificar una selección permite entrar a `/app/clinicas/[clinicId]/dashboard`. La nueva ruta vuelve a consultar `/auth/me` y `/clinics/:clinicId/access` antes de mostrar usuario, clínica o rol. El rol visible procede de la autorización del backend, no de la selección local.
-
-El dashboard incluye sidebar, navegación móvil mediante diálogo nativo con Escape y foco, clínica activa, selector multi-clínica, usuario, rol y logout. Los ocho módulos pendientes están deshabilitados y rotulados Próximamente. Los indicadores muestran No disponible: todavía no hay modelos de pacientes, tutores, citas ni consultas. No se implementa CRUD ni se presentan estadísticas ficticias. El CSS nuevo está limitado a `.pawly-dashboard` y a clases propias del dashboard; la landing pública permanece intacta.
-
-La sesión y la autorización se revalidan al entrar, al volver a la pestaña, al restaurar desde bfcache y mediante la acción de verificación. La API deniega inmediatamente nuevas solicitudes si la membresía queda suspendida. Esta versión no recibe notificaciones en tiempo real de suspensiones: una vista ya abierta se oculta al siguiente evento de revalidación. Cambiar de clínica oculta la vista anterior inmediatamente y cancela solicitudes obsoletas; la nueva ruta exige autorización independiente. La URL y el selector no conceden permisos. Todas las futuras consultas clínicas deberán volver a usar los guards del backend.
-
-### QA del dashboard
-
-`npm run test:unit` ejecuta cinco pruebas del contrato del cliente API y la navegación interna con el runner de Node.js. Requiere Node.js 24 y usa su transformación experimental de TypeScript, sin dependencias nuevas. `npm run test:e2e` añade escenarios de autorización, aislamiento durante el cambio de clínica, suspensión, respuestas inválidas, logout y navegación responsive accesible a las pruebas existentes.
-
-`npm run test:e2e:real` levanta exclusivamente la API aislada en 4001 y Next en 3100. El fixture de navegador cambia solo el destino de las llamadas compiladas a localhost:3001/api hacia localhost:4001/api. No simula respuestas: cookies, Origin, CORS, CSRF y autorización se procesan por el navegador, Nest y PostgreSQL reales. No usa ni detiene los servicios de desarrollo en 3000/3001. El runner transmite a Playwright únicamente el nombre del esquema que acaba de crear. Los fixtures adicionales verifican la conexión antes de crear una segunda clínica/membresía o suspenderla dentro de ese esquema. Los cinco flujos de navegador cubren escritorio y móvil, acceso ajeno, cambio de rol entre clínicas, suspensión real, retorno al selector y revocación de sesión. Se conserva la limpieza con RESTRICT y la comparación de todas las tablas de public.
-
-## Consultas veterinarias
-
-Rutas `/app/clinicas/[clinicId]/consultas`, `/consultas/nueva` y `/consultas/[consultationId]`. Desde agenda se inicia o abre la atención; la ficha del paciente muestra su historia cronológica filtrable. Borradores editables, finalización confirmada y rectificaciones anexas con autoría. Fechas en la zona horaria de la clínica. OWNER/ADMIN/VETERINARIAN; recepción ve acceso restringido y no solicita contenido clínico. Contrato y límites en [consultas](../../docs/consultations.md).
+El navegador redirige únicamente el transporte compilado hacia la API aislada; no simula respuestas en esta suite. Next recibe `WEBSITE_SERVER_API_URL` para consultar el mismo backend aislado. Se prueban cookies, CORS, CSRF, permisos, persistencia y aislamiento reales. Al terminar, el runner espera el cierre de Nest, elimina exclusivamente objetos conocidos de su esquema con `RESTRICT` y compara estructura y huellas de todas las filas de `public`. Un fallo de limpieza o cambio en `public` hace fallar el comando. Una interrupción forzada puede dejar el esquema temporal para revisión; no se limpian esquemas de otras ejecuciones.

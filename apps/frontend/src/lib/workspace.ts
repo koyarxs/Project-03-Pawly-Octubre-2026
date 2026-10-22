@@ -9,7 +9,7 @@ export function dashboardPath(clinicId: string): string {
   return `/app/clinicas/${encodeURIComponent(clinicId)}/dashboard`;
 }
 export type WorkspaceSection =
-  "dashboard" | "tutores" | "pacientes" | "agenda" | "consultas";
+  "dashboard" | "tutores" | "pacientes" | "agenda" | "consultas" | "sitio-web";
 export function workspacePath(
   clinicId: string,
   section: WorkspaceSection,

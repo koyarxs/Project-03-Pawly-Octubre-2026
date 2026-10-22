@@ -9,6 +9,10 @@ const require = createRequire(path.join(backend, "package.json"));
 const { PrismaClient, Prisma } = require("@prisma/client");
 const { NestFactory } = require("@nestjs/core");
 process.loadEnvFile(path.join(backend, ".env"));
+if (!/^[a-f0-9-]{36}$/.test(process.env.PAWLY_QA_WEBSITE_CLINIC_ID ?? ""))
+  throw new Error("An isolated website clinic ID is required.");
+process.env.WEBSITE_CLINIC_ID = process.env.PAWLY_QA_WEBSITE_CLINIC_ID;
+process.env.WEBSITE_PUBLIC_NAME = "Clínica QA Sitio";
 const url = new URL(process.env.DATABASE_URL ?? "");
 if (
   process.env.NODE_ENV === "production" ||
@@ -68,7 +72,7 @@ async function stop(code = 0) {
     if (ownsSchema) {
       await assertOwned(prisma);
       await control.$executeRawUnsafe(
-        `DROP TABLE IF EXISTS "${schema}"."ConsultationEvent", "${schema}"."ConsultationAmendment", "${schema}"."Consultation", "${schema}"."AppointmentEvent", "${schema}"."Appointment", "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership", "${schema}"."User", "${schema}"."VeterinaryClinic", "${schema}"."_prisma_migrations" RESTRICT`,
+        `DROP TABLE IF EXISTS "${schema}"."VeterinaryWebsite", "${schema}"."ConsultationEvent", "${schema}"."ConsultationAmendment", "${schema}"."Consultation", "${schema}"."AppointmentEvent", "${schema}"."Appointment", "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership", "${schema}"."User", "${schema}"."VeterinaryClinic", "${schema}"."_prisma_migrations" RESTRICT`,
       );
       await control.$executeRawUnsafe(
         `DROP TYPE IF EXISTS "${schema}"."ConsultationStatus", "${schema}"."DiagnosisType", "${schema}"."AppointmentStatus", "${schema}"."TutorStatus", "${schema}"."PatientStatus", "${schema}"."Species", "${schema}"."PatientSex", "${schema}"."UserStatus", "${schema}"."ClinicStatus", "${schema}"."MembershipStatus", "${schema}"."Role" RESTRICT`,

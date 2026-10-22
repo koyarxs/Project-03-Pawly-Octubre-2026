@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import "./landing.css";
-import "./product-preview.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,7 +24,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Pawly · Menos gestión. Más cuidado.",
     description:
-      "Una nueva visión para organizar tu clínica veterinaria. Explora la propuesta de Pawly y su demostración conceptual.",
+      "Pacientes, tutores, agenda y consultas conectados en una plataforma veterinaria para Chile, en desarrollo.",
     type: "website",
     locale: "es_CL",
     siteName: "Pawly",

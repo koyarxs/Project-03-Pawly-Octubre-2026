@@ -1,189 +1,228 @@
 .pawly-auth {
   min-height: 100svh;
   display: grid;
-  grid-template-columns: minmax(330px, 0.95fr) minmax(460px, 1.05fr);
-  background: #f7f9f7;
+  grid-template-columns: minmax(330px, 0.92fr) minmax(460px, 1.08fr);
+  background: var(--pw-canvas);
 }
 .pawly-auth .auth-story {
-  background: var(--petrol);
-  color: #f7f9f7;
-  padding: 44px clamp(32px, 5vw, 80px);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--pw-ink-strong);
+  color: #fff;
+  padding: 40px clamp(32px, 4vw, 64px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 46px;
+  gap: 48px;
+  min-height: 100svh;
+}
+.pawly-auth .auth-story > .brand,
+.pawly-auth .auth-story-footer {
+  position: relative;
+  z-index: 2;
 }
 .pawly-auth .auth-story-copy {
-  max-width: 490px;
+  margin-top: auto;
+  padding-top: 200px;
 }
-.pawly-auth .auth-story .auth-kicker {
-  color: var(--mint);
-}
-.pawly-auth .auth-story h2 {
-  font-size: clamp(36px, 4vw, 57px);
-  line-height: 1.09;
-  font-weight: 500;
-  letter-spacing: -0.05em;
-  margin: 18px 0;
-}
-.pawly-auth .auth-story-copy > p {
-  color: #c2d4d5;
-  font-size: 15px;
-  max-width: 390px;
+.pawly-auth .auth-story-copy > :not(.auth-story-photo) {
+  position: relative;
+  z-index: 2;
 }
 .pawly-auth .auth-story-photo {
-  position: relative;
-  aspect-ratio: 1.7;
-  margin-top: 34px;
-  border-radius: 18px;
-  overflow: hidden;
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+}
+.pawly-auth .auth-story-photo::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(
+    180deg,
+    #102f3550,
+    #102f3515 25%,
+    #102f35dd 68%,
+    #102f35 100%
+  );
 }
 .pawly-auth .auth-story-photo img {
   object-fit: cover;
+  object-position: center 55%;
+}
+.pawly-auth .auth-story .auth-kicker {
+  color: #d7e7d7;
+}
+.pawly-auth .auth-story h2 {
+  font-size: clamp(36px, 3.6vw, 58px);
+  font-weight: 480;
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+  margin: 20px 0;
+}
+.pawly-auth .auth-story-copy > p {
+  color: #e1eae4;
+  font-size: 15px;
+  max-width: 380px;
 }
 .pawly-auth .auth-story-footer {
   display: flex;
-  gap: 10px;
   align-items: center;
-  color: #c2d4d5;
+  gap: 10px;
+  color: #d8e6de;
   font-size: 12px;
+  padding-top: 24px;
+  border-top: 1px solid #ffffff30;
 }
 .pawly-auth .auth-main {
   display: flex;
   flex-direction: column;
-  padding: 34px clamp(24px, 5vw, 80px) 22px;
+  min-width: 0;
+  padding: 32px clamp(24px, 4vw, 64px) 22px;
 }
 .pawly-auth .auth-back {
-  align-self: flex-start;
-  display: flex;
-  align-items: center;
+  display: inline-flex;
   gap: 8px;
-  font-size: 12px;
-  color: var(--muted);
+  align-items: center;
+  align-self: flex-start;
+  min-height: 44px;
+  color: var(--pw-muted);
+  font-size: 13px;
+}
+.pawly-auth .auth-back:hover {
+  color: var(--pw-accent);
 }
 .pawly-auth .auth-form-area {
   width: 100%;
-  max-width: 430px;
+  max-width: 490px;
   margin: auto;
   padding: 38px 0;
+  outline: none;
 }
 .pawly-auth .auth-kicker,
 .pawly-workspace .auth-kicker {
-  font-size: 10px;
-  letter-spacing: 0.15em;
-  font-weight: 650;
-  color: var(--teal-ink);
   display: block;
+  color: var(--pw-accent);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.6;
+  letter-spacing: 0.12em;
 }
 .pawly-auth h1 {
-  font-size: clamp(29px, 3vw, 38px);
-  line-height: 1.17;
-  letter-spacing: -0.045em;
+  font-size: clamp(30px, 3vw, 42px);
   font-weight: 550;
+  line-height: 1.12;
+  letter-spacing: -0.05em;
   margin-top: 14px;
-  text-wrap: balance;
 }
 .pawly-auth .auth-intro {
-  margin: 14px 0 27px;
-  color: var(--muted);
   font-size: 14px;
-  line-height: 1.65;
+  color: var(--pw-muted);
+  margin: 18px 0 30px;
+  line-height: 1.7;
+}
+.pawly-auth form {
+  background: var(--pw-surface);
+  border: 1px solid var(--pw-line);
+  border-radius: var(--pw-radius-lg);
+  padding: 28px;
+  box-shadow: var(--pw-shadow-sm);
 }
 .pawly-auth .auth-field {
-  margin-bottom: 17px;
+  margin-bottom: 20px;
 }
 .pawly-auth .auth-field label {
   display: block;
-  font-size: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
   font-weight: 600;
-  margin-bottom: 7px;
 }
 .pawly-auth .auth-input-wrap {
   position: relative;
 }
 .pawly-auth .auth-input-wrap input {
   width: 100%;
-  height: 48px;
-  border: 1px solid #cbd8d3;
-  background: #fff;
-  border-radius: 9px;
+  height: 50px;
   padding: 0 14px;
-  color: var(--petrol);
-  font-size: 14px;
+  color: var(--pw-ink);
+  border: 1px solid var(--pw-line-strong);
+  border-radius: var(--pw-radius-sm);
+  background: var(--pw-surface);
+  font-size: 15px;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-}
-.pawly-auth .auth-input-wrap:has(.auth-eye) input {
-  padding-right: 48px;
+    border-color var(--pw-duration-fast),
+    box-shadow var(--pw-duration-fast);
 }
 .pawly-auth .auth-input-wrap input::placeholder {
-  color: #70817f;
+  color: #677a7b;
   font-size: 13px;
 }
 .pawly-auth .auth-input-wrap input:focus {
-  outline: 2px solid #147d8325;
-  outline-offset: 1px;
-  border-color: var(--teal);
+  outline: var(--pw-focus);
+  outline-offset: 2px;
+  border-color: var(--pw-accent);
 }
 .pawly-auth .auth-input-wrap input[aria-invalid="true"] {
-  border-color: #b74335;
+  border-color: var(--pw-danger);
 }
 .pawly-auth .auth-input-wrap input:disabled {
-  background: #edf2ee;
+  background: var(--pw-subtle);
+}
+.pawly-auth .auth-input-wrap:has(.auth-eye) input {
+  padding-right: 52px;
 }
 .pawly-auth .auth-eye {
   position: absolute;
-  right: 4px;
-  top: 4px;
-  width: 40px;
-  height: 40px;
+  inset: 3px 3px auto auto;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
   display: grid;
   place-items: center;
-  color: #52676c;
-  border: 0;
-  background: transparent;
-  border-radius: 7px;
+  color: var(--pw-muted);
 }
 .pawly-auth .auth-eye:hover {
-  background: #edf4f0;
+  background: var(--pw-sage-soft);
 }
 .pawly-auth .auth-field-error {
-  color: #96352b;
+  margin-top: 8px;
   font-size: 12px;
-  line-height: 1.5;
-  margin-top: 6px;
+  line-height: 1.6;
+  color: var(--pw-danger);
 }
 .pawly-auth .auth-hint {
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.5;
-  margin-top: 7px;
+  margin-top: 8px;
+  color: var(--pw-muted);
+  font-size: 12px;
+  line-height: 1.6;
 }
 .pawly-auth .auth-submit,
 .pawly-workspace .auth-submit {
   width: 100%;
-  min-height: 48px;
-  padding: 12px 18px;
-  border: 0;
-  border-radius: 9px;
+  min-height: 50px;
+  padding: 13px 18px;
+  border: 1px solid transparent;
+  border-radius: var(--pw-radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 11px;
-  background: var(--teal);
-  color: white;
+  gap: 10px;
+  color: #fff;
+  background: var(--pw-accent);
+  font-size: 14px;
   font-weight: 600;
-  font-size: 13px;
-  transition: background 0.15s;
+  transition: background var(--pw-duration-fast);
 }
 .pawly-auth .auth-submit:hover,
 .pawly-workspace .auth-submit:hover {
-  background: var(--petrol);
+  background: var(--pw-accent-hover);
 }
 .pawly-auth .auth-submit:disabled,
 .pawly-workspace button:disabled {
-  opacity: 0.65;
+  opacity: 0.6;
   cursor: wait;
 }
 .pawly-auth .auth-security-note {
@@ -191,21 +230,22 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  color: var(--muted);
-  font-size: 11px;
-  margin: 13px 0 0;
+  font-size: 12px;
+  color: var(--pw-muted);
+  margin-top: 16px;
 }
 .pawly-auth .auth-switch {
-  padding-top: 22px;
-  margin-top: 23px;
-  border-top: 1px solid var(--border);
+  font-size: 13px;
   text-align: center;
-  font-size: 12px;
-  color: var(--muted);
+  color: var(--pw-muted);
+  margin-top: 25px;
 }
 .pawly-auth .auth-switch a {
-  color: var(--teal-ink);
+  color: var(--pw-accent-hover);
   font-weight: 650;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   margin-left: 4px;
 }
 .pawly-auth .auth-switch a:hover {
@@ -213,43 +253,39 @@
 }
 .pawly-auth .auth-footer {
   text-align: center;
-  color: #647873;
-  font-size: 10px;
+  font-size: 12px;
+  color: var(--pw-muted);
   padding-top: 12px;
 }
 .pawly-auth .auth-alert,
 .pawly-workspace .auth-alert {
-  border: 1px solid #ecd0bc;
-  background: #fff5ec;
-  color: #77452a;
-  border-radius: 9px;
-  padding: 13px 15px;
+  border: 1px solid #e6c4aa;
+  background: #fff6ed;
+  color: #70452d;
+  border-radius: var(--pw-radius-sm);
+  padding: 16px;
   margin-bottom: 20px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.65;
   overflow-wrap: anywhere;
 }
 .pawly-auth .auth-success-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
-  background: var(--mint);
-  color: var(--teal-ink);
   display: grid;
   place-items: center;
-  margin-bottom: 25px;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 24px;
+  border-radius: var(--pw-radius-lg);
+  background: var(--pw-sage);
+  color: var(--pw-accent);
 }
 .pawly-auth .auth-success > p {
-  color: var(--muted);
-  font-size: 14px;
-  margin: 18px 0 28px;
+  font-size: 15px;
+  color: var(--pw-muted);
+  margin: 20px 0 30px;
   overflow-wrap: anywhere;
 }
-.pawly-auth .auth-success h1 {
-  margin-bottom: 10px;
-}
-.pawly-auth .auth-spinner,
-.pawly-workspace .auth-spinner {
+.auth-spinner {
   animation: auth-spin 1s linear infinite;
 }
 @keyframes auth-spin {
@@ -259,36 +295,44 @@
 }
 .pawly-workspace {
   min-height: 100svh;
-  background: #f7f9f7;
+  background: var(--pw-canvas);
 }
 .pawly-workspace.workspace-layout {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
 }
 .pawly-workspace .workspace-sidebar {
-  background: white;
-  border-right: 1px solid var(--border);
+  background: var(--pw-ink-strong);
+  border-right: 1px solid var(--pw-ink);
   padding: 34px 24px;
   display: flex;
   flex-direction: column;
 }
+.pawly-workspace .workspace-sidebar .brand {
+  color: #edf5ec;
+  --mark-check: var(--pw-ink-strong);
+}
+.pawly-workspace .workspace-sidebar .brand-dot {
+  color: #c5dac4;
+}
 .pawly-workspace .workspace-label {
-  margin: 44px 13px 14px;
-  font-size: 9px;
+  margin: 48px 12px 16px;
+  color: #b2c9c3;
+  font-size: 10px;
   font-weight: 650;
-  color: #70817f;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.12em;
 }
 .pawly-workspace .workspace-nav-current {
-  padding: 12px 14px;
   display: flex;
-  gap: 12px;
   align-items: center;
-  border-radius: 9px;
-  background: #eaf4ef;
-  color: var(--teal-ink);
-  font-size: 13px;
-  font-weight: 600;
+  gap: 12px;
+  min-height: 48px;
+  padding: 12px;
+  border-radius: var(--pw-radius-sm);
+  background: #274b50;
+  color: #edf5ec;
+  font-size: 14px;
+  font-weight: 550;
 }
 .pawly-workspace .workspace-sidebar-bottom {
   margin-top: auto;
@@ -296,120 +340,125 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #58736d;
+  color: #c6d8ce;
 }
 .pawly-workspace .workspace-sidebar-bottom p {
-  font-size: 11px;
-  line-height: 1.6;
+  font-size: 12px;
 }
 .pawly-workspace .workspace-topbar {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  height: 82px;
-  padding: 0 38px;
-  border-bottom: 1px solid var(--border);
-  background: white;
+  align-items: center;
+  gap: 16px;
+  min-height: 82px;
+  padding: 16px 40px;
+  border-bottom: 1px solid var(--pw-line);
+  background: var(--pw-surface);
 }
 .pawly-workspace .workspace-topbar > span {
   display: flex;
   align-items: center;
-  gap: 13px;
-  color: var(--muted);
-  font-size: 12px;
+  gap: 12px;
+  color: var(--pw-muted);
+  font-size: 13px;
 }
 .pawly-workspace .workspace-logout {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  background: white;
-  border-radius: 8px;
-  font-size: 12px;
-  color: var(--muted);
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--pw-line);
+  border-radius: var(--pw-radius-sm);
+  background: var(--pw-surface);
+  color: var(--pw-muted);
+  font-size: 13px;
 }
 .pawly-workspace .workspace-logout:hover {
-  border-color: var(--teal);
-  color: var(--teal-ink);
+  color: var(--pw-accent);
+  border-color: var(--pw-accent);
 }
 .pawly-workspace .workspace-content {
-  padding: 53px clamp(24px, 5vw, 76px) 28px;
+  padding: 56px clamp(24px, 4vw, 64px) 28px;
   max-width: 1280px;
-  margin: 0 auto;
+  margin: auto;
 }
 .pawly-workspace .workspace-welcome {
-  margin-bottom: 48px;
+  padding-bottom: 36px;
+  margin-bottom: 36px;
+  border-bottom: 1px solid var(--pw-line);
 }
 .pawly-workspace .workspace-welcome h1 {
-  font-size: clamp(30px, 3.8vw, 43px);
-  line-height: 1.2;
-  font-weight: 520;
-  letter-spacing: -0.05em;
-  margin: 14px 0 10px;
+  font-size: clamp(30px, 3.6vw, 44px);
+  font-weight: 550;
+  line-height: 1.15;
+  letter-spacing: -0.045em;
+  margin: 14px 0;
   overflow-wrap: anywhere;
 }
 .pawly-workspace .workspace-welcome p,
 .pawly-workspace .workspace-section-heading p {
-  color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
+  color: var(--pw-muted);
 }
 .pawly-workspace .workspace-section-heading {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 15px;
+  align-items: center;
+  gap: 16px;
   margin-bottom: 24px;
 }
 .pawly-workspace .workspace-section-heading h2 {
-  font-size: 22px;
-  letter-spacing: -0.025em;
-  margin-bottom: 7px;
+  font-size: 24px;
+  font-weight: 550;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
 }
 .pawly-workspace .workspace-section-heading > span {
-  border: 1px solid var(--border);
-  background: white;
-  border-radius: 20px;
-  padding: 6px 11px;
-  font-size: 10px;
-  color: var(--muted);
+  padding: 7px 12px;
+  background: var(--pw-sage);
+  color: var(--pw-accent-hover);
+  border-radius: 30px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .pawly-workspace .workspace-clinics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 18px;
 }
 .pawly-workspace .workspace-clinic {
+  position: relative;
   text-align: left;
   display: flex;
-  gap: 15px;
   align-items: center;
-  padding: 25px 22px;
-  border: 1px solid var(--border);
-  background: white;
-  border-radius: 13px;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+  gap: 16px;
   min-width: 0;
+  padding: 26px;
+  border: 1px solid var(--pw-line);
+  border-radius: var(--pw-radius-lg);
+  background: var(--pw-surface);
+  box-shadow: var(--pw-shadow-sm);
+  transition:
+    border-color var(--pw-duration-base),
+    box-shadow var(--pw-duration-base);
 }
 .pawly-workspace .workspace-clinic:hover {
-  border-color: var(--teal);
-  box-shadow: 0 6px 20px #102b3508;
+  border-color: var(--pw-accent);
+  box-shadow: var(--pw-shadow-md);
 }
 .pawly-workspace .workspace-clinic.is-selected {
-  border-color: var(--teal);
-  background: #f0faf5;
+  border: 2px solid var(--pw-accent);
+  padding: 25px;
+  background: var(--pw-sage-soft);
 }
 .pawly-workspace .workspace-clinic-icon {
-  height: 48px;
-  width: 48px;
+  width: 52px;
+  height: 52px;
   flex-shrink: 0;
-  border-radius: 12px;
-  background: #edf5f0;
-  color: var(--teal-ink);
+  border-radius: var(--pw-radius-md);
+  background: var(--pw-sage);
+  color: var(--pw-accent);
   display: grid;
   place-items: center;
 }
@@ -417,98 +466,120 @@
   min-width: 0;
 }
 .pawly-workspace .workspace-clinic-detail strong {
-  font-size: 14px;
   display: block;
-  overflow-wrap: anywhere;
+  font-size: 15px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 .pawly-workspace .workspace-clinic-detail > span {
   display: block;
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 5px;
+  font-size: 13px;
+  color: var(--pw-muted);
+  margin-top: 6px;
 }
 .pawly-workspace .workspace-clinic-action {
   margin-left: auto;
-  color: var(--teal);
+  color: var(--pw-accent);
 }
 .pawly-workspace .workspace-active {
-  margin-top: 30px;
-  padding: 28px 32px;
-  border: 1px solid #cbded5;
-  border-radius: 13px;
-  background: #ebf4ee;
+  margin-top: 28px;
+  padding: 28px;
+  background: var(--pw-sage);
+  border-radius: var(--pw-radius-lg);
+  border: 1px solid #cad9cb;
 }
 .pawly-workspace .workspace-active-badge {
-  color: var(--teal-ink);
-  font-size: 11px;
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 8px;
+  color: var(--pw-accent-hover);
+  font-size: 12px;
   margin-bottom: 18px;
 }
 .pawly-workspace .workspace-active h2 {
-  font-size: 26px;
+  font-size: 27px;
+  font-weight: 550;
   letter-spacing: -0.035em;
   overflow-wrap: anywhere;
 }
 .pawly-workspace .workspace-active p {
+  font-size: 14px;
+  color: var(--pw-muted);
   margin-top: 12px;
-  color: var(--muted);
-  font-size: 13px;
   max-width: 650px;
 }
+.pawly-workspace .workspace-enter {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  margin-top: 20px;
+  padding: 12px 20px;
+  border-radius: var(--pw-radius-sm);
+  background: var(--pw-accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+.pawly-workspace .workspace-enter:hover {
+  background: var(--pw-accent-hover);
+}
 .pawly-workspace .workspace-empty {
-  border: 1px dashed #bbcfc3;
-  padding: 38px;
-  border-radius: 13px;
-  background: #f0f5f1;
-  color: var(--muted);
+  border: 1px dashed var(--pw-line-strong);
+  padding: 36px;
+  border-radius: var(--pw-radius-lg);
+  background: var(--pw-sage-soft);
+  color: var(--pw-muted);
 }
 .pawly-workspace .workspace-empty h3 {
-  font-size: 18px;
-  color: var(--petrol);
-  margin: 15px 0 10px;
+  font-size: 20px;
+  color: var(--pw-ink);
+  margin: 16px 0 10px;
 }
 .pawly-workspace .workspace-empty p {
-  font-size: 13px;
+  font-size: 14px;
   max-width: 520px;
 }
 .pawly-workspace .workspace-refresh {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   background: transparent;
   border: 0;
-  padding: 10px 0 0;
-  color: var(--teal-ink);
+  padding: 10px 0;
+  color: var(--pw-accent-hover);
+  font-size: 13px;
   font-weight: 600;
-  font-size: 12px;
 }
 .pawly-workspace .workspace-footer {
-  margin-top: 65px;
-  border-top: 1px solid var(--border);
-  padding-top: 19px;
+  margin-top: 64px;
+  padding-top: 20px;
+  border-top: 1px solid var(--pw-line);
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
-  color: var(--muted);
+  gap: 16px;
+  color: var(--pw-muted);
+  font-size: 12px;
 }
 .pawly-workspace.workspace-gate {
-  padding: 40px;
+  min-height: 100svh;
+  padding: 32px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 55px;
+  gap: 48px;
   text-align: center;
 }
 .pawly-workspace.workspace-gate h1 {
-  font-size: 27px;
-  font-weight: 500;
-  margin: 18px 0 10px;
-  letter-spacing: -0.03em;
+  font-size: 30px;
+  font-weight: 550;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+  margin: 20px 0 12px;
 }
 .pawly-workspace.workspace-gate p {
-  color: var(--muted);
+  color: var(--pw-muted);
   font-size: 14px;
   max-width: 440px;
 }
@@ -517,7 +588,27 @@
 }
 .pawly-workspace.workspace-gate svg.auth-spinner {
   margin: auto;
-  color: var(--teal);
+  color: var(--pw-accent);
+}
+@media (max-width: 1000px) {
+  .pawly-workspace.workspace-layout {
+    grid-template-columns: 1fr;
+  }
+  .pawly-workspace .workspace-sidebar {
+    padding: 22px 24px;
+  }
+  .pawly-workspace .workspace-label,
+  .pawly-workspace .workspace-sidebar nav,
+  .pawly-workspace .workspace-sidebar-bottom {
+    display: none;
+  }
+  .pawly-workspace .workspace-topbar {
+    min-height: 72px;
+    padding: 12px 24px;
+  }
+  .pawly-workspace .workspace-content {
+    padding-top: 36px;
+  }
 }
 @media (max-width: 899px) {
   .pawly-auth {
@@ -526,40 +617,21 @@
   .pawly-auth .auth-story {
     padding: 24px;
     gap: 0;
+    min-height: auto;
   }
   .pawly-auth .auth-story-copy,
   .pawly-auth .auth-story-footer {
     display: none;
   }
   .pawly-auth .auth-main {
-    padding: 22px 24px 20px;
+    padding: 20px 24px;
     min-height: calc(100svh - 84px);
   }
   .pawly-auth .auth-form-area {
-    padding: 30px 0;
-  }
-  .pawly-workspace.workspace-layout {
-    grid-template-columns: 1fr;
-  }
-  .pawly-workspace .workspace-sidebar {
-    padding: 20px 24px;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .pawly-workspace .workspace-label,
-  .pawly-workspace .workspace-sidebar nav,
-  .pawly-workspace .workspace-sidebar-bottom {
-    display: none;
-  }
-  .pawly-workspace .workspace-topbar {
-    height: 66px;
-    padding: 0 24px;
-  }
-  .pawly-workspace .workspace-content {
-    padding-top: 35px;
+    padding: 28px 0;
   }
 }
-@media (max-width: 600px) {
+@media (max-width: 639px) {
   .pawly-workspace .workspace-clinics {
     grid-template-columns: 1fr;
   }
@@ -568,48 +640,50 @@
     flex-direction: column;
   }
   .pawly-workspace .workspace-clinic {
-    padding: 20px;
+    padding: 22px 18px;
+    gap: 12px;
+  }
+  .pawly-workspace .workspace-clinic.is-selected {
+    padding: 21px 17px;
+  }
+  .pawly-workspace .workspace-clinic-icon {
+    width: 44px;
+    height: 44px;
   }
   .pawly-workspace .workspace-active,
   .pawly-workspace .workspace-empty {
-    padding: 24px;
+    padding: 22px;
   }
   .pawly-workspace .workspace-topbar {
-    padding: 0 18px;
+    padding-inline: 20px;
   }
   .pawly-workspace .workspace-topbar > span {
-    font-size: 11px;
+    font-size: 12px;
     gap: 6px;
   }
   .pawly-workspace .workspace-logout {
-    padding: 9px;
-    font-size: 11px;
+    padding: 10px;
+    font-size: 12px;
+  }
+  .pawly-workspace .workspace-content {
+    padding-inline: 20px;
   }
   .pawly-workspace .workspace-footer {
-    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .pawly-auth .auth-main {
+    padding-inline: 20px;
+  }
+  .pawly-auth form {
+    padding: 22px 18px;
+  }
+  .pawly-auth .auth-security-note {
+    align-items: flex-start;
+    font-size: 11px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pawly-auth .auth-spinner,
-  .pawly-workspace .auth-spinner {
+  .auth-spinner {
     animation: none;
   }
-  .pawly-auth *,
-  .pawly-workspace * {
-    transition: none !important;
-  }
-}
-
-.pawly-workspace .workspace-enter {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 20px;
-  padding: 13px 19px;
-  border-radius: 8px;
-  background: var(--teal);
-  color: white;
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 600;
 }

@@ -7,5 +7,14 @@ export default defineConfig({
   expect: { timeout: 15000 },
   testIgnore: [],
   testMatch: "**/*.real.spec.ts",
-  webServer: base.webServer,
+  webServer: {
+    command: "node node_modules/next/dist/bin/next start --port 3100",
+    url: "http://localhost:3100",
+    reuseExistingServer: false,
+    timeout: 60_000,
+    env: {
+      NEXT_TELEMETRY_DISABLED: "1",
+      WEBSITE_SERVER_API_URL: "http://localhost:4001/api",
+    },
+  },
 });

@@ -24,6 +24,11 @@ import {
 import type { WorkspaceContext } from "@/components/workspace/workspace-shell";
 import { ConsultationForm } from "./consultation-form";
 import { useClinicalResource } from "./use-clinical-resource";
+import {
+  LoadingState,
+  PageHeader,
+  StatusBadge,
+} from "@/components/ui/workspace-ui";
 
 export function ConsultationDetail({
   context,
@@ -64,7 +69,7 @@ export function ConsultationDetail({
         <button onClick={context.refresh}>Verificar mi acceso</button>
       </div>
     );
-  if (!result.data) return <p role="status">Cargando consulta…</p>;
+  if (!result.data) return <LoadingState label="Cargando consulta…" />;
   const { record, professionals } = result.data;
   if (editing && record.status === "DRAFT")
     return (
@@ -82,121 +87,123 @@ export function ConsultationDetail({
     );
   return (
     <article className="medical-detail">
-      <header className="medical-heading">
-        <div>
-          <span className="dashboard-eyebrow">ATENCIÓN VETERINARIA</span>
-          <h1>{record.patient.name}</h1>
-          <p>
-            {date(record.attendedAt)} · {timezone}
-          </p>
-          <span
-            className={`medical-status medical-${record.status.toLowerCase()}`}
-          >
-            {consultationStates[record.status]}
-          </span>
-        </div>
-        <div className="medical-actions">
-          <Link href={consultationPath(context.clinicId)}>
-            Volver a consultas
-          </Link>
-          {record.status === "DRAFT" && (
-            <button
-              className="medical-primary"
-              onClick={() => setEditing(true)}
+      <PageHeader
+        eyebrow="ATENCIÓN VETERINARIA"
+        title={record.patient.name}
+        description={`${date(record.attendedAt)} · ${timezone}`}
+        actions={
+          <div className="medical-actions">
+            <StatusBadge
+              tone={record.status === "DRAFT" ? "warning" : "positive"}
             >
-              Editar borrador
-            </button>
-          )}
-        </div>
-      </header>
-      <section className="medical-panel">
-        <h2>Datos de la atención</h2>
-        <dl className="medical-metadata">
-          <div>
-            <dt>Profesional responsable</dt>
-            <dd>{record.professional.user.name}</dd>
-          </div>
-          <div>
-            <dt>Registrada por</dt>
-            <dd>
-              {record.creator.user.name} · {date(record.createdAt)}
-            </dd>
-          </div>
-          <div>
-            <dt>Origen</dt>
-            <dd>
-              {record.appointmentId ? "Cita de agenda" : "Sin cita previa"}
-            </dd>
-          </div>
-          {record.finalizedAt && (
-            <div>
-              <dt>Finalizada por</dt>
-              <dd>
-                {record.finalizer?.user.name} · {date(record.finalizedAt)}
-              </dd>
-            </div>
-          )}
-        </dl>
-        <div className="medical-actions">
-          <Link
-            href={`/app/clinicas/${context.clinicId}/pacientes/${record.patientId}#historia-clinica`}
-          >
-            Historia del paciente
-          </Link>
-          {record.appointmentId && (
-            <Link href={`/app/clinicas/${context.clinicId}/agenda`}>
-              Ver agenda
+              {consultationStates[record.status]}
+            </StatusBadge>
+            <Link href={consultationPath(context.clinicId)}>
+              Volver a consultas
             </Link>
-          )}
-        </div>
-      </section>
-      <section className="medical-panel">
-        <h2>Registro clínico</h2>
-        {record.status === "FINALIZED" && (
-          <p className="medical-notice">
-            Consulta finalizada. El registro original se conserva; cualquier
-            corrección se agrega al final.
-          </p>
-        )}
-        <dl className="medical-content">
-          {clinicalTextFields.map((field) => (
-            <div key={field}>
-              <dt>{clinicalLabels[field]}</dt>
+            {record.status === "DRAFT" && (
+              <button
+                className="medical-primary"
+                onClick={() => setEditing(true)}
+              >
+                Editar borrador
+              </button>
+            )}
+          </div>
+        }
+      />
+      <div className="medical-detail-layout">
+        <section className="medical-panel medical-attention-summary">
+          <h2>Datos de la atención</h2>
+          <dl className="medical-metadata">
+            <div>
+              <dt>Profesional responsable</dt>
+              <dd>{record.professional.user.name}</dd>
+            </div>
+            <div>
+              <dt>Registrada por</dt>
               <dd>
-                {record[field] || "No registrado"}
-                {field === "diagnosis" && record.diagnosisType && (
-                  <small>
-                    Tipo:{" "}
-                    {record.diagnosisType === "DEFINITIVE"
-                      ? "Definitivo"
-                      : "Presuntivo"}
-                  </small>
-                )}
+                {record.creator.user.name} · {date(record.createdAt)}
               </dd>
             </div>
-          ))}
-        </dl>
-        <h3>Signos vitales</h3>
-        <dl className="medical-metadata">
-          {(
-            [
-              ["Peso", record.weightKg, "kg"],
-              ["Temperatura", record.temperatureC, "°C"],
-              ["Frecuencia cardíaca", record.heartRate, "lpm"],
-              ["Frecuencia respiratoria", record.respiratoryRate, "rpm"],
-            ] as const
-          ).map(([label, value, unit]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>{value === null ? "No registrado" : `${value} ${unit}`}</dd>
+            <div>
+              <dt>Origen</dt>
+              <dd>
+                {record.appointmentId ? "Cita de agenda" : "Sin cita previa"}
+              </dd>
             </div>
-          ))}
-        </dl>
-        <p>
-          <strong>Próximo control:</strong>{" "}
-          {record.nextControlAt ? date(record.nextControlAt) : "No registrado"}
-        </p>
-      </section>
+            {record.finalizedAt && (
+              <div>
+                <dt>Finalizada por</dt>
+                <dd>
+                  {record.finalizer?.user.name} · {date(record.finalizedAt)}
+                </dd>
+              </div>
+            )}
+          </dl>
+          <div className="medical-actions">
+            <Link
+              href={`/app/clinicas/${context.clinicId}/pacientes/${record.patientId}#historia-clinica`}
+            >
+              Historia del paciente
+            </Link>
+            {record.appointmentId && (
+              <Link href={`/app/clinicas/${context.clinicId}/agenda`}>
+                Ver agenda
+              </Link>
+            )}
+          </div>
+        </section>
+        <section className="medical-panel">
+          <h2>Registro clínico</h2>
+          {record.status === "FINALIZED" && (
+            <p className="medical-notice">
+              Consulta finalizada. El registro original se conserva; cualquier
+              corrección se agrega al final.
+            </p>
+          )}
+          <dl className="medical-content">
+            {clinicalTextFields.map((field) => (
+              <div key={field} className={`medical-content-${field}`}>
+                <dt>{clinicalLabels[field]}</dt>
+                <dd>
+                  {record[field] || "No registrado"}
+                  {field === "diagnosis" && record.diagnosisType && (
+                    <small>
+                      Tipo:{" "}
+                      {record.diagnosisType === "DEFINITIVE"
+                        ? "Definitivo"
+                        : "Presuntivo"}
+                    </small>
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <h3>Signos vitales</h3>
+          <dl className="medical-metadata">
+            {(
+              [
+                ["Peso", record.weightKg, "kg"],
+                ["Temperatura", record.temperatureC, "°C"],
+                ["Frecuencia cardíaca", record.heartRate, "lpm"],
+                ["Frecuencia respiratoria", record.respiratoryRate, "rpm"],
+              ] as const
+            ).map(([label, value, unit]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{value === null ? "No registrado" : `${value} ${unit}`}</dd>
+              </div>
+            ))}
+          </dl>
+          <p>
+            <strong>Próximo control:</strong>{" "}
+            {record.nextControlAt
+              ? date(record.nextControlAt)
+              : "No registrado"}
+          </p>
+        </section>
+      </div>
       {record.status === "FINALIZED" && (
         <Rectifications
           key={revision}

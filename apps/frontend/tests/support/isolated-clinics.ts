@@ -48,6 +48,7 @@ export async function isolatedClinics() {
       email: string;
       password: string;
       clinicName: string;
+      clinicId?: string;
     }) {
       await assertTarget();
       const argon2 =
@@ -69,7 +70,11 @@ export async function isolatedClinics() {
             create: {
               role: "OWNER",
               clinic: {
-                create: { name: input.clinicName, slug: `qa-${randomUUID()}` },
+                create: {
+                  ...(input.clinicId ? { id: input.clinicId } : {}),
+                  name: input.clinicName,
+                  slug: `qa-${randomUUID()}`,
+                },
               },
             },
           },

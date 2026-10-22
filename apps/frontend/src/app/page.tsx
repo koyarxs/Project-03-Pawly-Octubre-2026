@@ -1,28 +1,38 @@
 import type { Metadata } from "next";
-import { MarketingLanding } from "@/components/marketing/marketing-landing";
+import { cache } from "react";
+import { PublicWebsite } from "@/components/website/public-website";
+import { getPublicWebsite } from "@/lib/website";
 
-export const metadata: Metadata = {
-  title: { absolute: "Pawly · Tu clínica conectada. Más tiempo para cuidar." },
-  description:
-    "Conecta pacientes, tutores, agenda, consultas e historia clínica con Pawly. Software veterinario para clínicas en Chile, en desarrollo.",
-  alternates: { canonical: "/" },
-  openGraph: {
-    title: "Pawly · Tu clínica conectada. Más tiempo para cuidar.",
-    description:
-      "De la primera cita a la historia de cada paciente. Conoce el espacio de gestión veterinaria que estamos construyendo para clínicas en Chile.",
-    type: "website",
-    locale: "es_CL",
-    siteName: "Pawly",
-    url: "/",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Pawly · Tu clínica conectada. Más tiempo para cuidar.",
-    description:
-      "Pacientes, agenda y atención clínica en un mismo espacio. Una plataforma veterinaria en desarrollo para Chile.",
-  },
-};
+const publicSite = cache(async () => {
+  try {
+    return await getPublicWebsite();
+  } catch {
+    return null;
+  }
+});
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await publicSite();
+  const title = site?.content?.clinicName || "Clínica Veterinaria Porvenir";
+  const description =
+    site?.content?.heroDescription ||
+    "Sitio de Clínica Veterinaria Porvenir, en preparación.";
+  return {
+    title: { absolute: title },
+    description,
+    alternates: { canonical: "/" },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      locale: "es_CL",
+      siteName: title,
+      url: "/",
+    },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
 
-export default function Home() {
-  return <MarketingLanding />;
+export default async function Home() {
+  const site = await publicSite();
+  return <PublicWebsite initial={site?.content ?? null} />;
 }

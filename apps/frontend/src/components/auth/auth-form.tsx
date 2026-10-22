@@ -266,9 +266,9 @@ export function AuthForm({ mode }: { mode: "register" | "login" }) {
       <p className="auth-switch">
         {registering
           ? "¿Ya tienes una cuenta?"
-          : "¿Tu clínica aún no tiene cuenta?"}{" "}
-        <Link href={registering ? "/iniciar-sesion" : "/registrarse"}>
-          {registering ? "Inicia sesión" : "Registra tu clínica"}
+          : "Acceso privado para el equipo de la veterinaria."}{" "}
+        <Link href={registering ? "/iniciar-sesion" : "/"}>
+          {registering ? "Inicia sesión" : "Volver al sitio"}
         </Link>
       </p>
     </>

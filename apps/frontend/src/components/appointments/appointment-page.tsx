@@ -40,6 +40,12 @@ import {
   shiftDate,
 } from "@/lib/appointment-time";
 import "./appointments.css";
+import {
+  EmptyState,
+  LoadingState,
+  PageHeader,
+  StatusBadge,
+} from "@/components/ui/workspace-ui";
 
 function useAgendaLoad<T>(
   key: string,
@@ -124,21 +130,21 @@ function Agenda({ context }: { context: WorkspaceContext }) {
   }
   return (
     <section className="appointments" aria-label="Agenda veterinaria">
-      <header className="agenda-heading">
-        <div>
-          <span className="dashboard-eyebrow">PLANIFICA LA ATENCIÓN</span>
-          <h1>Agenda veterinaria</h1>
-          <p>Las citas de tu equipo, en un mismo lugar.</p>
-        </div>
-        <button
-          className="agenda-primary"
-          disabled={!result.data}
-          onClick={(e) => open("new", e.currentTarget)}
-        >
-          <Plus size={18} />
-          Nueva cita
-        </button>
-      </header>
+      <PageHeader
+        eyebrow="PLANIFICA LA ATENCIÓN"
+        title="Agenda veterinaria"
+        description="Organiza la jornada y acompaña cada atención, de principio a fin."
+        actions={
+          <button
+            className="agenda-primary"
+            disabled={!result.data}
+            onClick={(e) => open("new", e.currentTarget)}
+          >
+            <Plus size={18} aria-hidden="true" />
+            Nueva cita
+          </button>
+        }
+      />
       <div className="agenda-toolbar">
         <div className="agenda-date-nav">
           <button
@@ -244,101 +250,137 @@ function Agenda({ context }: { context: WorkspaceContext }) {
           <button onClick={context.refresh}>Verificar mi acceso</button>
         </div>
       ) : !result.data ? (
-        <div className="agenda-empty" role="status">
-          Cargando agenda…
-        </div>
+        <LoadingState label="Cargando agenda…" rows={4} />
       ) : (
         <>
-          <p className="agenda-count" aria-live="polite">
-            {result.data.appointments.total} citas en el periodo
-            {result.data.appointments.totalPages > 1
-              ? ` · página ${page} de ${result.data.appointments.totalPages}`
-              : ""}
-          </p>
-          {result.data.appointments.total === 0 && (
-            <div className="agenda-empty">
-              <CalendarDays size={30} />
-              <h2>Un espacio para las próximas atenciones.</h2>
-              <p>
-                No hay citas con estos filtros. Crea una cita para un paciente
-                registrado.
-              </p>
+          <div className="agenda-period-heading">
+            <div>
+              <span className="pw-eyebrow">
+                {weekly ? "VISTA SEMANAL" : "VISTA DIARIA"}
+              </span>
+              <h2>
+                {new Intl.DateTimeFormat("es-CL", {
+                  timeZone: "UTC",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                }).format(new Date(`${range.start}T12:00:00Z`))}
+                {weekly &&
+                  ` — ${new Intl.DateTimeFormat("es-CL", { timeZone: "UTC", day: "numeric", month: "long" }).format(new Date(`${shiftDate(range.start, 6)}T12:00:00Z`))}`}
+              </h2>
             </div>
+            <p className="agenda-count" aria-live="polite">
+              {result.data.appointments.total} citas en el periodo
+              {result.data.appointments.totalPages > 1
+                ? ` · página ${page} de ${result.data.appointments.totalPages}`
+                : ""}
+            </p>
+          </div>
+          {result.data.appointments.total === 0 && (
+            <EmptyState
+              icon={CalendarDays}
+              title="Un espacio para las próximas atenciones."
+              description="No hay citas con estos filtros. Crea una cita para un paciente registrado."
+            />
           )}
           <div
-            className={`agenda-calendar ${weekly ? "agenda-week" : "agenda-day"}`}
+            className="agenda-calendar-wrap"
+            role="region"
+            aria-label={
+              weekly
+                ? "Calendario semanal de citas"
+                : "Calendario diario de citas"
+            }
+            tabIndex={0}
           >
-            {days.map((day) => {
-              const events = result.data!.appointments.items.filter(
-                (a) =>
-                  localStamp(a.startsAt, timezone).slice(0, 10) <= day &&
-                  localStamp(
-                    new Date(Date.parse(a.endsAt) - 1),
-                    timezone,
-                  ).slice(0, 10) >= day,
-              );
-              return (
-                <section
-                  className="agenda-column"
-                  key={day}
-                  aria-label={`Citas ${day}`}
-                >
-                  <h2>
-                    <span>
-                      {new Intl.DateTimeFormat("es-CL", {
-                        weekday: "short",
-                        timeZone: "UTC",
-                      }).format(new Date(`${day}T12:00:00Z`))}
-                    </span>
-                    {day.slice(8, 10)}
-                    <small>
-                      {new Intl.DateTimeFormat("es-CL", {
-                        month: "short",
-                        timeZone: "UTC",
-                      }).format(new Date(`${day}T12:00:00Z`))}
-                    </small>
-                  </h2>
-                  <div className="agenda-events">
-                    {events.length === 0 ? (
-                      <p className="agenda-no-events">Sin citas</p>
-                    ) : (
-                      events.map((a) => (
-                        <button
-                          className={`agenda-card agenda-${a.status.toLowerCase()}`}
-                          key={a.id}
-                          onClick={(e) => open(a, e.currentTarget)}
-                        >
-                          <span className="agenda-time">
-                            {new Intl.DateTimeFormat("es-CL", {
-                              timeZone: timezone,
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              hourCycle: "h23",
-                            }).format(new Date(a.startsAt))}{" "}
-                            –{" "}
-                            {new Intl.DateTimeFormat("es-CL", {
-                              timeZone: timezone,
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              hourCycle: "h23",
-                            }).format(new Date(a.endsAt))}
-                          </span>
-                          <strong>{a.patient.name}</strong>
-                          <span>{a.reason}</span>
-                          <small>
-                            {a.professional?.user.name ||
-                              "Sin profesional asignado"}
-                          </small>
-                          <span className="agenda-badge">
-                            {appointmentStates[a.status]}
-                          </span>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </section>
-              );
-            })}
+            <div
+              className={`agenda-calendar ${weekly ? "agenda-week" : "agenda-day"}`}
+            >
+              {days.map((day) => {
+                const events = result.data!.appointments.items.filter(
+                  (a) =>
+                    localStamp(a.startsAt, timezone).slice(0, 10) <= day &&
+                    localStamp(
+                      new Date(Date.parse(a.endsAt) - 1),
+                      timezone,
+                    ).slice(0, 10) >= day,
+                );
+                return (
+                  <section
+                    className={`agenda-column${day === localStamp(new Date(), timezone).slice(0, 10) ? " agenda-today" : ""}`}
+                    key={day}
+                    aria-label={`Citas ${day}`}
+                  >
+                    <h2>
+                      <span>
+                        {new Intl.DateTimeFormat("es-CL", {
+                          weekday: "short",
+                          timeZone: "UTC",
+                        }).format(new Date(`${day}T12:00:00Z`))}
+                      </span>
+                      {day.slice(8, 10)}
+                      <small>
+                        {new Intl.DateTimeFormat("es-CL", {
+                          month: "short",
+                          timeZone: "UTC",
+                        }).format(new Date(`${day}T12:00:00Z`))}
+                      </small>
+                    </h2>
+                    <div className="agenda-events">
+                      {events.length === 0 ? (
+                        <p className="agenda-no-events">Sin citas</p>
+                      ) : (
+                        events.map((a) => (
+                          <button
+                            className={`agenda-card agenda-${a.status.toLowerCase()}`}
+                            key={a.id}
+                            onClick={(e) => open(a, e.currentTarget)}
+                          >
+                            <span className="agenda-time">
+                              {new Intl.DateTimeFormat("es-CL", {
+                                timeZone: timezone,
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hourCycle: "h23",
+                              }).format(new Date(a.startsAt))}{" "}
+                              –{" "}
+                              {new Intl.DateTimeFormat("es-CL", {
+                                timeZone: timezone,
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hourCycle: "h23",
+                              }).format(new Date(a.endsAt))}
+                            </span>
+                            <strong>{a.patient.name}</strong>
+                            <span>{a.reason}</span>
+                            <small>
+                              {a.professional?.user.name ||
+                                "Sin profesional asignado"}
+                            </small>
+                            <StatusBadge
+                              className="agenda-badge"
+                              tone={
+                                a.status === "IN_PROGRESS"
+                                  ? "warning"
+                                  : a.status === "CONFIRMED"
+                                    ? "info"
+                                    : a.status === "CANCELLED"
+                                      ? "danger"
+                                      : a.status === "SCHEDULED"
+                                        ? "positive"
+                                        : "neutral"
+                              }
+                            >
+                              {appointmentStates[a.status]}
+                            </StatusBadge>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
           </div>
           {result.data.appointments.totalPages > 1 && (
             <div className="agenda-pagination">
@@ -529,6 +571,7 @@ function AppointmentEditor({
       ref={dialog}
       className="agenda-dialog"
       aria-labelledby="appointment-title"
+      aria-describedby="appointment-description"
       onCancel={(e) => {
         if (busy) e.preventDefault();
         else onClose();
@@ -545,7 +588,12 @@ function AppointmentEditor({
           <X size={22} />
         </button>
       </div>
-      <form onSubmit={submit}>
+      <p className="agenda-dialog-intro" id="appointment-description">
+        {appointment
+          ? "Consulta los datos y la trazabilidad de esta atención."
+          : "Vincula un paciente y su tutor para reservar una atención."}
+      </p>
+      <form onSubmit={submit} aria-busy={busy}>
         <fieldset disabled={busy || terminal}>
           <legend className="sr-only">Datos de la cita</legend>
           {!appointment ? (
@@ -743,6 +791,8 @@ function AppointmentEditor({
       </form>
       {appointment && (
         <section className="agenda-history" aria-label="Historial de la cita">
+          <h3>Historial de cambios</h3>
+          <p>La cita conserva sus modificaciones, con autor y fecha.</p>
           <button type="button" disabled={busy} onClick={() => void history()}>
             Ver historial
           </button>

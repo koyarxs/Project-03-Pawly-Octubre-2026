@@ -32,9 +32,11 @@ export function Workspace() {
     revision: number;
   } | null>(null);
   const selected =
-    chosen?.revision === revision && state.kind === "ready" &&
-    state.session.memberships.some(({ clinic, role }) =>
-      clinic.id === chosen.access.id && role === chosen.access.role,
+    chosen?.revision === revision &&
+    state.kind === "ready" &&
+    state.session.memberships.some(
+      ({ clinic, role }) =>
+        clinic.id === chosen.access.id && role === chosen.access.role,
     )
       ? chosen.access
       : null;
@@ -117,7 +119,9 @@ export function Workspace() {
         </header>
         <main className="workspace-content">
           {revalidationError && (
-            <div role="status" className="auth-alert">{revalidationError}</div>
+            <div role="status" className="auth-alert">
+              {revalidationError}
+            </div>
           )}
           <div className="workspace-welcome">
             <span className="auth-kicker">TU ESPACIO DE TRABAJO</span>
@@ -204,8 +208,8 @@ export function Workspace() {
               <p>
                 Estás trabajando con el rol de{" "}
                 <strong>{roleNames[selected.role].toLowerCase()}</strong>. Este
-                es el espacio inicial de tu clínica; las herramientas de gestión
-                estarán disponibles en próximas etapas.
+                espacio reúne tus pacientes, tutores y agenda, con las
+                herramientas habilitadas para tu rol.
               </p>
             </section>
           )}

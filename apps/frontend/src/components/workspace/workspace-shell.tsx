@@ -9,6 +9,7 @@ import {
   CalendarDays,
   ChartNoAxesCombined,
   ClipboardList,
+  Globe,
   LayoutDashboard,
   LoaderCircle,
   LogOut,
@@ -48,6 +49,7 @@ const modules = [
   ["Tutores", Users],
   ["Pacientes", PawPrint],
   ["Consultas", ClipboardList],
+  ["Sitio web", Globe],
   ["Vacunación", Syringe],
   ["Inventario", Package],
   ["Reportes", ChartNoAxesCombined],
@@ -58,10 +60,12 @@ function Navigation({
   clinicId,
   section,
   clinical,
+  manage,
 }: {
   clinicId: string;
   section: WorkspaceSection;
   clinical: boolean;
+  manage: boolean;
 }) {
   return (
     <nav aria-label="Navegación de la clínica">
@@ -72,49 +76,56 @@ function Navigation({
         <LayoutDashboard size={19} aria-hidden="true" />
         Dashboard
       </Link>
-      {modules.map(([name, Icon]) =>
-        name === "Tutores" ||
-        name === "Pacientes" ||
-        name === "Agenda" ||
-        (name === "Consultas" && clinical) ? (
-          <Link
-            key={name}
-            href={workspacePath(
-              clinicId,
-              name === "Consultas"
-                ? "consultas"
-                : name === "Agenda"
-                  ? "agenda"
-                  : name === "Tutores"
-                    ? "tutores"
-                    : "pacientes",
-            )}
-            aria-current={
-              section ===
-              (name === "Consultas"
-                ? "consultas"
-                : name === "Agenda"
-                  ? "agenda"
-                  : name === "Tutores"
-                    ? "tutores"
-                    : "pacientes")
-                ? "page"
-                : undefined
-            }
-          >
-            <Icon size={19} aria-hidden="true" />
-            {name}
-          </Link>
-        ) : (
-          <button key={name} disabled>
-            <Icon size={19} aria-hidden="true" />
-            <span>{name}</span>
-            <small>
-              {name === "Consultas" ? "Acceso clínico" : "Próximamente"}
-            </small>
-          </button>
-        ),
-      )}
+      {modules
+        .filter(([name]) => name !== "Sitio web" || manage)
+        .map(([name, Icon]) =>
+          name === "Tutores" ||
+          name === "Pacientes" ||
+          name === "Agenda" ||
+          (name === "Consultas" && clinical) ||
+          name === "Sitio web" ? (
+            <Link
+              key={name}
+              href={workspacePath(
+                clinicId,
+                name === "Sitio web"
+                  ? "sitio-web"
+                  : name === "Consultas"
+                    ? "consultas"
+                    : name === "Agenda"
+                      ? "agenda"
+                      : name === "Tutores"
+                        ? "tutores"
+                        : "pacientes",
+              )}
+              aria-current={
+                section ===
+                (name === "Sitio web"
+                  ? "sitio-web"
+                  : name === "Consultas"
+                    ? "consultas"
+                    : name === "Agenda"
+                      ? "agenda"
+                      : name === "Tutores"
+                        ? "tutores"
+                        : "pacientes")
+                  ? "page"
+                  : undefined
+              }
+            >
+              <Icon size={19} aria-hidden="true" />
+              {name}
+            </Link>
+          ) : (
+            <button key={name} disabled>
+              <Icon size={19} aria-hidden="true" />
+              <span>{name}</span>
+              <small>
+                {name === "Consultas" ? "Acceso clínico" : "Próximamente"}
+              </small>
+            </button>
+          ),
+        )}
     </nav>
   );
 }
@@ -140,12 +151,16 @@ export function WorkspaceShell({
     revision,
   } = usePrivateWorkspace(clinicId);
   const [changing, setChanging] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const desktop = window.matchMedia("(min-width: 1001px)");
     const closeOnDesktop = () => {
-      if (desktop.matches) dialog.current?.close();
+      if (desktop.matches) {
+        dialog.current?.close();
+        setMenuOpen(false);
+      }
     };
     desktop.addEventListener("change", closeOnDesktop);
     return () => desktop.removeEventListener("change", closeOnDesktop);
@@ -175,24 +190,32 @@ export function WorkspaceShell({
     );
   function closeMenu() {
     dialog.current?.close();
+    setMenuOpen(false);
     menuButton.current?.focus();
   }
   return (
     <div className="pawly-dashboard">
+      <a className="dashboard-skip-link" href="#contenido-clinica">
+        Saltar al contenido de la clínica
+      </a>
       <aside className="dashboard-sidebar">
-        <Brand inverse />
-        <span className="dashboard-eyebrow">WORKSPACE</span>
+        <div className="dashboard-sidebar-brand">
+          <Brand inverse />
+          <span>GESTIÓN VETERINARIA</span>
+        </div>
+        <span className="dashboard-eyebrow">ESPACIO CLÍNICO</span>
         <Navigation
           clinicId={clinicId}
           section={section}
           clinical={access.role !== "RECEPTIONIST"}
+          manage={access.role === "OWNER" || access.role === "ADMIN"}
         />
         <div className="dashboard-sidebar-note">
           <ShieldCheck size={21} />
           <p>
-            Tu clínica.
+            Cada cuidado, conectado.
             <br />
-            Un espacio conectado.
+            Tu equipo en un mismo lugar.
           </p>
         </div>
         <Link className="dashboard-back" href="/app">
@@ -201,9 +224,11 @@ export function WorkspaceShell({
       </aside>
       <dialog
         ref={dialog}
+        id="navegacion-clinica-movil"
         className="dashboard-mobile-menu"
         aria-label="Navegación móvil"
         onCancel={closeMenu}
+        onClose={() => setMenuOpen(false)}
       >
         <div className="dashboard-menu-heading">
           <Brand inverse />
@@ -215,6 +240,7 @@ export function WorkspaceShell({
           clinicId={clinicId}
           section={section}
           clinical={access.role !== "RECEPTIONIST"}
+          manage={access.role === "OWNER" || access.role === "ADMIN"}
         />
         <Link className="dashboard-back" href="/app">
           Mis clínicas <ArrowRight size={16} />
@@ -226,14 +252,19 @@ export function WorkspaceShell({
             ref={menuButton}
             className="dashboard-menu-toggle"
             aria-label="Abrir navegación"
-            onClick={() => dialog.current?.showModal()}
+            aria-expanded={menuOpen}
+            aria-controls="navegacion-clinica-movil"
+            onClick={() => {
+              dialog.current?.showModal();
+              setMenuOpen(true);
+            }}
           >
             <Menu size={22} />
           </button>
           <div className="dashboard-clinic-picker">
             <Building2 size={21} aria-hidden="true" />
             <label>
-              <span>CLÍNICA ACTIVA</span>
+              <span>TU CLÍNICA</span>
               <select
                 aria-label="Cambiar clínica"
                 value={clinicId}
@@ -274,7 +305,11 @@ export function WorkspaceShell({
             <span>{leaving ? "Cerrando sesión…" : "Cerrar sesión"}</span>
           </button>
         </header>
-        <main className="dashboard-content">
+        <main
+          className="dashboard-content"
+          id="contenido-clinica"
+          tabIndex={-1}
+        >
           {logoutError && (
             <div className="auth-alert" role="alert">
               {logoutError}
@@ -294,7 +329,7 @@ export function WorkspaceShell({
             revision,
           })}
           <footer className="dashboard-footer">
-            Pawly Workspace <span>Más tiempo para cuidar.</span>
+            Pawly <span>Más tiempo para cuidar.</span>
           </footer>
         </main>
       </div>
