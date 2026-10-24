@@ -71,6 +71,23 @@ export function calendarRange(date: string, weekly: boolean, timeZone: string) {
   };
 }
 
+export function shiftMonth(date: string, months: number): string {
+  const [year, month] = date.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1 + months, 1, 12))
+    .toISOString()
+    .slice(0, 10);
+}
+export function monthRange(date: string, timeZone: string) {
+  const start = date.slice(0, 7) + "-01",
+    next = shiftMonth(start, 1);
+  return {
+    start,
+    from: calendarRange(start, false, timeZone).from,
+    to: calendarRange(next, false, timeZone).from,
+    days: Math.round((Date.parse(next) - Date.parse(start)) / 86400000),
+  };
+}
+
 // Preserve seconds/precision of API-created appointments when only their state changes.
 export function appointmentInstant(
   value: string,

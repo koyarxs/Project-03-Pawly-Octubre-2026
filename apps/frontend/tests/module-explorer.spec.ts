@@ -25,7 +25,7 @@ test("el sitio oculta las secciones desactivadas sin inventar servicios", async 
   await expect(page.locator('a[href="#servicios"]')).toHaveCount(0);
   await expect(page.locator("#contacto")).toBeVisible();
 });
-test("un sitio sin publicación muestra preparación y no un borrador privado", async ({
+test("un sitio sin publicación muestra portada editorial sin borradores privados", async ({
   page,
 }) => {
   await mockPublicWebsite(page, null);
@@ -34,7 +34,7 @@ test("un sitio sin publicación muestra preparación y no un borrador privado", 
     page
       .getByRole("status")
       .filter({ hasText: "El sitio público está en preparación" }),
-  ).toContainText("El sitio público está en preparación");
+  ).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: "Acceso del equipo" }),
   ).toBeVisible();

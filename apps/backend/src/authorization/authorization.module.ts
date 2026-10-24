@@ -12,75 +12,29 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { Role } from "@prisma/client";
+import { Role, PatientScope } from "@prisma/client";
+import { requireMember, type Permission } from "./permission-policy";
+export type { Permission } from "./permission-policy";
 import { isUUID } from "class-validator";
 import { PrismaService } from "../prisma/prisma.service";
 import { SessionGuard } from "../sessions/session.guard";
 import { SessionsModule } from "../sessions/sessions.module";
 import { AuthenticatedRequest } from "../sessions/sessions.service";
 
-export type Permission =
-  | "consultation:read"
-  | "consultation:write"
-  | "appointment:read"
-  | "appointment:write"
-  | "clinic:read"
-  | "clinic:manage"
-  | "tutor:read"
-  | "tutor:write"
-  | "patient:read"
-  | "patient:write"
-  | "clinical:archive";
 export const RequirePermissions = (...permissions: Permission[]) =>
   SetMetadata("clinic-permissions", permissions);
-const permissions: Record<Role, readonly Permission[]> = {
-  OWNER: [
-    "consultation:read",
-    "consultation:write",
-    "appointment:read",
-    "appointment:write",
-    "clinic:read",
-    "clinic:manage",
-    "tutor:read",
-    "tutor:write",
-    "patient:read",
-    "patient:write",
-    "clinical:archive",
-  ],
-  ADMIN: [
-    "consultation:read",
-    "consultation:write",
-    "appointment:read",
-    "appointment:write",
-    "clinic:read",
-    "clinic:manage",
-    "tutor:read",
-    "tutor:write",
-    "patient:read",
-    "patient:write",
-    "clinical:archive",
-  ],
-  VETERINARIAN: [
-    "consultation:read",
-    "consultation:write",
-    "appointment:read",
-    "appointment:write",
-    "clinic:read",
-    "tutor:read",
-    "tutor:write",
-    "patient:read",
-    "patient:write",
-  ],
-  RECEPTIONIST: [
-    "clinic:read",
-    "tutor:read",
-    "tutor:write",
-    "patient:read",
-    "appointment:read",
-    "appointment:write",
-  ],
+export type ClinicContext = {
+  id: string;
+  name: string;
+  slug: string;
+  role: Role;
+  membershipId: string;
+  permissions: Permission[];
+  accessVersion: number;
+  patientScope: PatientScope;
+  job: string | null;
+  medicalPracticeEnabled: boolean;
 };
-type ClinicContext = { id: string; name: string; slug: string; role: Role };
 export type ClinicRequest = AuthenticatedRequest & { clinic: ClinicContext };
 
 @Injectable()
@@ -94,27 +48,27 @@ export class ClinicAuthorizationService {
     if (!required.length)
       throw new ForbiddenException("Permisos no definidos.");
     if (!isUUID(clinicId)) throw new BadRequestException("Clínica inválida.");
-    const membership = await this.prisma.clinicMembership.findFirst({
-      where: {
-        userId,
-        clinicId,
-        status: "ACTIVE",
-        clinic: { status: "ACTIVE" },
-        user: { status: "ACTIVE" },
-      },
-      select: {
-        role: true,
-        clinic: { select: { id: true, name: true, slug: true } },
-      },
-    });
-    if (
-      !membership ||
-      !required.every((permission) =>
-        permissions[membership.role].includes(permission),
-      )
-    )
-      throw new ForbiddenException("Acceso no permitido.");
-    return { ...membership.clinic, role: membership.role };
+    const membership = await requireMember(
+      this.prisma,
+      clinicId,
+      userId,
+      required,
+    );
+    const { effectivePermissions } = await import("./permission-policy");
+    const { id, name, slug } = membership.clinic;
+    return {
+      id,
+      name,
+      slug,
+      role: membership.role,
+      membershipId: membership.id,
+      permissions: effectivePermissions(membership),
+      accessVersion: membership.accessVersion,
+      patientScope: membership.patientScope,
+      job: membership.staffProfile?.job ?? null,
+      medicalPracticeEnabled:
+        effectivePermissions(membership).includes("consultation:write"),
+    };
   }
 }
 

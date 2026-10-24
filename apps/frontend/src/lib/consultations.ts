@@ -1,6 +1,7 @@
-import { AuthError, request, type ClinicRole } from "./auth";
+import { AuthError, request, type ClinicAccess } from "./auth";
 import type { Professional, Appointment } from "./appointments";
-export const canReadClinical = (role: ClinicRole) => role !== "RECEPTIONIST";
+export const canReadClinical = (access: ClinicAccess) =>
+  access.permissions.includes("consultation:read");
 export type ConsultationStatus = "DRAFT" | "FINALIZED";
 export const consultationStates = {
   DRAFT: "Borrador",

@@ -15,12 +15,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
   title: {
-    default: "Pawly · Menos gestión. Más cuidado.",
-    template: "%s | Pawly",
+    default: "Clínica Veterinaria Porvenir",
+    template: "%s | Porvenir",
   },
   description:
     "Conoce Pawly, una plataforma de gestión veterinaria en desarrollo para clínicas y profesionales en Chile. Pacientes, agenda y cuidado conectados.",
-  applicationName: "Pawly",
+  applicationName: "Clínica Veterinaria Porvenir",
   openGraph: {
     title: "Pawly · Menos gestión. Más cuidado.",
     description:
@@ -35,7 +35,10 @@ export const metadata: Metadata = {
     description:
       "Plataforma de gestión veterinaria en desarrollo. Diseñada para quienes cuidan.",
   },
-  icons: { icon: "/pawly-icon.svg" },
+  icons: {
+    icon: "/images/brand/porvenir-emblem.png",
+    apple: "/images/brand/porvenir-emblem.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

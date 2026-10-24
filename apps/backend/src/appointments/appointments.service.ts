@@ -6,8 +6,19 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { AppointmentStatus, Prisma } from "@prisma/client";
+import {
+  effectivePermissions,
+  lockClinic,
+  medicalRoles,
+  memberInclude,
+  patientScope,
+  requireMember,
+  requirePatient,
+} from "../authorization/permission-policy";
 import { PrismaService } from "../prisma/prisma.service";
 import { appointmentSnapshot } from "./appointment-snapshot";
+import { BookingEngine } from "./booking-engine";
+import { bookingNotice } from "./booking-notifications";
 import {
   AppointmentInput,
   AppointmentQueryDto,
@@ -15,12 +26,13 @@ import {
 } from "./appointments.dto";
 
 const include = {
+  service: { select: { id: true, name: true, durationMinutes: true } },
   consultation: { select: { id: true, status: true } },
   patient: { select: { id: true, name: true } },
   tutor: { select: { id: true, firstName: true, lastName: true } },
   professional: { select: { id: true, user: { select: { name: true } } } },
 } satisfies Prisma.AppointmentInclude;
-const eligibleRoles = ["OWNER", "ADMIN", "VETERINARIAN"] as const;
+const eligibleRoles = medicalRoles;
 export function utcDate(input: string): Date {
   const result = new Date(input);
   if (
@@ -35,8 +47,24 @@ export function utcDate(input: string): Date {
   return result;
 }
 const transitions: Record<AppointmentStatus, readonly AppointmentStatus[]> = {
-  SCHEDULED: ["SCHEDULED", "CONFIRMED", "IN_PROGRESS", "CANCELLED"],
-  CONFIRMED: ["CONFIRMED", "SCHEDULED", "IN_PROGRESS", "CANCELLED"],
+  SCHEDULED: [
+    "SCHEDULED",
+    "CONFIRMED",
+    "ARRIVED",
+    "IN_PROGRESS",
+    "CANCELLED",
+    "NO_SHOW",
+  ],
+  CONFIRMED: [
+    "CONFIRMED",
+    "SCHEDULED",
+    "ARRIVED",
+    "IN_PROGRESS",
+    "CANCELLED",
+    "NO_SHOW",
+  ],
+  ARRIVED: ["ARRIVED", "IN_PROGRESS", "CANCELLED"],
+  NO_SHOW: [],
   IN_PROGRESS: ["IN_PROGRESS", "COMPLETED", "CANCELLED"],
   COMPLETED: [],
   CANCELLED: [],
@@ -49,25 +77,48 @@ export function assertTransition(
 }
 @Injectable()
 export class AppointmentsService {
-  constructor(private readonly prisma: PrismaService) {}
-  async detail(clinicId: string, id: string) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly booking: BookingEngine,
+  ) {}
+  async detail(clinicId: string, id: string, userId: string) {
+    const access = await requireMember(this.prisma, clinicId, userId, [
+      "appointment:read",
+    ]);
     const record = await this.prisma.appointment.findUnique({
       where: { id_clinicId: { id, clinicId } },
       include,
     });
     if (!record) throw new NotFoundException();
+    await requirePatient(this.prisma, access, record.patientId);
     return record;
   }
-  async list(clinicId: string, q: AppointmentQueryDto) {
+  async list(clinicId: string, q: AppointmentQueryDto, userId: string) {
+    const access = await requireMember(this.prisma, clinicId, userId, [
+      "appointment:read",
+    ]);
     const from = utcDate(q.from),
       to = utcDate(q.to);
     if (to <= from || to.valueOf() - from.valueOf() > 32 * 86400000)
       throw new BadRequestException();
     const where: Prisma.AppointmentWhereInput = {
       clinicId,
+      patient: patientScope(access),
       startsAt: { lt: to },
       endsAt: { gt: from },
       ...(q.status ? { status: q.status } : {}),
+      ...(q.serviceId ? { serviceId: q.serviceId } : {}),
+      ...(q.scope === "upcoming"
+        ? {
+            status: q.status || {
+              notIn: ["CANCELLED", "COMPLETED", "NO_SHOW"],
+            },
+            startsAt: {
+              gte: new Date(Math.max(from.valueOf(), Date.now())),
+              lt: to,
+            },
+          }
+        : {}),
       ...(q.professionalMembershipId
         ? { professionalMembershipId: q.professionalMembershipId }
         : {}),
@@ -87,19 +138,31 @@ export class AppointmentsService {
     );
     return { items, total, page: q.page, totalPages: Math.ceil(total / 100) };
   }
-  professionals(clinicId: string) {
-    return this.prisma.clinicMembership.findMany({
+  async professionals(clinicId: string) {
+    const candidates = await this.prisma.clinicMembership.findMany({
       where: {
         clinicId,
         status: "ACTIVE",
         user: { status: "ACTIVE" },
         role: { in: [...eligibleRoles] },
       },
-      select: { id: true, user: { select: { name: true } } },
+      include: {
+        ...memberInclude,
+        user: { select: { name: true, status: true } },
+      },
       orderBy: [{ user: { name: "asc" } }, { id: "asc" }],
     });
+    return candidates
+      .filter(
+        (m) =>
+          this.booking.isDemoProfessional(clinicId, m.staffProfile) ||
+          (m.staffProfile?.credentialEvidence !== "PAWLY_BOOKING_DEMO_ONLY" &&
+            effectivePermissions(m).includes("consultation:write")),
+      )
+      .map((m) => ({ id: m.id, user: { name: m.user.name } }));
   }
-  async history(clinicId: string, id: string) {
+  async history(clinicId: string, id: string, userId: string) {
+    await this.detail(clinicId, id, userId);
     const record = await this.prisma.appointment.findUnique({
       where: { id_clinicId: { id, clinicId } },
     });
@@ -127,17 +190,19 @@ export class AppointmentsService {
     try {
       return await this.prisma.$transaction(
         async (tx) => {
-          const actor = await tx.clinicMembership.findUnique({
-            where: { userId_clinicId: { userId, clinicId } },
-          });
-          if (!actor || actor.status !== "ACTIVE")
-            throw new ConflictException();
+          await lockClinic(tx, clinicId);
+          const actor = await requireMember(tx, clinicId, userId, [
+            "appointment:write",
+          ]);
+          if (actor.patientScope === "ASSIGNED")
+            await requirePatient(tx, actor, dto.patientId);
           const old = id
             ? await tx.appointment.findUnique({
                 where: { id_clinicId: { id, clinicId } },
               })
             : null;
           if (id && !old) throw new NotFoundException();
+          if (old) await requirePatient(tx, actor, old.patientId);
           if (
             old &&
             (await tx.consultation.findFirst({
@@ -150,9 +215,13 @@ export class AppointmentsService {
             throw new ConflictException();
           const status = update?.status ?? AppointmentStatus.SCHEDULED;
           if (old) assertTransition(old.status, status);
+          if (status === "NO_SHOW" && startsAt > new Date())
+            throw new BadRequestException(
+              "Una cita futura no puede marcarse como inasistencia.",
+            );
           if (
             ["IN_PROGRESS", "COMPLETED"].includes(status) &&
-            actor.role === "RECEPTIONIST"
+            !effectivePermissions(actor).includes("appointment:clinical")
           )
             throw new ForbiddenException();
           if (
@@ -172,8 +241,9 @@ export class AppointmentsService {
           });
           // A historical cancelled appointment can still be cancelled after archival.
           const cancelling = status === "CANCELLED";
+          const closing = cancelling || status === "NO_SHOW";
           if (
-            !cancelling &&
+            !closing &&
             (!relation ||
               relation.patient.status !== "ACTIVE" ||
               relation.tutor.status !== "ACTIVE")
@@ -188,14 +258,28 @@ export class AppointmentsService {
                 user: { status: "ACTIVE" },
                 role: { in: [...eligibleRoles] },
               },
+              include: memberInclude,
             });
-            if (!professional && !cancelling) throw new BadRequestException();
-            if (!cancelling) {
+            if (
+              (!professional ||
+                (!this.booking.isDemoProfessional(
+                  clinicId,
+                  professional.staffProfile,
+                ) &&
+                  (professional.staffProfile?.credentialEvidence ===
+                    "PAWLY_BOOKING_DEMO_ONLY" ||
+                    !effectivePermissions(professional).includes(
+                      "consultation:write",
+                    )))) &&
+              !closing
+            )
+              throw new BadRequestException();
+            if (!closing) {
               const conflict = await tx.appointment.findFirst({
                 where: {
                   clinicId,
                   professionalMembershipId: dto.professionalMembershipId,
-                  status: { not: "CANCELLED" },
+                  status: { notIn: ["CANCELLED", "NO_SHOW"] },
                   startsAt: { lt: endsAt },
                   endsAt: { gt: startsAt },
                   ...(id ? { id: { not: id } } : {}),
@@ -207,7 +291,7 @@ export class AppointmentsService {
           if (cancelling && !update?.cancellationReason?.trim())
             throw new BadRequestException();
           if (
-            cancelling &&
+            closing &&
             old &&
             (dto.patientId !== old.patientId ||
               dto.tutorId !== old.tutorId ||
@@ -217,7 +301,28 @@ export class AppointmentsService {
               dto.reason !== old.reason)
           )
             throw new BadRequestException();
+          const changedTime =
+            !old ||
+            old.startsAt.valueOf() !== startsAt.valueOf() ||
+            old.endsAt.valueOf() !== endsAt.valueOf() ||
+            old.professionalMembershipId !== dto.professionalMembershipId ||
+            (dto.serviceId !== undefined && dto.serviceId !== old.serviceId);
+          const bookingData =
+            changedTime && status !== "CANCELLED" && status !== "NO_SHOW"
+              ? await this.booking.checkManual(tx, clinicId, {
+                  serviceId: dto.serviceId ?? old?.serviceId ?? null,
+                  professionalId: dto.professionalMembershipId,
+                  startsAt,
+                  endsAt,
+                  ...(old ? { appointmentId: old.id } : {}),
+                })
+              : {
+                  serviceId: old?.serviceId ?? null,
+                  resourceKey: old?.resourceKey ?? null,
+                  blockedUntil: old?.blockedUntil ?? null,
+                };
           const data = {
+            ...bookingData,
             patientId: dto.patientId,
             tutorId: dto.tutorId,
             professionalMembershipId: dto.professionalMembershipId,
@@ -248,10 +353,74 @@ export class AppointmentsService {
               after: appointmentSnapshot(record),
             },
           });
+          const linked = await tx.bookingRequest.findFirst({
+            where: { clinicId, appointmentId: record.id },
+          });
+          if (linked && record.serviceId && record.professionalMembershipId) {
+            await tx.bookingRequest.update({
+              where: { id: linked.id },
+              data: {
+                serviceId: record.serviceId,
+                professionalMembershipId: record.professionalMembershipId,
+                startsAt: record.startsAt,
+                endsAt: record.endsAt,
+                blockedUntil: record.blockedUntil || record.endsAt,
+                resourceKey: record.resourceKey,
+                status:
+                  record.status === "CANCELLED" || record.status === "NO_SHOW"
+                    ? "CANCELLED"
+                    : "CONVERTED",
+                cancellationReason:
+                  record.status === "NO_SHOW"
+                    ? "Inasistencia registrada por la clínica"
+                    : record.cancellationReason,
+                version: { increment: 1 },
+              },
+            });
+            await tx.bookingEvent.create({
+              data: {
+                clinicId,
+                bookingId: linked.id,
+                actorMembershipId: actor.id,
+                action: `APPOINTMENT_${record.status}`,
+                snapshot: {
+                  status:
+                    record.status === "CANCELLED" || record.status === "NO_SHOW"
+                      ? "CANCELLED"
+                      : "CONVERTED",
+                  appointmentStatus: record.status,
+                  startsAt: record.startsAt.toISOString(),
+                  endsAt: record.endsAt.toISOString(),
+                  version: linked.version + 1,
+                },
+              },
+            });
+          }
+          const notificationKind =
+            record.status === "CANCELLED"
+              ? "CANCELLED"
+              : !old
+                ? "RECEIVED"
+                : changedTime
+                  ? "RESCHEDULED"
+                  : record.status === "CONFIRMED" && old.status !== "CONFIRMED"
+                    ? "CONFIRMED"
+                    : null;
+          if (notificationKind)
+            await bookingNotice(tx, {
+              clinicId,
+              ...(linked
+                ? { bookingId: linked.id }
+                : { appointmentId: record.id }),
+              version: linked ? linked.version + 1 : record.version,
+              kind: notificationKind,
+              startsAt: record.startsAt,
+              remind: record.status === "CONFIRMED",
+            });
           return record;
         },
         {
-          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
           maxWait: 5000,
           timeout: 10000,
         },

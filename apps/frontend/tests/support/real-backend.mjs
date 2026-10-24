@@ -5,6 +5,15 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 const backend = fileURLToPath(new URL("../../../backend/", import.meta.url));
+const buildRoot = path.resolve(
+  backend,
+  process.env.PAWLY_QA_BACKEND_BUILD || "dist",
+);
+if (
+  buildRoot !== path.join(backend, "dist") &&
+  !buildRoot.startsWith(path.join(backend, ".cache") + path.sep)
+)
+  throw new Error("QA build must stay inside the backend cache or dist");
 const require = createRequire(path.join(backend, "package.json"));
 const { PrismaClient, Prisma } = require("@prisma/client");
 const { NestFactory } = require("@nestjs/core");
@@ -13,6 +22,9 @@ if (!/^[a-f0-9-]{36}$/.test(process.env.PAWLY_QA_WEBSITE_CLINIC_ID ?? ""))
   throw new Error("An isolated website clinic ID is required.");
 process.env.WEBSITE_CLINIC_ID = process.env.PAWLY_QA_WEBSITE_CLINIC_ID;
 process.env.WEBSITE_PUBLIC_NAME = "Clínica QA Sitio";
+delete process.env.BOOKING_DEMO_CLINIC_ID;
+if (process.env.PAWLY_QA_PERSONAL_DEMO === "1")
+  process.env.BOOKING_DEMO_CLINIC_ID = process.env.PAWLY_QA_WEBSITE_CLINIC_ID;
 const url = new URL(process.env.DATABASE_URL ?? "");
 if (
   process.env.NODE_ENV === "production" ||
@@ -24,6 +36,10 @@ if (
   [...url.searchParams.keys()].some((k) => k !== "schema")
 )
   throw new Error("Browser tests require local pawly on loopback:5433/public");
+// Docker is explicitly bound to IPv4 loopback. Keep QA deterministic on Windows
+// and bound the pool independently of the host's reported CPU count.
+url.hostname = "127.0.0.1";
+url.searchParams.set("connection_limit", "5");
 const control = new PrismaClient({ datasourceUrl: url.toString() });
 const schema = `pawly_frontend_test_${randomUUID().replaceAll("-", "")}`;
 let ownsSchema = false;
@@ -53,7 +69,10 @@ async function snapshot() {
       }
       return JSON.stringify({ columns, constraints, indexes, enums, rows });
     },
-    { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    {
+      isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+      timeout: 30000,
+    },
   );
 }
 async function assertOwned(client) {
@@ -72,12 +91,13 @@ async function stop(code = 0) {
     if (ownsSchema) {
       await assertOwned(prisma);
       await control.$executeRawUnsafe(
-        `DROP TABLE IF EXISTS "${schema}"."VeterinaryWebsite", "${schema}"."ConsultationEvent", "${schema}"."ConsultationAmendment", "${schema}"."Consultation", "${schema}"."AppointmentEvent", "${schema}"."Appointment", "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership", "${schema}"."User", "${schema}"."VeterinaryClinic", "${schema}"."_prisma_migrations" RESTRICT`,
+        `DROP TABLE IF EXISTS "${schema}"."BookingNotification","${schema}"."BookingEvent","${schema}"."BookingRequest","${schema}"."BookingServiceProfessional","${schema}"."BookingService","${schema}"."BookingSettings","${schema}"."ConciergeMessage","${schema}"."ConciergeBookingProposal","${schema}"."ConciergeConversation","${schema}"."ConciergePresence","${schema}"."ConciergeUsage","${schema}"."ConciergeSettings","${schema}"."NewsletterSubscriber","${schema}"."PatientAssignment", "${schema}"."StaffInvitation", "${schema}"."AccessAuditLog", "${schema}"."StaffProfile", "${schema}"."VeterinaryWebsite", "${schema}"."ConsultationEvent", "${schema}"."ConsultationAmendment", "${schema}"."Consultation", "${schema}"."AppointmentEvent", "${schema}"."Appointment", "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership", "${schema}"."User", "${schema}"."VeterinaryClinic", "${schema}"."_prisma_migrations" RESTRICT`,
       );
       await control.$executeRawUnsafe(
-        `DROP TYPE IF EXISTS "${schema}"."ConsultationStatus", "${schema}"."DiagnosisType", "${schema}"."AppointmentStatus", "${schema}"."TutorStatus", "${schema}"."PatientStatus", "${schema}"."Species", "${schema}"."PatientSex", "${schema}"."UserStatus", "${schema}"."ClinicStatus", "${schema}"."MembershipStatus", "${schema}"."Role" RESTRICT`,
+        `DROP TYPE IF EXISTS "${schema}"."ConciergeSeat","${schema}"."ConciergeMessageRole","${schema}"."ConciergeHandoffState","${schema}"."ConciergeBookingState","${schema}"."ConciergeUsageState","${schema}"."StaffJob", "${schema}"."CredentialStatus", "${schema}"."PatientScope", "${schema}"."PermissionKey", "${schema}"."ConsultationStatus", "${schema}"."DiagnosisType", "${schema}"."AppointmentStatus", "${schema}"."TutorStatus", "${schema}"."PatientStatus", "${schema}"."Species", "${schema}"."PatientSex", "${schema}"."UserStatus", "${schema}"."ClinicStatus", "${schema}"."MembershipStatus", "${schema}"."Role" RESTRICT`,
       );
       for (const fn of [
+        "protectAccessAudit",
         "protectFinalizedConsultation",
         "protectClinicalAppendOnly",
         "requireFinalizedForAmendment",
@@ -122,6 +142,7 @@ try {
   url.searchParams.set("schema", schema);
   process.env.DATABASE_URL = url.toString();
   process.env.NODE_ENV = "test";
+  process.env.MAIL_MODE = "disabled";
   process.env.CORS_ORIGINS = "http://localhost:3100";
   prisma = new PrismaClient({ datasourceUrl: url.toString() });
   await assertOwned(prisma);
@@ -134,12 +155,12 @@ try {
     ],
     { cwd: backend, env: process.env, stdio: "pipe", timeout: 30000 },
   );
-  const { AppModule } = require(path.join(backend, "dist/app.module.js"));
+  const { AppModule } = require(path.join(buildRoot, "app.module.js"));
   const { PrismaService } = require(
-    path.join(backend, "dist/prisma/prisma.service.js"),
+    path.join(buildRoot, "prisma/prisma.service.js"),
   );
   const { configureHttp } = require(
-    path.join(backend, "dist/http/configure-http.js"),
+    path.join(buildRoot, "http/configure-http.js"),
   );
   app = await NestFactory.create(AppModule, { logger: ["error"] });
   configureHttp(app);

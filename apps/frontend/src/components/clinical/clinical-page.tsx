@@ -75,11 +75,14 @@ function ClinicalContent({
   if (view === "list") return <ClinicalList context={context} kind={kind} />;
   if (
     (view === "new" || view === "edit") &&
-    !canWrite(kind, context.access.role)
+    !canWrite(kind, context.access, view === "edit" ? "update" : "create")
   )
     return (
       <section className="clinical-state" role="alert">
-        <h1>No tienes permiso para editar pacientes.</h1>
+        <h1>
+          No tienes permiso para editar{" "}
+          {kind === "tutores" ? "tutores" : "pacientes"}.
+        </h1>
         <p>
           Tu rol permite consultar las fichas. Solicita la gestión a un
           integrante autorizado de la clínica.
@@ -238,7 +241,7 @@ function ClinicalDetail({
               {statusNames[record.status]}
             </StatusBadge>
             {record.status !== "ARCHIVED" &&
-              canWrite(kind, context.access.role) && (
+              canWrite(kind, context.access, "update") && (
                 <Link
                   className="clinical-secondary"
                   href={clinicalPath(context.clinicId, kind, record.id, true)}
@@ -273,10 +276,13 @@ function ClinicalDetail({
               </div>
             ))}
           </dl>
-          <div className="clinical-notes">
-            <h3>Observaciones</h3>
-            <p>{record.notes || "Sin observaciones registradas."}</p>
-          </div>
+          {(kind === "tutores" ||
+            context.access.permissions.includes("patient:notes")) && (
+            <div className="clinical-notes">
+              <h3>Observaciones</h3>
+              <p>{record.notes || "Sin observaciones registradas."}</p>
+            </div>
+          )}
           <div className="clinical-dates">
             <span>
               Creado:{" "}
@@ -299,15 +305,23 @@ function ClinicalDetail({
           >
             <h2>Responsables asociados</h2>
             <div className="clinical-related">
-              {(record as Patient).tutors.map((tutor) => (
-                <Link
-                  key={tutor.id}
-                  href={clinicalPath(context.clinicId, "tutores", tutor.id)}
-                >
-                  <RecordIdentity name={fullName(tutor)} kind="person" />
-                  <span>Ver ficha</span>
-                </Link>
-              ))}
+              {(record as Patient).tutors.map((tutor) =>
+                context.access.permissions.includes("tutor:read") ? (
+                  <Link
+                    key={tutor.id}
+                    href={clinicalPath(context.clinicId, "tutores", tutor.id)}
+                  >
+                    <RecordIdentity name={fullName(tutor)} kind="person" />
+                    <span>Ver ficha</span>
+                  </Link>
+                ) : (
+                  <RecordIdentity
+                    key={tutor.id}
+                    name={fullName(tutor)}
+                    kind="person"
+                  />
+                ),
+              )}
             </div>
           </section>
         )}
@@ -322,7 +336,7 @@ function ClinicalDetail({
       {kind === "tutores" && (
         <ClinicalList context={context} kind="pacientes" tutorId={record.id} />
       )}
-      {record.status !== "ARCHIVED" && canArchive(context.access.role) && (
+      {record.status !== "ARCHIVED" && canArchive(context.access) && (
         <section className="clinical-archive">
           <div>
             <h2>Archivar registro</h2>

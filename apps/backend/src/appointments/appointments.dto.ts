@@ -2,6 +2,7 @@ import { Transform, Type } from "class-transformer";
 import {
   IsEnum,
   IsInt,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -15,6 +16,7 @@ import {
 import { AppointmentStatus } from "@prisma/client";
 
 export class AppointmentInput {
+  @IsOptional() @IsUUID("4") serviceId?: string | null;
   @IsUUID("4") patientId!: string;
   @IsUUID("4") tutorId!: string;
   @ValidateIf((_o, value: unknown) => value !== null)
@@ -39,6 +41,8 @@ export class UpdateAppointmentDto extends AppointmentInput {
   @IsOptional() @IsString() @MaxLength(500) cancellationReason?: string;
 }
 export class AppointmentQueryDto {
+  @IsOptional() @IsIn(["upcoming"]) scope?: string;
+  @IsOptional() @IsUUID("4") serviceId?: string;
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/)
   from!: string;

@@ -9,7 +9,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
       <a className="skip-link" href="#contenido">
         Saltar al formulario
       </a>
-      <aside className="auth-story" aria-label="Bienvenido a Pawly">
+      <aside className="auth-story" aria-label="Bienvenido a Porvenir">
         <Brand inverse />
         <div className="auth-story-copy">
           <span className="auth-kicker">DISEÑADO PARA QUIENES CUIDAN</span>
@@ -39,13 +39,13 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
       </aside>
       <div className="auth-main">
         <Link href="/" className="auth-back">
-          <ArrowLeft size={16} aria-hidden="true" /> Volver a Pawly
+          <ArrowLeft size={16} aria-hidden="true" /> Volver a Porvenir
         </Link>
         <main className="auth-form-area" id="contenido" tabIndex={-1}>
           {children}
         </main>
         <footer className="auth-footer">
-          Pawly Workspace · Más tiempo para cuidar.
+          Clínica Veterinaria Porvenir · Más tiempo para cuidar.
         </footer>
       </div>
     </div>

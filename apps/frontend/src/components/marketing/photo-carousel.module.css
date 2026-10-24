@@ -87,6 +87,72 @@
   }
 }
 
+.banner.carousel {
+  position: relative;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: #f4f5ed;
+  overflow: hidden;
+}
+.banner .frame {
+  height: auto;
+  aspect-ratio: 2.4 / 1;
+  background: #f4f5ed;
+}
+.banner .slide,
+.banner .photoCanvas {
+  position: absolute;
+  inset: 0;
+  aspect-ratio: auto;
+}
+.banner .photoCanvas::after {
+  content: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #f7f7ef 0%, #f7f7eff5 22%, #f7f7efc7 36%, #f7f7ef20 57%, transparent 75%), linear-gradient(0deg, #06483d3d, transparent 30%);
+  pointer-events: none;
+}
+.banner .photoCanvas picture { display: block; width: 100%; height: 100%; }
+.banner .photograph { display: block; width: 100%; height: 100%; object-fit: contain; }
+.banner .caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  min-height: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.banner .toolbar {
+  position: absolute;
+  z-index: 3;
+  bottom: 14px;
+  right: 20px;
+  left: auto;
+  display: flex;
+  gap: 4px;
+  padding: 0;
+  min-height: 48px;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+.banner .toolbar button { background: #ffffffd9; }
+.banner[data-align="right"] .photoCanvas::after {
+  background: linear-gradient(270deg, #f7f7ef 0%, #f7f7eff5 22%, #f7f7efc7 36%, #f7f7ef20 57%, transparent 75%);
+}
+.banner .navigation { gap: 2px; }
+.banner .toolbar button { color: #06483d; }
+@media (max-width: 767px) {
+  .banner .frame { aspect-ratio: 4 / 5; }
+  .banner .photoCanvas { top: 0; }
+  .banner .photoCanvas::after,
+  .banner[data-align="right"] .photoCanvas::after {
+    background: linear-gradient(180deg, #f4f5ed 0%, #f4f5edee 8%, #f4f5ed22 38%, transparent 60%);
+  }
+}
+
 .frame {
   position: relative;
   aspect-ratio: 4 / 3;

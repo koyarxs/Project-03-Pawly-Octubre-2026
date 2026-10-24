@@ -30,6 +30,7 @@ export function usePrivateWorkspace(clinicId?: string) {
   const [logoutError, setLogoutError] = useState("");
   const [revalidationError, setRevalidationError] = useState("");
   const verifiedUser = useRef<string | null>(null);
+  const verifiedAccess = useRef<string | null>(null);
   const pending = useRef<AbortController | null>(null);
   const logoutLock = useRef(false);
   const endSession = useCallback(() => {
@@ -50,18 +51,43 @@ export function usePrivateWorkspace(clinicId?: string) {
         if (controller.signal.aborted) return;
         // Clear the previous account's UI before requesting any new access.
         if (
-          background && verifiedUser.current &&
+          background &&
+          verifiedUser.current &&
           verifiedUser.current !== session.id
         ) {
           setRevision((value) => value + 1);
           return;
         }
-        if (clinicId && !session.memberships.some(({ clinic }) => clinic.id === clinicId))
+        if (
+          clinicId &&
+          !session.memberships.some(({ clinic }) => clinic.id === clinicId)
+        )
           throw new AuthError(403);
         const access = clinicId
           ? await checkClinicAccess(clinicId, controller.signal)
           : null;
         if (!controller.signal.aborted) {
+          const fingerprint = JSON.stringify(
+            access && {
+              id: access.id,
+              membershipId: access.membershipId,
+              role: access.role,
+              permissions: access.permissions,
+              accessVersion: access.accessVersion,
+              patientScope: access.patientScope,
+              medicalPracticeEnabled: access.medicalPracticeEnabled,
+            },
+          );
+          if (
+            background &&
+            verifiedAccess.current !== null &&
+            verifiedAccess.current !== fingerprint
+          ) {
+            verifiedAccess.current = fingerprint;
+            setRevision((value) => value + 1);
+            return;
+          }
+          verifiedAccess.current = fingerprint;
           verifiedUser.current = session.id;
           setRevalidationError("");
           setSnapshot({
@@ -116,10 +142,12 @@ export function usePrivateWorkspace(clinicId?: string) {
     };
     document.addEventListener("visibilitychange", refresh);
     window.addEventListener("pageshow", restore);
+    const accessTimer = window.setInterval(refresh, 30_000);
     return () => {
       controller.abort();
       document.removeEventListener("visibilitychange", refresh);
       window.removeEventListener("pageshow", restore);
+      window.clearInterval(accessTimer);
     };
   }, [clinicId, revision, router]);
   function refresh() {

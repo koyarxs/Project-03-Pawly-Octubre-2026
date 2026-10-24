@@ -21,7 +21,9 @@ export class BrowserRequestGuard implements CanActivate {
     const pathname = request.path.toLowerCase();
     if (
       !pathname.startsWith("/api/auth") &&
-      !pathname.startsWith("/api/clinics")
+      !pathname.startsWith("/api/clinics") &&
+      !pathname.startsWith("/api/bookings") &&
+      !pathname.startsWith("/api/website/newsletter")
     )
       return true;
     http.getResponse<Response>().setHeader("Cache-Control", "no-store");

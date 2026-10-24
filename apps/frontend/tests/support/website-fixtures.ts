@@ -40,6 +40,8 @@ export async function mockPublicWebsite(
   page: Page,
   content: WebsiteContent | null = publicWebsiteFixture,
 ) {
+  // Public landing tests never make billable requests to Google.
+  await page.route("**/api/google-reviews", (route) => route.fulfill({ status: 200, json: { status: "not-configured", reviews: [] } }));
   await page.route("**/api/website", (route) =>
     route.fulfill({
       status: 200,

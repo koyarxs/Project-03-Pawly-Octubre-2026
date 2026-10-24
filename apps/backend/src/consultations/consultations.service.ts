@@ -1,14 +1,22 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma, Consultation } from "@prisma/client";
+import {
+  effectivePermissions,
+  lockClinic,
+  memberInclude,
+  patientScope,
+  requireMember,
+  requirePatient,
+} from "../authorization/permission-policy";
 import { PrismaService } from "../prisma/prisma.service";
 import { utcDate } from "../appointments/appointments.service";
 import { appointmentSnapshot } from "../appointments/appointment-snapshot";
+import { BookingEngine } from "../appointments/booking-engine";
 import {
   AmendmentDto,
   ClinicalFieldsDto,
@@ -16,7 +24,7 @@ import {
   CreateConsultationDto,
   UpdateConsultationDto,
 } from "./consultations.dto";
-const roles = ["OWNER", "ADMIN", "VETERINARIAN"] as const;
+
 const person = {
   select: { id: true, user: { select: { name: true } } },
 } as const;
@@ -69,7 +77,10 @@ export function assertFinalizable(dto: ClinicalFieldsDto) {
 }
 @Injectable()
 export class ConsultationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly booking: BookingEngine,
+  ) {}
   private serialize<
     T extends {
       weightKg: Prisma.Decimal | null;
@@ -87,7 +98,7 @@ export class ConsultationsService {
   ) {
     try {
       return await this.prisma.$transaction(operation, {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
         maxWait: 5000,
         timeout: 10000,
       });
@@ -105,37 +116,22 @@ export class ConsultationsService {
     clinicId: string,
     userId: string,
   ) {
-    const actor = await tx.clinicMembership.findFirst({
-      where: {
-        clinicId,
-        userId,
-        status: "ACTIVE",
-        role: { in: [...roles] },
-        user: { status: "ACTIVE" },
-        clinic: { status: "ACTIVE" },
-      },
-    });
-    if (!actor) throw new ForbiddenException();
-    return actor;
+    await lockClinic(tx, clinicId);
+    return requireMember(tx, clinicId, userId, ["consultation:write"]);
   }
   private async professional(
     tx: Prisma.TransactionClient,
     clinicId: string,
     id: string,
   ) {
-    if (
-      !(await tx.clinicMembership.findFirst({
-        where: {
-          clinicId,
-          id,
-          status: "ACTIVE",
-          role: { in: [...roles] },
-          user: { status: "ACTIVE" },
-        },
-      }))
-    )
+    const member = await tx.clinicMembership.findFirst({
+      where: { id, clinicId },
+      include: memberInclude,
+    });
+    if (!member || !effectivePermissions(member).includes("consultation:write"))
       throw new BadRequestException();
   }
+
   private async record(
     tx: Prisma.TransactionClient,
     clinicId: string,
@@ -192,7 +188,7 @@ export class ConsultationsService {
     if (
       !appointment ||
       appointment.patientId !== record.patientId ||
-      ["CANCELLED", "COMPLETED"].includes(appointment.status)
+      ["CANCELLED", "COMPLETED", "NO_SHOW"].includes(appointment.status)
     )
       throw new ConflictException();
     const conflict = await tx.appointment.findFirst({
@@ -200,12 +196,33 @@ export class ConsultationsService {
         clinicId: record.clinicId,
         id: { not: appointment.id },
         professionalMembershipId: record.professionalMembershipId,
-        status: { not: "CANCELLED" },
+        status: { notIn: ["CANCELLED", "NO_SHOW"] },
         startsAt: { lt: appointment.endsAt },
         endsAt: { gt: appointment.startsAt },
       },
     });
     if (conflict) throw new ConflictException();
+    if (
+      appointment.professionalMembershipId !== record.professionalMembershipId
+    ) {
+      const end = appointment.blockedUntil || appointment.endsAt;
+      const occupied = await this.booking.occupied(
+        tx,
+        record.clinicId,
+        appointment.startsAt,
+        end,
+        { appointmentId: appointment.id },
+      );
+      if (
+        occupied.some(
+          (o) =>
+            o.professionalId === record.professionalMembershipId &&
+            o.startsAt < end &&
+            o.blockedUntil > appointment.startsAt,
+        )
+      )
+        throw new ConflictException();
+    }
     const status = record.status === "FINALIZED" ? "COMPLETED" : "IN_PROGRESS";
     if (
       appointment.status === status &&
@@ -229,10 +246,42 @@ export class ConsultationsService {
         after: appointmentSnapshot(updated),
       },
     });
+    const publicBooking = await tx.bookingRequest.findFirst({
+      where: { clinicId: record.clinicId, appointmentId: appointment.id },
+    });
+    if (publicBooking) {
+      await tx.bookingRequest.update({
+        where: { id: publicBooking.id },
+        data: {
+          professionalMembershipId: updated.professionalMembershipId!,
+          version: { increment: 1 },
+        },
+      });
+      await tx.bookingEvent.create({
+        data: {
+          clinicId: record.clinicId,
+          bookingId: publicBooking.id,
+          actorMembershipId: actorId,
+          action:
+            record.status === "FINALIZED"
+              ? "CONSULTATION_COMPLETED"
+              : "CONSULTATION_STARTED",
+          snapshot: {
+            status: publicBooking.status,
+            appointmentStatus: updated.status,
+            startsAt: updated.startsAt.toISOString(),
+          },
+        },
+      });
+    }
   }
-  async list(clinicId: string, q: ConsultationQueryDto) {
+  async list(clinicId: string, q: ConsultationQueryDto, userId: string) {
+    const access = await requireMember(this.prisma, clinicId, userId, [
+      "consultation:read",
+    ]);
     const where: Prisma.ConsultationWhereInput = {
       clinicId,
+      patient: patientScope(access),
       ...(q.patientId ? { patientId: q.patientId } : {}),
       ...(q.status ? { status: q.status } : {}),
     };
@@ -272,16 +321,20 @@ export class ConsultationsService {
     );
     return { items, total, page: q.page, totalPages: Math.ceil(total / 20) };
   }
-  async detail(clinicId: string, id: string) {
+  async detail(clinicId: string, id: string, userId: string) {
+    const access = await requireMember(this.prisma, clinicId, userId, [
+      "consultation:read",
+    ]);
     const r = await this.prisma.consultation.findUnique({
       where: { id_clinicId: { id, clinicId } },
       include,
     });
     if (!r) throw new NotFoundException();
+    await requirePatient(this.prisma, access, r.patientId);
     return this.serialize(r);
   }
-  async history(clinicId: string, id: string, page: number) {
-    await this.detail(clinicId, id);
+  async history(clinicId: string, id: string, page: number, userId: string) {
+    await this.detail(clinicId, id, userId);
     const where = { clinicId, consultationId: id };
     const [items, total] = await this.prisma.$transaction(
       [
@@ -304,8 +357,8 @@ export class ConsultationsService {
     );
     return { items, total, page, totalPages: Math.ceil(total / 20) };
   }
-  async amendments(clinicId: string, id: string, page: number) {
-    await this.detail(clinicId, id);
+  async amendments(clinicId: string, id: string, page: number, userId: string) {
+    await this.detail(clinicId, id, userId);
     const where = { clinicId, consultationId: id };
     const [items, total] = await this.prisma.$transaction(
       [
@@ -333,6 +386,8 @@ export class ConsultationsService {
     return this.write(async (tx) => {
       const actor = await this.actor(tx, clinicId, userId);
       await this.professional(tx, clinicId, dto.professionalMembershipId);
+      if ("patientId" in dto && actor.patientScope === "ASSIGNED")
+        await requirePatient(tx, actor, dto.patientId);
       const patient = await tx.patient.findUnique({
         where: { id_clinicId: { id: dto.patientId, clinicId } },
       });
@@ -349,7 +404,7 @@ export class ConsultationsService {
           appointment.professionalMembershipId !== dto.professionalMembershipId
         )
           throw new BadRequestException();
-        if (["CANCELLED", "COMPLETED"].includes(appointment.status))
+        if (["CANCELLED", "COMPLETED", "NO_SHOW"].includes(appointment.status))
           throw new ConflictException();
       }
       const r = await tx.consultation.create({
@@ -384,6 +439,7 @@ export class ConsultationsService {
     return this.write(async (tx) => {
       const actor = await this.actor(tx, clinicId, userId);
       const old = await this.record(tx, clinicId, id);
+      await requirePatient(tx, actor, old.patientId);
       if (old.status !== "DRAFT" || old.version !== dto.version)
         throw new ConflictException();
       await this.professional(tx, clinicId, dto.professionalMembershipId);
@@ -418,6 +474,7 @@ export class ConsultationsService {
     return this.write(async (tx) => {
       const actor = await this.actor(tx, clinicId, userId);
       const old = await this.record(tx, clinicId, id);
+      await requirePatient(tx, actor, old.patientId);
       if (old.status !== "FINALIZED") throw new ConflictException();
       const amendment = await tx.consultationAmendment.create({
         data: {

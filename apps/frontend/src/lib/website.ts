@@ -1,22 +1,7 @@
 import { AuthError, request } from "./auth";
+import { websiteBanners } from "./website-banners";
 
-export const websitePhotos = [
-  {
-    id: "consultation",
-    label: "Consulta veterinaria con tutor",
-    image: "/images/pawly-2/hero-consultation.webp",
-  },
-  {
-    id: "pets",
-    label: "Perro y gato con su familia",
-    image: "/images/pawly-2/pets-and-family.webp",
-  },
-  {
-    id: "care",
-    label: "Acompañamiento en la consulta",
-    image: "/images/landing-clinical-care.webp",
-  },
-] as const;
+export const websitePhotos = websiteBanners;
 export interface WebsiteContent {
   clinicName: string;
   tagline: string;

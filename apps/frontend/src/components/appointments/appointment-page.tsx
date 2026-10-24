@@ -10,6 +10,19 @@ import {
 } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import {
+  BookingSettingsPanel,
+  type AppointmentDraft,
+} from "./booking-settings";
+import { BookingRequestsPanel } from "./booking-requests";
+import {
+  privateBooking,
+  bookingTime,
+  bookingStates,
+  type BookingIntake,
+  type BookingSettings,
+} from "@/lib/booking";
+import bookingStyles from "./booking-workspace.module.css";
+import {
   WorkspaceShell,
   type WorkspaceContext,
 } from "@/components/workspace/workspace-shell";
@@ -38,6 +51,8 @@ import {
   localStamp,
   appointmentInstant,
   shiftDate,
+  monthRange,
+  shiftMonth,
 } from "@/lib/appointment-time";
 import "./appointments.css";
 import {
@@ -77,42 +92,220 @@ export function AppointmentPage({ clinicId }: { clinicId: string }) {
   return (
     <WorkspaceShell clinicId={clinicId} section="agenda">
       {(context) => (
-        <Agenda key={`${clinicId}:${context.revision}`} context={context} />
+        <SchedulingWorkspace
+          key={`${clinicId}:${context.revision}`}
+          context={context}
+        />
       )}
     </WorkspaceShell>
   );
 }
-function Agenda({ context }: { context: WorkspaceContext }) {
+function SchedulingWorkspace({ context }: { context: WorkspaceContext }) {
+  const [bookingFocus, setBookingFocus] = useState<{
+    date: string;
+    status: string;
+  } | null>(null);
+  const [tab, setTab] = useState("calendar"),
+    [draft, setDraft] = useState<AppointmentDraft | null>(null);
+  const tabs = [
+    ["calendar", "Calendario"],
+    ["day", "Citas del día"],
+    ["upcoming", "Próximas citas"],
+    ["requests", "Solicitudes pendientes"],
+    ["history", "Historial"],
+    ["availability", "Disponibilidad"],
+    ["services", "Servicios"],
+    ["settings", "Configuración"],
+  ] as const;
+  return (
+    <div className={bookingStyles.workspace}>
+      <nav
+        className={bookingStyles.tabs}
+        aria-label="Navegación de agendamiento"
+      >
+        {tabs.map(([id, label]) => (
+          <button
+            type="button"
+            key={id}
+            aria-pressed={tab === id}
+            onClick={() => {
+              setTab(id);
+              setDraft(null);
+              setBookingFocus(null);
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+      {tab === "requests" ? (
+        <BookingRequestsPanel
+          context={context}
+          initialDate={bookingFocus?.date}
+          initialStatus={bookingFocus?.status}
+        />
+      ) : ["availability", "services", "settings"].includes(tab) ? (
+        <BookingSettingsPanel
+          context={context}
+          key={tab}
+          view={tab as "availability" | "services" | "settings"}
+          onSlot={(value) => {
+            setDraft(value);
+            setTab("calendar");
+          }}
+        />
+      ) : (
+        <Agenda
+          key={tab}
+          context={context}
+          initialView={
+            tab === "day"
+              ? "day"
+              : tab === "upcoming"
+                ? "upcoming"
+                : tab === "history"
+                  ? "history"
+                  : "week"
+          }
+          draft={draft}
+          onDraftClosed={() => setDraft(null)}
+          onBookingClick={(row) => {
+            const tz =
+              context.session.memberships.find(
+                (m) => m.clinic.id === context.clinicId,
+              )?.clinic.timezone || "America/Santiago";
+            setBookingFocus({
+              date: localStamp(row.startsAt, tz).slice(0, 10),
+              status: row.status,
+            });
+            setTab("requests");
+          }}
+        />
+      )}
+    </div>
+  );
+}
+type AgendaView = "day" | "week" | "month" | "upcoming" | "history";
+function Agenda({
+  context,
+  initialView = "week",
+  draft,
+  onDraftClosed,
+  onBookingClick,
+}: {
+  context: WorkspaceContext;
+  initialView?: AgendaView;
+  draft?: AppointmentDraft | null;
+  onDraftClosed?: () => void;
+  onBookingClick?: (row: BookingIntake) => void;
+}) {
   const clinicId = context.clinicId;
   const timezone =
     context.session.memberships.find((m) => m.clinic.id === context.clinicId)!
       .clinic.timezone || "America/Santiago";
   const [date, setDate] = useState(() =>
-    localStamp(new Date(), timezone).slice(0, 10),
+    localStamp(draft?.startsAt || new Date(), timezone).slice(0, 10),
   );
-  const [weekly, setWeekly] = useState(true),
+  const [view, setView] = useState<AgendaView>(initialView),
     [status, setStatus] = useState(""),
     [professional, setProfessional] = useState(""),
     [page, setPage] = useState(1),
     [revision, setRevision] = useState(0);
-  const [editor, setEditor] = useState<Appointment | "new" | null>(null),
+  const [serviceFilter, setServiceFilter] = useState("");
+  const [editor, setEditor] = useState<Appointment | "new" | null>(
+      draft ? "new" : null,
+    ),
     [notice, setNotice] = useState("");
   const trigger = useRef<HTMLButtonElement | null>(null);
-  const range = calendarRange(date, weekly, timezone);
-  const query = `from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}&page=${page}${status ? `&status=${encodeURIComponent(status)}` : ""}${professional ? `&professionalMembershipId=${encodeURIComponent(professional)}` : ""}`;
+  const weekly = view === "week",
+    monthly = view === "month",
+    list = view === "upcoming" || view === "history";
+  const month = monthRange(date, timezone),
+    listStart = view === "history" ? shiftDate(date, -30) : date;
+  const range = monthly
+    ? month
+    : list
+      ? {
+          start: listStart,
+          from: calendarRange(listStart, false, timezone).from,
+          to: calendarRange(shiftDate(listStart, 31), false, timezone).from,
+        }
+      : calendarRange(date, weekly, timezone);
+  const query = `from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}&page=${page}${status ? `&status=${encodeURIComponent(status)}` : ""}${professional ? `&professionalMembershipId=${encodeURIComponent(professional)}` : ""}${serviceFilter ? `&serviceId=${serviceFilter}` : ""}${view === "upcoming" ? "&scope=upcoming" : ""}`;
   const load = useCallback(
     async (signal: AbortSignal) => {
-      const [appointments, professionals] = await Promise.all([
-        getAppointments(clinicId, query, signal),
-        getProfessionals(clinicId, signal),
-      ]);
-      return { appointments, professionals };
+      const bookingQuery = new URLSearchParams({
+        from: range.from,
+        to: range.to,
+        page: String(page),
+        calendar: "1",
+        ...(status === "SCHEDULED"
+          ? { status: "PENDING" }
+          : status === "CONFIRMED"
+            ? { status: "CONFIRMED" }
+            : {}),
+        ...(professional ? { professionalId: professional } : {}),
+        ...(serviceFilter ? { serviceId: serviceFilter } : {}),
+      });
+      const [appointments, professionals, settings, bookingResult] =
+        await Promise.all([
+          getAppointments(clinicId, query, signal),
+          getProfessionals(clinicId, signal),
+          privateBooking<BookingSettings>(
+            clinicId,
+            "/settings",
+            undefined,
+            undefined,
+            signal,
+          ).catch((e) => {
+            if (e instanceof AuthError && e.status === 404) return null;
+            throw e;
+          }),
+          status && !["SCHEDULED", "CONFIRMED"].includes(status)
+            ? Promise.resolve({ items: [], total: 0, totalPages: 0 })
+            : privateBooking<{
+                items: BookingIntake[];
+                total: number;
+                totalPages: number;
+              }>(
+                clinicId,
+                `/requests?${bookingQuery}`,
+                undefined,
+                undefined,
+                signal,
+              ).catch((e) => {
+                if (e instanceof AuthError && e.status === 404)
+                  return { items: [], total: 0, totalPages: 0 };
+                throw e;
+              }),
+        ]);
+      const bookings = Array.isArray(bookingResult.items)
+        ? bookingResult
+        : { items: [], total: 0, totalPages: 0 };
+      return {
+        appointments,
+        professionals,
+        settings,
+        bookings,
+        totalPages: Math.max(appointments.totalPages, bookings.totalPages),
+        total: appointments.total + bookings.total,
+      };
     },
-    [clinicId, query],
+    [
+      clinicId,
+      query,
+      range.from,
+      range.to,
+      page,
+      status,
+      professional,
+      serviceFilter,
+    ],
   );
   const result = useAgendaLoad(`${query}:${revision}`, load, context);
-  const days = Array.from({ length: weekly ? 7 : 1 }, (_, i) =>
-    shiftDate(range.start, i),
+  const days = Array.from(
+    { length: monthly ? month.days : list ? 31 : weekly ? 7 : 1 },
+    (_, i) => shiftDate(range.start, i),
   );
   function open(value: Appointment | "new", button: HTMLButtonElement) {
     trigger.current = button;
@@ -120,6 +313,7 @@ function Agenda({ context }: { context: WorkspaceContext }) {
   }
   function close() {
     setEditor(null);
+    onDraftClosed?.();
     requestAnimationFrame(() => trigger.current?.focus());
   }
   function changeDate(value: string) {
@@ -135,21 +329,29 @@ function Agenda({ context }: { context: WorkspaceContext }) {
         title="Agenda veterinaria"
         description="Organiza la jornada y acompaña cada atención, de principio a fin."
         actions={
-          <button
-            className="agenda-primary"
-            disabled={!result.data}
-            onClick={(e) => open("new", e.currentTarget)}
-          >
-            <Plus size={18} aria-hidden="true" />
-            Nueva cita
-          </button>
+          context.access.permissions.includes("appointment:write") && (
+            <button
+              className="agenda-primary"
+              disabled={!result.data}
+              onClick={(e) => open("new", e.currentTarget)}
+            >
+              <Plus size={18} aria-hidden="true" />
+              Nueva cita
+            </button>
+          )
         }
       />
       <div className="agenda-toolbar">
         <div className="agenda-date-nav">
           <button
             aria-label="Periodo anterior"
-            onClick={() => changeDate(shiftDate(date, weekly ? -7 : -1))}
+            onClick={() =>
+              changeDate(
+                monthly
+                  ? shiftMonth(date, -1)
+                  : shiftDate(date, list ? -31 : weekly ? -7 : -1),
+              )
+            }
           >
             <ChevronLeft size={18} />
           </button>
@@ -162,7 +364,13 @@ function Agenda({ context }: { context: WorkspaceContext }) {
           </button>
           <button
             aria-label="Periodo siguiente"
-            onClick={() => changeDate(shiftDate(date, weekly ? 7 : 1))}
+            onClick={() =>
+              changeDate(
+                monthly
+                  ? shiftMonth(date, 1)
+                  : shiftDate(date, list ? 31 : weekly ? 7 : 1),
+              )
+            }
           >
             <ChevronRight size={18} />
           </button>
@@ -178,9 +386,9 @@ function Agenda({ context }: { context: WorkspaceContext }) {
         </div>
         <div className="agenda-view" role="group" aria-label="Vista de agenda">
           <button
-            aria-pressed={!weekly}
+            aria-pressed={view === "day"}
             onClick={() => {
-              setWeekly(false);
+              setView("day");
               setPage(1);
             }}
           >
@@ -189,11 +397,20 @@ function Agenda({ context }: { context: WorkspaceContext }) {
           <button
             aria-pressed={weekly}
             onClick={() => {
-              setWeekly(true);
+              setView("week");
               setPage(1);
             }}
           >
             Semana
+          </button>
+          <button
+            aria-pressed={monthly}
+            onClick={() => {
+              setView("month");
+              setPage(1);
+            }}
+          >
+            Mes
           </button>
         </div>
       </div>
@@ -235,6 +452,23 @@ function Agenda({ context }: { context: WorkspaceContext }) {
         <span className="agenda-timezone">
           Horario de la clínica · {timezone}
         </span>
+        <label>
+          Servicio
+          <select
+            value={serviceFilter}
+            onChange={(e) => {
+              setServiceFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">Todos los servicios</option>
+            {result.data?.settings?.services?.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <button onClick={() => setRevision((r) => r + 1)}>Actualizar</button>
       </div>
       {notice && (
@@ -256,7 +490,15 @@ function Agenda({ context }: { context: WorkspaceContext }) {
           <div className="agenda-period-heading">
             <div>
               <span className="pw-eyebrow">
-                {weekly ? "VISTA SEMANAL" : "VISTA DIARIA"}
+                {monthly
+                  ? "VISTA MENSUAL"
+                  : view === "upcoming"
+                    ? "PRÓXIMAS CITAS"
+                    : view === "history"
+                      ? "HISTORIAL DE CITAS"
+                      : weekly
+                        ? "VISTA SEMANAL"
+                        : "VISTA DIARIA"}
               </span>
               <h2>
                 {new Intl.DateTimeFormat("es-CL", {
@@ -270,13 +512,14 @@ function Agenda({ context }: { context: WorkspaceContext }) {
               </h2>
             </div>
             <p className="agenda-count" aria-live="polite">
-              {result.data.appointments.total} citas en el periodo
-              {result.data.appointments.totalPages > 1
-                ? ` · página ${page} de ${result.data.appointments.totalPages}`
+              {result.data.appointments.total} citas y{" "}
+              {result.data.bookings.total} reservas públicas en el periodo
+              {result.data.totalPages > 1
+                ? ` · página ${page} de ${result.data.totalPages}`
                 : ""}
             </p>
           </div>
-          {result.data.appointments.total === 0 && (
+          {result.data.total === 0 && (
             <EmptyState
               icon={CalendarDays}
               title="Un espacio para las próximas atenciones."
@@ -287,15 +530,32 @@ function Agenda({ context }: { context: WorkspaceContext }) {
             className="agenda-calendar-wrap"
             role="region"
             aria-label={
-              weekly
-                ? "Calendario semanal de citas"
-                : "Calendario diario de citas"
+              monthly
+                ? "Calendario mensual de citas"
+                : weekly
+                  ? "Calendario semanal de citas"
+                  : "Calendario diario de citas"
             }
             tabIndex={0}
           >
             <div
-              className={`agenda-calendar ${weekly ? "agenda-week" : "agenda-day"}`}
+              className={`agenda-calendar ${monthly ? "agenda-month" : list ? "agenda-list" : weekly ? "agenda-week" : "agenda-day"}`}
             >
+              {monthly &&
+                Array.from(
+                  {
+                    length:
+                      (new Date(`${range.start}T12:00:00Z`).getUTCDay() + 6) %
+                      7,
+                  },
+                  (_, i) => (
+                    <div
+                      className="agenda-month-padding"
+                      aria-hidden="true"
+                      key={`padding-${i}`}
+                    />
+                  ),
+                )}
               {days.map((day) => {
                 const events = result.data!.appointments.items.filter(
                   (a) =>
@@ -305,6 +565,24 @@ function Agenda({ context }: { context: WorkspaceContext }) {
                       timezone,
                     ).slice(0, 10) >= day,
                 );
+                const reservations = result.data!.bookings.items.filter(
+                  (b) => localStamp(b.startsAt, timezone).slice(0, 10) === day,
+                );
+                const cards = [
+                  ...events.map((value) => ({
+                    kind: "appointment" as const,
+                    value,
+                  })),
+                  ...reservations.map((value) => ({
+                    kind: "booking" as const,
+                    value,
+                  })),
+                ].sort(
+                  (a, b) =>
+                    a.value.startsAt.localeCompare(b.value.startsAt) ||
+                    a.value.id.localeCompare(b.value.id),
+                );
+                if (list && !cards.length) return null;
                 return (
                   <section
                     className={`agenda-column${day === localStamp(new Date(), timezone).slice(0, 10) ? " agenda-today" : ""}`}
@@ -325,56 +603,102 @@ function Agenda({ context }: { context: WorkspaceContext }) {
                           timeZone: "UTC",
                         }).format(new Date(`${day}T12:00:00Z`))}
                       </small>
+                      {monthly && (
+                        <button
+                          className="agenda-open-day"
+                          aria-label={`Ver citas del ${day}`}
+                          onClick={() => {
+                            changeDate(day);
+                            setView("day");
+                          }}
+                        >
+                          Ver día
+                        </button>
+                      )}
                     </h2>
                     <div className="agenda-events">
-                      {events.length === 0 ? (
+                      {cards.length === 0 ? (
                         <p className="agenda-no-events">Sin citas</p>
                       ) : (
-                        events.map((a) => (
-                          <button
-                            className={`agenda-card agenda-${a.status.toLowerCase()}`}
-                            key={a.id}
-                            onClick={(e) => open(a, e.currentTarget)}
-                          >
-                            <span className="agenda-time">
-                              {new Intl.DateTimeFormat("es-CL", {
-                                timeZone: timezone,
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hourCycle: "h23",
-                              }).format(new Date(a.startsAt))}{" "}
-                              –{" "}
-                              {new Intl.DateTimeFormat("es-CL", {
-                                timeZone: timezone,
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hourCycle: "h23",
-                              }).format(new Date(a.endsAt))}
-                            </span>
-                            <strong>{a.patient.name}</strong>
-                            <span>{a.reason}</span>
-                            <small>
-                              {a.professional?.user.name ||
-                                "Sin profesional asignado"}
-                            </small>
-                            <StatusBadge
-                              className="agenda-badge"
-                              tone={
-                                a.status === "IN_PROGRESS"
-                                  ? "warning"
-                                  : a.status === "CONFIRMED"
-                                    ? "info"
-                                    : a.status === "CANCELLED"
-                                      ? "danger"
-                                      : a.status === "SCHEDULED"
-                                        ? "positive"
-                                        : "neutral"
-                              }
+                        cards.map((entry) => {
+                          if (entry.kind === "booking") {
+                            const b = entry.value;
+                            return (
+                              <button
+                                type="button"
+                                key={`booking-${b.id}`}
+                                className="agenda-card agenda-public-reservation"
+                                onClick={() => onBookingClick?.(b)}
+                              >
+                                <span className="agenda-time">
+                                  {bookingTime(b.startsAt, timezone)}
+                                </span>
+                                <strong>{b.petName}</strong>
+                                <span>{b.service.name}</span>
+                                <small>{b.professional.user.name}</small>
+                                <StatusBadge
+                                  tone={
+                                    b.status === "PENDING" ? "warning" : "info"
+                                  }
+                                  className="agenda-badge"
+                                >
+                                  {bookingStates[b.status]}
+                                </StatusBadge>
+                                <small>
+                                  Reserva pública · revisar solicitud
+                                </small>
+                              </button>
+                            );
+                          }
+                          const a = entry.value;
+                          return (
+                            <button
+                              className={`agenda-card agenda-${a.status.toLowerCase()}`}
+                              key={a.id}
+                              onClick={(e) => open(a, e.currentTarget)}
                             >
-                              {appointmentStates[a.status]}
-                            </StatusBadge>
-                          </button>
-                        ))
+                              <span className="agenda-time">
+                                {new Intl.DateTimeFormat("es-CL", {
+                                  timeZone: timezone,
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hourCycle: "h23",
+                                }).format(new Date(a.startsAt))}{" "}
+                                –{" "}
+                                {new Intl.DateTimeFormat("es-CL", {
+                                  timeZone: timezone,
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hourCycle: "h23",
+                                }).format(new Date(a.endsAt))}
+                              </span>
+                              <strong>{a.patient.name}</strong>
+                              <span>{a.reason}</span>
+                              <small>
+                                {a.professional?.user.name ||
+                                  "Sin profesional asignado"}
+                              </small>
+                              <StatusBadge
+                                className="agenda-badge"
+                                tone={
+                                  a.status === "IN_PROGRESS"
+                                    ? "warning"
+                                    : a.status === "CONFIRMED"
+                                      ? "info"
+                                      : ["CANCELLED", "NO_SHOW"].includes(
+                                            a.status,
+                                          )
+                                        ? "danger"
+                                        : a.status === "SCHEDULED"
+                                          ? "positive"
+                                          : "neutral"
+                                }
+                              >
+                                {appointmentStates[a.status]}
+                              </StatusBadge>
+                            </button>
+                          );
+                        })
                       )}
                     </div>
                   </section>
@@ -382,7 +706,7 @@ function Agenda({ context }: { context: WorkspaceContext }) {
               })}
             </div>
           </div>
-          {result.data.appointments.totalPages > 1 && (
+          {result.data.totalPages > 1 && (
             <div className="agenda-pagination">
               <button
                 disabled={page <= 1}
@@ -392,7 +716,7 @@ function Agenda({ context }: { context: WorkspaceContext }) {
               </button>
               <span>Página {page}</span>
               <button
-                disabled={page >= result.data.appointments.totalPages}
+                disabled={page >= result.data.totalPages}
                 onClick={() => setPage((p) => p + 1)}
               >
                 Siguiente
@@ -406,6 +730,8 @@ function Agenda({ context }: { context: WorkspaceContext }) {
           context={context}
           timezone={timezone}
           date={date}
+          draft={draft}
+          services={result.data.settings?.services || []}
           appointment={editor === "new" ? null : editor}
           professionals={result.data.professionals}
           onClose={close}
@@ -425,6 +751,8 @@ function AppointmentEditor({
   date,
   appointment,
   professionals,
+  services,
+  draft,
   onClose,
   onSaved,
 }: {
@@ -433,6 +761,8 @@ function AppointmentEditor({
   date: string;
   appointment: Appointment | null;
   professionals: Professional[];
+  services: BookingSettings["services"];
+  draft?: AppointmentDraft | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -442,18 +772,21 @@ function AppointmentEditor({
   const [patient, setPatient] = useState<PatientSummary | null>(null),
     [tutorId, setTutorId] = useState(appointment?.tutorId || "");
   const [professional, setProfessional] = useState(
-      appointment?.professionalMembershipId || "",
+      appointment?.professionalMembershipId || draft?.professionalId || "",
     ),
     [start, setStart] = useState(
       appointment
         ? localStamp(appointment.startsAt, timezone)
-        : `${date}T09:00`,
+        : draft
+          ? localStamp(draft.startsAt, timezone)
+          : `${date}T09:00`,
     ),
     [duration, setDuration] = useState(
       appointment
         ? (Date.parse(appointment.endsAt) - Date.parse(appointment.startsAt)) /
             60000
-        : 30,
+        : services.find((s) => s.id === draft?.serviceId)?.durationMinutes ||
+            30,
     ),
     [reason, setReason] = useState(appointment?.reason || ""),
     [status, setStatus] = useState<AppointmentStatus>(
@@ -464,9 +797,14 @@ function AppointmentEditor({
     [error, setError] = useState(""),
     [events, setEvents] = useState<AppointmentEvent[] | null>(null),
     [historyError, setHistoryError] = useState("");
+  const [serviceId, setServiceId] = useState(
+    appointment?.serviceId || draft?.serviceId || "",
+  );
+  const [openedAt] = useState(() => Date.now());
   const terminal =
     appointment?.status === "COMPLETED" ||
     appointment?.status === "CANCELLED" ||
+    appointment?.status === "NO_SHOW" ||
     Boolean(appointment?.consultation);
   useEffect(() => {
     dialog.current?.showModal();
@@ -519,7 +857,7 @@ function AppointmentEditor({
     pending.current = c;
     try {
       const cancelling = status === "CANCELLED" && appointment;
-      if (!patient && !cancelling)
+      if (!patient && !appointment && !cancelling)
         throw new Error("Selecciona un paciente y un tutor responsable.");
       const startsAt = cancelling
         ? appointment.startsAt
@@ -527,7 +865,10 @@ function AppointmentEditor({
       await saveAppointment(
         context.clinicId,
         {
-          patientId: cancelling ? appointment.patientId : patient!.id,
+          ...(serviceId ? { serviceId } : {}),
+          patientId: cancelling
+            ? appointment.patientId
+            : patient?.id || appointment!.patientId,
           tutorId: cancelling ? appointment.tutorId : tutorId,
           professionalMembershipId: cancelling
             ? appointment.professionalMembershipId
@@ -565,7 +906,18 @@ function AppointmentEditor({
     ? ["SCHEDULED"]
     : appointment.status === "IN_PROGRESS"
       ? ["IN_PROGRESS", "COMPLETED", "CANCELLED"]
-      : ["SCHEDULED", "CONFIRMED", "IN_PROGRESS", "CANCELLED"];
+      : appointment.status === "ARRIVED"
+        ? ["ARRIVED", "IN_PROGRESS", "CANCELLED"]
+        : [
+            "SCHEDULED",
+            "CONFIRMED",
+            "ARRIVED",
+            "IN_PROGRESS",
+            "CANCELLED",
+            ...(Date.parse(appointment.startsAt) <= openedAt
+              ? ["NO_SHOW" as const]
+              : []),
+          ];
   return (
     <dialog
       ref={dialog}
@@ -635,6 +987,34 @@ function AppointmentEditor({
           </label>
           <div className="agenda-form-row">
             <label>
+              Servicio de la cita
+              <select
+                value={serviceId}
+                onChange={(e) => {
+                  setServiceId(e.target.value);
+                  const s = services.find((item) => item.id === e.target.value);
+                  if (s) {
+                    setDuration(s.durationMinutes);
+                    if (
+                      !s.professionals.some(
+                        (p) => p.membershipId === professional,
+                      )
+                    )
+                      setProfessional("");
+                  }
+                }}
+              >
+                <option value="">Sin servicio configurado</option>
+                {services
+                  .filter((s) => s.enabled || s.id === appointment?.serviceId)
+                  .map((s) => (
+                    <option value={s.id} key={s.id}>
+                      {s.name} · {s.durationMinutes} min
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
               Fecha y hora de inicio
               <input
                 type="datetime-local"
@@ -652,6 +1032,7 @@ function AppointmentEditor({
                 max={480}
                 step={1}
                 value={duration}
+                disabled={!!serviceId}
                 onChange={(e) => setDuration(Number(e.target.value))}
               />
             </label>
@@ -702,7 +1083,9 @@ function AppointmentEditor({
                 {(terminal ? [appointment.status] : available)
                   .filter(
                     (s) =>
-                      context.access.role !== "RECEPTIONIST" ||
+                      context.access.permissions.includes(
+                        "appointment:clinical",
+                      ) ||
                       !["IN_PROGRESS", "COMPLETED"].includes(s) ||
                       s === appointment.status,
                   )
@@ -737,7 +1120,7 @@ function AppointmentEditor({
           </p>
         )}
         {appointment &&
-          canReadClinical(context.access.role) &&
+          canReadClinical(context.access) &&
           (appointment.consultation || !terminal) && (
             <p className="agenda-notice">
               <Link
@@ -776,17 +1159,18 @@ function AppointmentEditor({
           <button type="button" disabled={busy} onClick={onClose}>
             Cerrar
           </button>
-          {!terminal && (
-            <button className="agenda-primary" disabled={busy} type="submit">
-              {busy
-                ? "Guardando…"
-                : status === "CANCELLED"
-                  ? "Confirmar cancelación"
-                  : appointment
-                    ? "Guardar cambios"
-                    : "Crear cita"}
-            </button>
-          )}
+          {!terminal &&
+            context.access.permissions.includes("appointment:write") && (
+              <button className="agenda-primary" disabled={busy} type="submit">
+                {busy
+                  ? "Guardando…"
+                  : status === "CANCELLED"
+                    ? "Confirmar cancelación"
+                    : appointment
+                      ? "Guardar cambios"
+                      : "Crear cita"}
+              </button>
+            )}
         </div>
       </form>
       {appointment && (

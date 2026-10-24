@@ -59,12 +59,28 @@ export async function getDashboardOverview(
   timezone: string,
   clinical: boolean,
   signal: AbortSignal,
+  permissions: readonly string[] = [
+    "appointment:read",
+    "patient:read",
+    "tutor:read",
+  ],
 ): Promise<DashboardOverview> {
   const now = new Date();
   const [appointments, patients, tutors, drafts] = await Promise.allSettled([
-    todayAppointments(clinicId, date, timezone, now, signal),
-    listRecords(clinicId, "pacientes", "page=1&limit=1&status=ACTIVE", signal),
-    listRecords(clinicId, "tutores", "page=1&limit=1&status=ACTIVE", signal),
+    permissions.includes("appointment:read")
+      ? todayAppointments(clinicId, date, timezone, now, signal)
+      : Promise.resolve(null),
+    permissions.includes("patient:read")
+      ? listRecords(
+          clinicId,
+          "pacientes",
+          "page=1&limit=1&status=ACTIVE",
+          signal,
+        )
+      : Promise.resolve(null),
+    permissions.includes("tutor:read")
+      ? listRecords(clinicId, "tutores", "page=1&limit=1&status=ACTIVE", signal)
+      : Promise.resolve(null),
     clinical
       ? getConsultations(clinicId, "page=1&status=DRAFT", signal)
       : Promise.resolve(null),
@@ -89,7 +105,9 @@ export async function getDashboardOverview(
     tutors: count(tutors),
     drafts: clinical ? count(drafts) : undefined,
     upcoming:
-      appointments.status === "fulfilled" ? appointments.value.upcoming : [],
+      appointments.status === "fulfilled" && appointments.value
+        ? appointments.value.upcoming
+        : [],
     updatedAt: now.toISOString(),
   };
 }

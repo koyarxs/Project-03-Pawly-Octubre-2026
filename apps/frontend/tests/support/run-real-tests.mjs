@@ -15,7 +15,12 @@ async function runProject(project, spec) {
     {
       cwd,
       stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env, PAWLY_QA_WEBSITE_CLINIC_ID: websiteClinicId },
+      env: {
+        ...process.env,
+        PAWLY_QA_WEBSITE_CLINIC_ID: websiteClinicId,
+        PAWLY_QA_PERSONAL_DEMO:
+          spec === "personal-demo.real.spec.ts" ? "1" : "0",
+      },
     },
   );
   const backendExit = new Promise((resolve) =>
@@ -90,16 +95,28 @@ const specs = [
   "dashboard.real.spec.ts",
   "clinical.real.spec.ts",
   "appointments.real.spec.ts",
+  "booking.real.spec.ts",
+  "personal-demo.real.spec.ts",
   "consultations.real.spec.ts",
   "website.real.spec.ts",
+  "staff.real.spec.ts",
 ];
-const requested = process.argv.slice(2);
+const args = process.argv.slice(2);
+const requested = args.filter((arg) => !arg.startsWith("--project="));
+const projectArgs = args
+  .filter((arg) => arg.startsWith("--project="))
+  .map((arg) => arg.slice("--project=".length));
+if (projectArgs.some((project) => !["desktop", "mobile"].includes(project)))
+  throw new Error("Unknown real test project");
+const projects = projectArgs.length
+  ? [...new Set(projectArgs)]
+  : ["desktop", "mobile"];
 if (requested.some((spec) => !specs.includes(spec)))
   throw new Error("Unknown real test spec");
 const selected = requested.length
   ? specs.filter((spec) => requested.includes(spec))
   : specs;
-outer: for (const project of ["desktop", "mobile"]) {
+outer: for (const project of projects) {
   for (const spec of selected) {
     const code = await runProject(project, spec);
     if (code !== 0) {

@@ -23,6 +23,7 @@ import {
   type DashboardOverview,
   type OverviewValue,
 } from "@/lib/dashboard";
+import { hasPermission, jobNames, sectionPermissions } from "@/lib/permissions";
 import { roleNames, workspacePath } from "@/lib/workspace";
 import { WorkspaceShell, type WorkspaceContext } from "./workspace-shell";
 
@@ -44,7 +45,7 @@ function DashboardOverviewContent({ context }: { context: WorkspaceContext }) {
   const timezone =
     session.memberships.find((item) => item.clinic.id === clinicId)?.clinic
       .timezone || "America/Santiago";
-  const clinical = canReadClinical(access.role);
+  const clinical = canReadClinical(access);
   const [today, setToday] = useState(() =>
     localStamp(new Date(), timezone).slice(0, 10),
   );
@@ -82,6 +83,7 @@ function DashboardOverviewContent({ context }: { context: WorkspaceContext }) {
       timezone,
       clinical,
       controller.signal,
+      access.permissions,
     )
       .then((data) => {
         if (!controller.signal.aborted) setSnapshot({ key, data });
@@ -93,7 +95,16 @@ function DashboardOverviewContent({ context }: { context: WorkspaceContext }) {
           setBlockedKey(key);
       });
     return () => controller.abort();
-  }, [clinicId, today, timezone, clinical, key, refresh, endSession]);
+  }, [
+    clinicId,
+    today,
+    timezone,
+    clinical,
+    key,
+    refresh,
+    endSession,
+    access.permissions,
+  ]);
   if (blockedKey === key)
     return (
       <section
@@ -187,7 +198,8 @@ function DashboardOverviewContent({ context }: { context: WorkspaceContext }) {
           <span>TU CLÍNICA ACTIVA</span>
           <h2 id="active-clinic">{access.name}</h2>
           <p>
-            {roleNames[access.role]} · {timezone}
+            {jobNames[access.job ?? access.role] ?? roleNames[access.role]} ·{" "}
+            {timezone}
           </p>
         </div>
         <span className="dashboard-verified">
@@ -195,6 +207,16 @@ function DashboardOverviewContent({ context }: { context: WorkspaceContext }) {
           Acceso verificado
         </span>
       </section>
+      <div className="dashboard-access-note">
+        <ShieldCheck size={18} aria-hidden="true" />
+        <p>
+          {access.patientScope === "ASSIGNED"
+            ? "Tu vista incluye solamente pacientes asignados y sus atenciones."
+            : "Tu vista incluye los módulos autorizados de esta clínica."}{" "}
+          {!access.medicalPracticeEnabled &&
+            "Las acciones médicas requieren credenciales verificadas y autorización independiente."}
+        </p>
+      </div>
       <div className="dashboard-summary-heading">
         <h2>Tu clínica, en perspectiva</h2>
         <button
@@ -211,8 +233,16 @@ function DashboardOverviewContent({ context }: { context: WorkspaceContext }) {
         className={`dashboard-indicators ${clinical ? "dashboard-indicators-clinical" : ""}`}
         aria-busy={!overview}
       >
-        {metrics.map(
-          ({ label, icon: Icon, value, description, href, link }) => (
+        {metrics
+          .filter((m) =>
+            hasPermission(
+              access,
+              sectionPermissions[
+                m.href.split("/").at(-1) as keyof typeof sectionPermissions
+              ],
+            ),
+          )
+          .map(({ label, icon: Icon, value, description, href, link }) => (
             <article
               className="dashboard-indicator"
               key={label}
@@ -231,8 +261,7 @@ function DashboardOverviewContent({ context }: { context: WorkspaceContext }) {
                 <ArrowRight size={14} aria-hidden="true" />
               </Link>
             </article>
-          ),
-        )}
+          ))}
       </section>
       <p className="dashboard-summary-note" role="status">
         {overview
@@ -240,89 +269,91 @@ function DashboardOverviewContent({ context }: { context: WorkspaceContext }) {
           : "Cargando los datos de tu clínica…"}
       </p>
       <div className="dashboard-panels">
-        <section
-          className="dashboard-panel dashboard-day-panel"
-          aria-labelledby="agenda-title"
-        >
-          <div className="dashboard-panel-title">
-            <div>
-              <span className="dashboard-eyebrow">JORNADA DE HOY</span>
-              <h2 id="agenda-title">En curso y próximas citas</h2>
-            </div>
-            <Link
-              href={workspacePath(clinicId, "agenda")}
-              className="dashboard-text-link"
-            >
-              Ver agenda
-              <ArrowRight size={15} aria-hidden="true" />
-            </Link>
-          </div>
-          {!overview ? (
-            <div className="dashboard-empty" role="status">
-              <LoaderCircle
-                className="auth-spinner"
-                size={25}
-                aria-hidden="true"
-              />
-              <p>Cargando las citas de hoy…</p>
-            </div>
-          ) : overview.appointments.kind === "error" ? (
-            <div className="dashboard-empty" role="alert">
-              <CalendarDays size={27} aria-hidden="true" />
-              <h3>No pudimos cargar las citas.</h3>
-              <p>Vuelve a actualizar el resumen para consultar tu jornada.</p>
-            </div>
-          ) : overview.upcoming.length === 0 ? (
-            <div className="dashboard-empty">
-              <CalendarDays size={29} aria-hidden="true" />
-              <h3>Tu jornada tiene espacio.</h3>
-              <p>
-                No hay citas en curso o pendientes para lo que queda de hoy.
-              </p>
+        {hasPermission(access, "appointment:read") && (
+          <section
+            className="dashboard-panel dashboard-day-panel"
+            aria-labelledby="agenda-title"
+          >
+            <div className="dashboard-panel-title">
+              <div>
+                <span className="dashboard-eyebrow">JORNADA DE HOY</span>
+                <h2 id="agenda-title">En curso y próximas citas</h2>
+              </div>
               <Link
-                className="dashboard-available"
                 href={workspacePath(clinicId, "agenda")}
+                className="dashboard-text-link"
               >
-                Abrir agenda
+                Ver agenda
                 <ArrowRight size={15} aria-hidden="true" />
               </Link>
             </div>
-          ) : (
-            <ol className="dashboard-upcoming">
-              {overview.upcoming.map((appointment) => (
-                <li key={appointment.id}>
-                  <div className="dashboard-upcoming-time">
-                    <time dateTime={appointment.startsAt}>
-                      {time(appointment.startsAt)}
-                    </time>
-                    <span>{time(appointment.endsAt)}</span>
-                  </div>
-                  <div className="dashboard-upcoming-patient">
-                    <Link
-                      href={`${workspacePath(clinicId, "pacientes")}/${encodeURIComponent(appointment.patientId)}`}
+            {!overview ? (
+              <div className="dashboard-empty" role="status">
+                <LoaderCircle
+                  className="auth-spinner"
+                  size={25}
+                  aria-hidden="true"
+                />
+                <p>Cargando las citas de hoy…</p>
+              </div>
+            ) : overview.appointments.kind === "error" ? (
+              <div className="dashboard-empty" role="alert">
+                <CalendarDays size={27} aria-hidden="true" />
+                <h3>No pudimos cargar las citas.</h3>
+                <p>Vuelve a actualizar el resumen para consultar tu jornada.</p>
+              </div>
+            ) : overview.upcoming.length === 0 ? (
+              <div className="dashboard-empty">
+                <CalendarDays size={29} aria-hidden="true" />
+                <h3>Tu jornada tiene espacio.</h3>
+                <p>
+                  No hay citas en curso o pendientes para lo que queda de hoy.
+                </p>
+                <Link
+                  className="dashboard-available"
+                  href={workspacePath(clinicId, "agenda")}
+                >
+                  Abrir agenda
+                  <ArrowRight size={15} aria-hidden="true" />
+                </Link>
+              </div>
+            ) : (
+              <ol className="dashboard-upcoming">
+                {overview.upcoming.map((appointment) => (
+                  <li key={appointment.id}>
+                    <div className="dashboard-upcoming-time">
+                      <time dateTime={appointment.startsAt}>
+                        {time(appointment.startsAt)}
+                      </time>
+                      <span>{time(appointment.endsAt)}</span>
+                    </div>
+                    <div className="dashboard-upcoming-patient">
+                      <Link
+                        href={`${workspacePath(clinicId, "pacientes")}/${encodeURIComponent(appointment.patientId)}`}
+                      >
+                        {appointment.patient.name}
+                      </Link>
+                      <p>{appointment.reason}</p>
+                      <span>
+                        {appointment.professional?.user.name ||
+                          "Sin profesional asignado"}
+                      </span>
+                    </div>
+                    <span
+                      className={`dashboard-appointment-status dashboard-status-${appointment.status.toLowerCase()}`}
                     >
-                      {appointment.patient.name}
-                    </Link>
-                    <p>{appointment.reason}</p>
-                    <span>
-                      {appointment.professional?.user.name ||
-                        "Sin profesional asignado"}
+                      {appointmentStates[appointment.status]}
                     </span>
-                  </div>
-                  <span
-                    className={`dashboard-appointment-status dashboard-status-${appointment.status.toLowerCase()}`}
-                  >
-                    {appointmentStates[appointment.status]}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          )}
-          <p className="dashboard-panel-footnote">
-            <Clock3 size={13} aria-hidden="true" />
-            Hasta 5 citas de la jornada. Horarios de {timezone}.
-          </p>
-        </section>
+                  </li>
+                ))}
+              </ol>
+            )}
+            <p className="dashboard-panel-footnote">
+              <Clock3 size={13} aria-hidden="true" />
+              Hasta 5 citas de la jornada. Horarios de {timezone}.
+            </p>
+          </section>
+        )}
         <section
           className="dashboard-panel dashboard-actions-panel"
           aria-labelledby="workspace-title"
@@ -344,13 +375,12 @@ function DashboardOverviewContent({ context }: { context: WorkspaceContext }) {
                 href: `${workspacePath(clinicId, "tutores")}/nuevo`,
               },
               {
-                name:
-                  access.role === "RECEPTIONIST"
-                    ? "Consultar pacientes"
-                    : "Registrar un paciente",
+                name: !hasPermission(access, "patient:create")
+                  ? "Consultar pacientes"
+                  : "Registrar un paciente",
                 description: "La información que acompaña su cuidado.",
                 icon: PawPrint,
-                href: `${workspacePath(clinicId, "pacientes")}${access.role === "RECEPTIONIST" ? "" : "/nuevo"}`,
+                href: `${workspacePath(clinicId, "pacientes")}${hasPermission(access, "patient:create") ? "/nuevo" : ""}`,
               },
               ...(clinical
                 ? [
@@ -362,19 +392,45 @@ function DashboardOverviewContent({ context }: { context: WorkspaceContext }) {
                     },
                   ]
                 : []),
-            ].map(({ name, description, icon: Icon, href }) => (
-              <Link href={href} key={name}>
-                <span className="dashboard-shortcut-icon">
-                  <Icon size={20} aria-hidden="true" />
-                </span>
-                <span>
-                  <strong>{name}</strong>
-                  <small>{description}</small>
-                </span>
-                <ArrowRight size={16} aria-hidden="true" />
-              </Link>
-            ))}
+            ]
+              .filter((item) =>
+                hasPermission(
+                  access,
+                  item.href.includes("tutores")
+                    ? "tutor:write"
+                    : item.href.includes("pacientes")
+                      ? "patient:read"
+                      : "consultation:write",
+                ),
+              )
+              .map(({ name, description, icon: Icon, href }) => (
+                <Link href={href} key={name}>
+                  <span className="dashboard-shortcut-icon">
+                    <Icon size={20} aria-hidden="true" />
+                  </span>
+                  <span>
+                    <strong>{name}</strong>
+                    <small>{description}</small>
+                  </span>
+                  <ArrowRight size={16} aria-hidden="true" />
+                </Link>
+              ))}
           </div>
+          {hasPermission(access, "staff:read") && (
+            <Link
+              className="dashboard-available"
+              href={workspacePath(clinicId, "personal")}
+            >
+              Personal y Accesos <ArrowRight size={15} />
+            </Link>
+          )}
+          <p className="dashboard-panel-footnote">
+            {access.role === "VET_TECHNICIAN"
+              ? "Hospitalización, signos vitales y tareas de enfermería: pendientes de implementación."
+              : access.role === "PET_GROOMER"
+                ? "Agenda y servicios de peluquería: pendientes de implementación. Los pacientes asignados están disponibles en su directorio."
+                : "Caja, pagos, inventario, vacunación y reportes financieros: pendientes de implementación."}
+          </p>
           <div className="dashboard-access-note">
             <ShieldCheck size={18} aria-hidden="true" />
             <p>

@@ -79,7 +79,7 @@ export function ClinicalList({
         }
         actions={
           !tutorId &&
-          canWrite(kind, context.access.role) && (
+          canWrite(kind, context.access) && (
             <Link
               className="clinical-primary"
               href={`${clinicalPath(context.clinicId, kind)}/nuevo`}

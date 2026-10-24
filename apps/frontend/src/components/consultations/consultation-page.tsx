@@ -25,7 +25,7 @@ export function ConsultationPage({
           className="medical-workspace"
           key={`${clinicId}:${context.revision}`}
         >
-          {!canReadClinical(context.access.role) ? (
+          {!canReadClinical(context.access) ? (
             <section className="medical-panel">
               <h1>Acceso clínico restringido</h1>
               <p>
@@ -35,6 +35,11 @@ export function ConsultationPage({
             </section>
           ) : id ? (
             <ConsultationDetail context={context} id={id} />
+          ) : newRecord &&
+            !context.access.permissions.includes("consultation:write") ? (
+            <section role="alert">
+              <h1>No tienes permiso para registrar consultas.</h1>
+            </section>
           ) : newRecord ? (
             <NewConsultation
               context={context}

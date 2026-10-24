@@ -730,3 +730,139 @@
     transition: none;
   }
 }
+
+/* Monthly overview and date-grouped history share the existing appointment editor. */
+.agenda-calendar-wrap:has(.agenda-month) {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.agenda-month .agenda-column {
+  display: block;
+  min-width: 0;
+}
+.agenda-month .agenda-events {
+  min-width: 0;
+}
+.agenda-month .agenda-card {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.agenda-month {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  min-width: 840px;
+}
+.agenda-month .agenda-column,
+.agenda-month-padding {
+  border-right: 1px solid #e2e8dd;
+  border-bottom: 1px solid #e2e8dd;
+  min-height: 150px;
+}
+.agenda-month-padding {
+  background: #f8faf5;
+}
+.agenda-month .agenda-column h2 {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 7px;
+  padding: 10px;
+  font-size: 19px;
+  background: #fbfcf8;
+}
+.agenda-month .agenda-column h2 small {
+  display: none;
+}
+.agenda-month .agenda-column h2 span {
+  font-size: 9px;
+}
+.appointments .agenda-open-day {
+  margin-left: auto;
+  min-height: 24px;
+  padding: 3px 5px;
+  font-size: 9px;
+  border: 0;
+  background: transparent;
+}
+.agenda-month .agenda-events {
+  min-height: 105px;
+  padding: 6px;
+  gap: 6px;
+  background: none;
+}
+.agenda-month .agenda-card {
+  padding: 8px 7px;
+  gap: 4px;
+  border-radius: 7px;
+}
+.agenda-month .agenda-card strong {
+  font-size: 11px;
+}
+.agenda-month .agenda-card small,
+.agenda-month .agenda-time,
+.agenda-month .agenda-card .agenda-badge {
+  font-size: 9px;
+}
+.agenda-month .agenda-card small {
+  display: none;
+}
+.agenda-month .agenda-no-events {
+  margin: 12px 0;
+  font-size: 10px;
+}
+.agenda-list {
+  grid-template-columns: 1fr;
+}
+.agenda-list .agenda-column {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  border-bottom: 1px solid #e2e8dd;
+  border-right: 0;
+}
+.agenda-list .agenda-events {
+  min-height: 0;
+  background: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  padding: 15px;
+}
+.agenda-list .agenda-column h2 {
+  border-bottom: 0;
+  height: 100%;
+  justify-content: center;
+}
+.appointments .agenda-arrived {
+  background: #edf5f3;
+  border-left-color: #5a9a8d;
+}
+.appointments .agenda-no_show {
+  background: #f4eeee;
+  border-left-color: #ae8987;
+  opacity: 0.85;
+}
+@media (max-width: 640px) {
+  .agenda-list .agenda-column {
+    grid-template-columns: 65px minmax(0, 1fr);
+  }
+  .agenda-list .agenda-events {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+  .agenda-month {
+    min-width: 700px;
+  }
+  .agenda-month .agenda-events {
+    min-height: 100px;
+  }
+  .agenda-month .agenda-column {
+    min-height: 142px;
+  }
+  .agenda-month .agenda-column h2 {
+    font-size: 16px;
+  }
+  .agenda-month .agenda-card {
+    padding: 7px;
+  }
+  .agenda-month .agenda-card strong {
+    font-size: 11px;
+  }
+}

@@ -10,7 +10,13 @@ async function bootstrap(): Promise<void> {
   const config = app.get(ConfigService);
   configureHttp(app);
 
-  await app.listen(config.get<number>("PORT", 3001));
+  try {
+    await app.listen(config.get<number>("PORT", 3001));
+  } catch (error) {
+    // Release database connections and timers when startup fails.
+    await app.close();
+    throw error;
+  }
 }
 
 void bootstrap().catch((error: unknown) => {

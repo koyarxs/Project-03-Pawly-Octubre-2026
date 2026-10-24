@@ -4,12 +4,22 @@ export const roleNames: Record<ClinicRole, string> = {
   ADMIN: "Administrador",
   VETERINARIAN: "Veterinario",
   RECEPTIONIST: "Recepción",
+  CLINIC_DIRECTOR: "Dirección clínica",
+  VET_TECHNICIAN: "Técnico veterinario",
+  PET_GROOMER: "Peluquería canina",
 };
 export function dashboardPath(clinicId: string): string {
   return `/app/clinicas/${encodeURIComponent(clinicId)}/dashboard`;
 }
 export type WorkspaceSection =
-  "dashboard" | "tutores" | "pacientes" | "agenda" | "consultas" | "sitio-web";
+  | "dashboard"
+  | "tutores"
+  | "pacientes"
+  | "agenda"
+  | "consultas"
+  | "sitio-web"
+  | "personal"
+  | "mi-perfil";
 export function workspacePath(
   clinicId: string,
   section: WorkspaceSection,

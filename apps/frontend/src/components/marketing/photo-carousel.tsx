@@ -1,6 +1,7 @@
 "use client";
 
-import Image from "next/image";
+import Image, { getImageProps } from "next/image";
+import { websiteBanners } from "@/lib/website-banners";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import {
   useEffect,
@@ -42,6 +43,23 @@ const availablePhotographs = [
 
 const motionQuery = "(prefers-reduced-motion: reduce)";
 
+function BannerPicture({ desktop, mobile, alt, first }: { desktop: string; mobile: string; alt: string; first: boolean }) {
+  const common = { alt, sizes: "100vw", loading: first ? "eager" as const : "lazy" as const, fetchPriority: first ? "high" as const : "auto" as const };
+  const { props: wide } = getImageProps({ ...common, src: desktop, width: 2400, height: 1000 });
+  const { props: narrow } = getImageProps({ ...common, src: mobile, width: 1000, height: 1250 });
+  return <>
+    {first && <>
+      <link rel="preload" as="image" imageSrcSet={wide.srcSet} imageSizes="100vw" media="(min-width: 768px)" />
+      <link rel="preload" as="image" imageSrcSet={narrow.srcSet} imageSizes="100vw" media="(max-width: 767px)" />
+    </>}
+    <picture>
+      <source media="(max-width: 767px)" srcSet={narrow.srcSet} sizes="100vw" width={1000} height={1250} />
+      {/* Native picture provides art direction with Next-optimized sources. */}
+      <img {...wide} alt={alt} className={styles.photograph} />
+    </picture>
+  </>;
+}
+
 function subscribeToMotion(onChange: () => void) {
   const preference = window.matchMedia(motionQuery);
   preference.addEventListener("change", onChange);
@@ -66,17 +84,26 @@ export function PhotoCarousel({
   intervalMs = 6000,
   photoIds,
   variant,
+  onSlideChange,
+  textAlignment = "left",
+  pauseAutoplay = false,
 }: {
   intervalMs?: number;
   photoIds?: readonly string[];
-  variant?: "cover";
+  variant?: "cover" | "banner";
+  onSlideChange?: (index: number) => void;
+  textAlignment?: "left" | "right";
+  pauseAutoplay?: boolean;
 }) {
   const chosen = photoIds
     ?.map((id) => availablePhotographs.find((photo) => photo.id === id))
     .filter((photo): photo is (typeof availablePhotographs)[number] =>
       Boolean(photo),
     );
-  const photographs = chosen?.length ? chosen : availablePhotographs;
+  const photographs = (chosen?.length ? chosen : availablePhotographs).map((photo) => {
+    const banner = variant === "banner" ? websiteBanners.find((item) => item.id === photo.id) : undefined;
+    return { ...photo, ...banner, mobileImage: banner?.mobileImage };
+  });
   const [selected, setSelected] = useState(0);
   const [paused, setPaused] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -101,7 +128,11 @@ export function PhotoCarousel({
     ? Math.min(7000, Math.max(5000, intervalMs))
     : 6000;
   const canAdvance =
-    !paused && !hovered && !reducedMotion && documentVisible && inView;
+    !paused && !pauseAutoplay && (variant === "banner" || !hovered) && !reducedMotion && documentVisible && inView;
+
+  useEffect(() => {
+    onSlideChange?.(selected);
+  }, [selected, onSlideChange]);
 
   useEffect(() => {
     const element = carousel.current;
@@ -176,8 +207,9 @@ export function PhotoCarousel({
   return (
     <div
       ref={carousel}
-      className={`${styles.carousel}${variant === "cover" ? ` ${styles.cover}` : ""}`}
+      className={`${styles.carousel}${variant ? ` ${styles[variant]}` : ""}`}
       role="region"
+      data-align={textAlignment}
       aria-roledescription="carrusel"
       aria-label="Carrusel de cuidado veterinario"
       aria-describedby={`${id}-instructions`}
@@ -214,16 +246,16 @@ export function PhotoCarousel({
             hidden={selected !== index}
           >
             <div className={styles.photoCanvas}>
-              <Image
+              {photograph.mobileImage ? <BannerPicture desktop={photograph.image} mobile={photograph.mobileImage} alt={photograph.alt} first={index === 0} /> : <Image
                 src={photograph.image}
                 alt={photograph.alt}
                 fill
                 preload={index === 0}
                 loading={index === 0 ? undefined : "lazy"}
-                sizes="(max-width: 767px) calc(100vw - 40px), (max-width: 1199px) 48vw, 650px"
+                sizes={variant === "banner" ? "100vw" : "(max-width: 767px) calc(100vw - 40px), (max-width: 1199px) 48vw, 650px"}
                 className={styles.photograph}
                 style={{ objectPosition: photograph.position }}
-              />
+              />}
             </div>
             <figcaption className={styles.caption}>
               <span className={styles.eyebrow}>Para quienes cuidan</span>
@@ -274,7 +306,7 @@ export function PhotoCarousel({
             <Pause size={17} aria-hidden="true" />
           )}
         </button>
-        <div
+        {variant !== "banner" && <div
           className={styles.indicators}
           role="group"
           aria-label="Elegir fotografía"
@@ -292,8 +324,8 @@ export function PhotoCarousel({
               <span aria-hidden="true" />
             </button>
           ))}
-        </div>
-        <div className={styles.navigation}>
+        </div>}
+        {variant !== "banner" && <div className={styles.navigation}>
           <button
             type="button"
             aria-label="Fotografía anterior"
@@ -310,7 +342,7 @@ export function PhotoCarousel({
           >
             <ChevronRight size={20} aria-hidden="true" />
           </button>
-        </div>
+        </div>}
       </div>
       <p
         className={styles.visuallyHidden}

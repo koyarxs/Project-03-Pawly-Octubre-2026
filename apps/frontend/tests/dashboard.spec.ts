@@ -1,3 +1,4 @@
+import { withAccessFixture } from "./support/access-fixture";
 import { test, expect, type Page } from "@playwright/test";
 
 import { returnToTab } from "./support/tab-lifecycle";
@@ -70,7 +71,7 @@ async function routes(
     await route.fulfill({
       status: result.status,
       headers: cors,
-      ...(result.body ? { json: result.body } : {}),
+      ...(result.body ? { json: withAccessFixture(result.body) } : {}),
     });
   });
 }
@@ -296,6 +297,10 @@ test("dashboard responsive, menú accesible y módulos claramente pendientes", a
   await routes(page);
   await page.goto(path());
   await expect(page.getByRole("heading", { name: first.name })).toBeVisible();
+  const desktopLogo = page.locator(".dashboard-sidebar").getByRole("img", { name: "Clínica Veterinaria Porvenir", exact: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(desktopLogo).toBeVisible();
+  await expect.poll(() => desktopLogo.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     expect(
@@ -312,11 +317,12 @@ test("dashboard responsive, menú accesible y módulos claramente pendientes", a
   await toggle.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByRole("dialog").getByRole("img", { name: "Clínica Veterinaria Porvenir", exact: true })).toBeVisible();
   const nav = page.getByRole("dialog").getByRole("navigation");
   for (const name of ["Vacunación", "Inventario", "Reportes", "Configuración"])
     await expect(
       nav.getByRole("button", { name: `${name} Próximamente`, exact: true }),
-    ).toBeDisabled();
+    ).toHaveCount(0);
   await expect(
     nav.getByRole("link", { name: "Consultas", exact: true }),
   ).toHaveAttribute("href", /\/consultas$/);

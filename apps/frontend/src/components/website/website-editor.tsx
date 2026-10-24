@@ -41,7 +41,7 @@ export function WebsiteEditor({ clinicId }: { clinicId: string }) {
   return (
     <WorkspaceShell clinicId={clinicId} section="sitio-web">
       {(context) =>
-        context.access.role === "OWNER" || context.access.role === "ADMIN" ? (
+        context.access.permissions.includes("clinic:manage") ? (
           <EditorContent
             key={`${clinicId}:${context.session.id}:${context.revision}`}
             context={context}
@@ -362,16 +362,17 @@ function EditorContent({ context }: { context: WorkspaceContext }) {
               {field("tagline", "Frase de presentación", 80, {
                 required: true,
               })}
-              {field("heroTitle", "Título principal", 140, { required: true })}
-              {field("heroDescription", "Descripción de la portada", 600, {
+              {field("heroTitle", "Título accesible de la portada", 140, { required: true,
+                hint: "Identifica la portada para lectores de pantalla. Los textos visibles están integrados en los banners.",
+              })}
+              {field("heroDescription", "Descripción accesible de la portada", 600, {
                 required: true,
                 multiline: true,
               })}
               <fieldset className="website-photo-fieldset">
-                <legend>Fotografías de la portada</legend>
+                <legend>Banners de la portada</legend>
                 <p>
-                  Selecciona al menos una fotografía ilustrativa con licencia
-                  documentada. No representan al equipo real de la clínica.
+                  Selecciona los banners que recorrerá el carrusel. Incluyen su texto y una versión para celular. Son composiciones ilustrativas; no anuncian atención de especies ni servicios específicos.
                 </p>
                 <div className="website-photo-options">
                   {websitePhotos.map((photo) => (

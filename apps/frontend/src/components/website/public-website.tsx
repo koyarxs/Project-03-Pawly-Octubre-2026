@@ -7,10 +7,10 @@ import { ClinicWebsite } from "./clinic-website";
 const editorialShell: WebsiteContent = {
   clinicName: "Clínica Veterinaria Porvenir",
   tagline: "Cerca de ti. Cerca de quienes quieres.",
-  heroTitle: "El amor deja huellas. El cuidado, también.",
+  heroTitle: "Su bienestar empieza con una buena decisión.",
   heroDescription:
-    "Hay compañeros que lo cambian todo. Este es un espacio para celebrar ese vínculo y encontrar la información de nuestra veterinaria.",
-  heroPhotos: ["pets", "consultation", "care"],
+    "Dale a tu compañero la atención que merece. Contacta a Clínica Veterinaria Porvenir y conversemos sobre cómo cuidar su salud.",
+  heroPhotos: ["consultation", "pets", "care"],
   aboutTitle: "",
   aboutText: "",
   phone: "",

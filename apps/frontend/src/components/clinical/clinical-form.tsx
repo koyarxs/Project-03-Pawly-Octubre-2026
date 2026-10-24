@@ -385,7 +385,9 @@ export function ClinicalForm({
             color: optional(values.color),
             microchip: optional(values.microchip),
             status: values.status as "ACTIVE" | "DECEASED",
-            notes: optional(values.notes),
+            notes: context.access.permissions.includes("patient:notes")
+              ? optional(values.notes)
+              : null,
             tutorIds: selected.map((item) => item.id),
           };
     const controller = new AbortController();
@@ -719,15 +721,18 @@ export function ClinicalForm({
                   </div>
                 </>
               )}
-              <InputField
-                id="notes"
-                label="Observaciones"
-                values={values}
-                update={update}
-                errors={errors}
-                maxLength={2000}
-                multiline
-              />
+              {(kind === "tutores" ||
+                context.access.permissions.includes("patient:notes")) && (
+                <InputField
+                  id="notes"
+                  label="Observaciones"
+                  values={values}
+                  update={update}
+                  errors={errors}
+                  maxLength={2000}
+                  multiline
+                />
+              )}
             </div>
             {kind === "pacientes" && (
               <TutorPicker

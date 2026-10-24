@@ -27,6 +27,7 @@ import {
   UpdateConsultationDto,
 } from "./consultations.dto";
 import { ConsultationsService } from "./consultations.service";
+import { AppointmentsModule } from "../appointments/appointments.module";
 @Controller("clinics/:clinicId/consultations")
 @UseGuards(SessionGuard, ClinicGuard)
 class ConsultationsController {
@@ -34,7 +35,7 @@ class ConsultationsController {
   @Get()
   @RequirePermissions("consultation:read")
   list(@Req() r: ClinicRequest, @Query() q: ConsultationQueryDto) {
-    return this.consultations.list(r.clinic.id, q);
+    return this.consultations.list(r.clinic.id, q, r.principal.userId);
   }
   @Get(":id")
   @RequirePermissions("consultation:read")
@@ -42,7 +43,7 @@ class ConsultationsController {
     @Req() r: ClinicRequest,
     @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
   ) {
-    return this.consultations.detail(r.clinic.id, id);
+    return this.consultations.detail(r.clinic.id, id, r.principal.userId);
   }
   @Get(":id/history")
   @RequirePermissions("consultation:read")
@@ -51,7 +52,12 @@ class ConsultationsController {
     @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
     @Query() q: ConsultationPageDto,
   ) {
-    return this.consultations.history(r.clinic.id, id, q.page);
+    return this.consultations.history(
+      r.clinic.id,
+      id,
+      q.page,
+      r.principal.userId,
+    );
   }
   @Get(":id/amendments")
   @RequirePermissions("consultation:read")
@@ -60,7 +66,12 @@ class ConsultationsController {
     @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
     @Query() q: ConsultationPageDto,
   ) {
-    return this.consultations.amendments(r.clinic.id, id, q.page);
+    return this.consultations.amendments(
+      r.clinic.id,
+      id,
+      q.page,
+      r.principal.userId,
+    );
   }
   @Post()
   @RequirePermissions("consultation:write")
@@ -87,7 +98,7 @@ class ConsultationsController {
   }
 }
 @Module({
-  imports: [SessionsModule, AuthorizationModule],
+  imports: [SessionsModule, AuthorizationModule, AppointmentsModule],
   controllers: [ConsultationsController],
   providers: [ConsultationsService],
 })

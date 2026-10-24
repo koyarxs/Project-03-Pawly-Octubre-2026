@@ -28,7 +28,7 @@ export function ClinicalHistory({
   patientId: string;
   active?: boolean;
 }) {
-  return canReadClinical(context.access.role) ? (
+  return canReadClinical(context.access) ? (
     <ConsultationList
       context={context}
       patientId={patientId}
@@ -103,7 +103,8 @@ export function ConsultationList({
         level={patientId ? 2 : 1}
         description="Cada atención forma parte de una historia. Consulta los registros más recientes de tu clínica."
         actions={
-          canCreate && (
+          canCreate &&
+          context.access.permissions.includes("consultation:write") && (
             <Link className="medical-primary" href={newPath}>
               <Plus size={17} aria-hidden="true" />
               Nueva consulta

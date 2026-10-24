@@ -1,5 +1,5 @@
 import { AuthError, request } from "./auth";
-import type { ClinicRole } from "./auth";
+import type { ClinicAccess } from "./auth";
 import { workspacePath } from "./workspace";
 
 export type ClinicalKind = "tutores" | "pacientes";
@@ -87,11 +87,17 @@ export type PatientInput = {
 };
 export const fullName = (person: { firstName: string; lastName: string }) =>
   `${person.firstName} ${person.lastName}`;
-export function canWrite(kind: ClinicalKind, role: ClinicRole) {
-  return kind === "tutores" || role !== "RECEPTIONIST";
+export function canWrite(
+  kind: ClinicalKind,
+  access: ClinicAccess,
+  operation: "create" | "update" = "create",
+) {
+  return access.permissions.includes(
+    kind === "tutores" ? "tutor:write" : `patient:${operation}`,
+  );
 }
-export function canArchive(role: ClinicRole) {
-  return role === "OWNER" || role === "ADMIN";
+export function canArchive(access: ClinicAccess) {
+  return access.permissions.includes("clinical:archive");
 }
 export const clinicalPath = (
   clinicId: string,

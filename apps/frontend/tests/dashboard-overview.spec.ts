@@ -1,3 +1,4 @@
+import { withAccessFixture } from "./support/access-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { returnToTab } from "./support/tab-lifecycle";
 
@@ -114,7 +115,7 @@ async function mock(
     await route.fulfill({
       status: reply.status,
       headers: cors,
-      ...(reply.body ? { json: reply.body } : {}),
+      ...(reply.body ? { json: withAccessFixture(reply.body) } : {}),
     });
   });
 }
@@ -277,10 +278,10 @@ test("recepción no solicita ni presenta indicadores o accesos clínicos", async
   ).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: /^Registrar un paciente\b/ }),
-  ).toHaveCount(0);
+  ).toBeVisible();
   await expect(
     page.getByRole("link", { name: /^Consultar pacientes\b/ }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   expect(consultationRequests).toBe(0);
 });
 

@@ -39,13 +39,15 @@ test.beforeEach(async ({ page }) => {
 
 test("el carrusel carga fotografías locales con texto alternativo y reserva la precarga para la portada", async ({
   page,
+  isMobile,
 }) => {
   const carousel = await openLanding(page);
   await expect(carousel.locator("figure")).toHaveCount(3);
   await expect(carousel.getByRole("img")).toHaveCount(1);
   const firstImage = carousel.locator("figure").first().locator("img");
-  await expect(firstImage).toHaveAttribute("alt", /veterinario.*tutora.*perro/);
+  await expect(firstImage).toHaveAttribute("alt", /perro mestizo.*gato/);
   await expect(firstImage).not.toHaveAttribute("loading", "lazy");
+  await expect.poll(() => firstImage.evaluate((image) => (image as HTMLImageElement).currentSrc)).toContain(isMobile ? "companions-mobile" : "companions-desktop");
   await expect(
     carousel.locator("figure").nth(1).locator("img"),
   ).toHaveAttribute("loading", "lazy");
@@ -56,9 +58,9 @@ test("el carrusel carga fotografías locales con texto alternativo y reserva la 
     0,
   );
   for (let number = 1; number <= 3; number += 1) {
-    await carousel
-      .getByRole("button", { name: new RegExp(`^Ver fotografía ${number}:`) })
-      .click();
+    await carousel.focus();
+    await page.keyboard.press("Home");
+    for (let step = 1; step < number; step++) await page.keyboard.press("ArrowRight");
     await showPhotograph(page, number);
     const image = carousel.getByRole("img");
     await expect(image).toHaveAttribute("alt", /.+/);
@@ -81,7 +83,7 @@ test("el carrusel carga fotografías locales con texto alternativo y reserva la 
   }
 });
 
-test("la reproducción automática respeta el intervalo, el hover y la pausa explícita sin anuncios automáticos", async ({
+test("la reproducción automática cambia banners con textos integrados y permite pausar", async ({
   page,
 }) => {
   const carousel = await openLanding(page);
@@ -94,13 +96,17 @@ test("la reproducción automática respeta el intervalo, el hover y la pausa exp
   await page.mouse.move(0, 0);
   await page.clock.fastForward(6100);
   await showPhotograph(page, 2);
+  await expect(carousel.getByRole("img")).toHaveAttribute("alt", /conejo.*cobayo.*Grandes vínculos/);
+  await expect(page.locator('#inicio [class*="heroCopy"]')).toHaveCount(0);
   await expect(carousel.getByRole("status")).toBeEmpty();
   await carousel.hover();
-  await page.clock.fastForward(18000);
-  await showPhotograph(page, 2);
-  await page.mouse.move(0, 0);
   await page.clock.fastForward(6100);
   await showPhotograph(page, 3);
+  await expect(carousel.getByRole("img")).toHaveAttribute("alt", /ninfa.*periquito.*Cada vida tiene su encanto/);
+  await page.mouse.move(0, 0);
+  await page.clock.fastForward(6100);
+  await showPhotograph(page, 1);
+  await expect(carousel.getByRole("img")).toHaveAttribute("alt", /Cuidarlos es quererlos/);
   await carousel
     .getByRole("button", {
       name: "Pausar presentación automática",
@@ -115,7 +121,7 @@ test("la reproducción automática respeta el intervalo, el hover y la pausa exp
     }),
   ).toBeVisible();
   await page.clock.fastForward(18000);
-  await showPhotograph(page, 3);
+  await showPhotograph(page, 1);
   await carousel
     .getByRole("button", {
       name: "Reanudar presentación automática",
@@ -124,22 +130,19 @@ test("la reproducción automática respeta el intervalo, el hover y la pausa exp
     .click();
   await page.mouse.move(0, 0);
   await page.clock.fastForward(6100);
-  await showPhotograph(page, 1);
+  await showPhotograph(page, 2);
 });
 
 test("los controles manuales y el foco detienen la reproducción hasta reanudar y las flechas solo actúan dentro", async ({
   page,
 }) => {
   const carousel = await openLanding(page);
-  await carousel
-    .getByRole("button", { name: "Fotografía anterior", exact: true })
-    .click();
+  await carousel.focus();
+  await page.keyboard.press("ArrowLeft");
   await showPhotograph(page, 3);
-  await carousel
-    .getByRole("button", { name: "Fotografía siguiente", exact: true })
-    .click();
+  await page.keyboard.press("ArrowRight");
   await showPhotograph(page, 1);
-  await carousel.getByRole("button", { name: /^Ver fotografía 2:/ }).click();
+  await page.keyboard.press("ArrowRight");
   await showPhotograph(page, 2);
   await expect(carousel.getByRole("status")).toContainText("2 de 3.");
   await carousel.focus();
@@ -223,9 +226,8 @@ test("movimiento reducido mantiene la navegación manual y desactiva reproducci�
   ).toBeDisabled();
   await page.clock.fastForward(30000);
   await showPhotograph(page, 1);
-  await carousel
-    .getByRole("button", { name: "Fotografía siguiente", exact: true })
-    .click();
+  await carousel.focus();
+  await page.keyboard.press("ArrowRight");
   await showPhotograph(page, 2);
   await carousel.focus();
   await page.keyboard.press("ArrowRight");

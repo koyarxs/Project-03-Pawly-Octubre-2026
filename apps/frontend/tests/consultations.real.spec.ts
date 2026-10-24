@@ -219,6 +219,8 @@ test("consulta real: cita, borrador, finalización, rectificación, historia y p
       }),
     ).toBeVisible();
     const other = await fixtures.additionalClinic(owner.userId);
+    expect((await context.request.get(`${api}/clinics/${other.id}/consultations/${consultationId}`)).status()).toBe(403);
+    await fixtures.verifyMedical(owner.userId,other.id);
     expect(
       (
         await context.request.get(

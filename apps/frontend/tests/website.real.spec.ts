@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+﻿import { randomUUID } from "node:crypto";
 import { test, expect, api } from "./support/real-fixtures";
 import { isolatedClinics } from "./support/isolated-clinics";
 
@@ -33,10 +33,10 @@ test("sitio real: borrador privado, vista previa, publicación, retirada y permi
       .getByLabel("Nombre público de la veterinaria", { exact: false })
       .fill("Veterinaria QA Publicada");
     await page
-      .getByLabel("Título principal", { exact: true })
+      .getByLabel("Título accesible de la portada", { exact: true })
       .fill("Una portada de prueba, publicada conscientemente.");
     await page
-      .getByLabel("Descripción de la portada", { exact: true })
+      .getByLabel("Descripción accesible de la portada", { exact: true })
       .fill(
         "Contenido ficticio de una prueba aislada. No describe servicios reales.",
       );

@@ -5,6 +5,8 @@ export const appointmentStates = {
   IN_PROGRESS: "En atención",
   COMPLETED: "Completada",
   CANCELLED: "Cancelada",
+  ARRIVED: "Paciente en espera",
+  NO_SHOW: "No asistió",
 } as const;
 export type AppointmentStatus = keyof typeof appointmentStates;
 export interface Professional {
@@ -12,6 +14,8 @@ export interface Professional {
   user: { name: string };
 }
 export interface Appointment {
+  serviceId?: string | null;
+  service?: { id: string; name: string; durationMinutes: number } | null;
   consultation?: { id: string; status: "DRAFT" | "FINALIZED" } | null;
   id: string;
   clinicId: string;
@@ -29,6 +33,7 @@ export interface Appointment {
   professional: Professional | null;
 }
 export interface AppointmentInput {
+  serviceId?: string | null;
   patientId: string;
   tutorId: string;
   professionalMembershipId: string | null;

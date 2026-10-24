@@ -1,3 +1,4 @@
+﻿import { withAccessFixture } from "./support/access-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { returnToTab } from "./support/tab-lifecycle";
 import { publicWebsiteFixture } from "./support/website-fixtures";
@@ -97,7 +98,7 @@ async function mockEditor(page: Page, initialRole = "OWNER") {
       status,
       headers,
       contentType: "application/json",
-      body: JSON.stringify(body),
+      body: JSON.stringify(withAccessFixture(body)),
     });
   });
   return state;
@@ -108,7 +109,7 @@ test("guardar el borrador no publica, y publicar exige confirmación explícita"
   const state = await mockEditor(page);
   await page.goto(target);
   await page
-    .getByLabel("Título principal", { exact: true })
+    .getByLabel("Título accesible de la portada", { exact: true })
     .fill("Una portada nueva para Porvenir.");
   await expect(
     page.getByRole("button", { name: "Publicar sitio", exact: true }),
@@ -209,7 +210,7 @@ test("la vista previa usa cambios sin guardar y restaura el foco sin publicar", 
   const state = await mockEditor(page);
   await page.goto(target);
   await page
-    .getByLabel("Título principal", { exact: true })
+    .getByLabel("Título accesible de la portada", { exact: true })
     .fill("Texto privado sin guardar.");
   const trigger = page.getByRole("button", {
     name: "Vista previa",
@@ -234,7 +235,7 @@ test("un conflicto al guardar conserva los textos y no informa un éxito fictici
   const state = await mockEditor(page);
   state.failSave = 409;
   await page.goto(target);
-  const input = page.getByLabel("Título principal", { exact: true });
+  const input = page.getByLabel("Título accesible de la portada", { exact: true });
   await input.fill("Mi borrador debe conservarse.");
   await page
     .getByRole("button", { name: "Guardar borrador", exact: true })
@@ -272,7 +273,7 @@ test("cambiar de rol al volver a la pestaña retira los borradores privados", as
   const state = await mockEditor(page);
   await page.goto(target);
   await page
-    .getByLabel("Título principal", { exact: true })
+    .getByLabel("Título accesible de la portada", { exact: true })
     .fill("Borrador privado de administración.");
   state.role = "VETERINARIAN";
   await returnToTab(page);
@@ -287,7 +288,7 @@ test("el formulario y la vista previa se adaptan sin desbordamiento", async ({
   await mockEditor(page);
   await page.goto(target);
   await expect(
-    page.getByLabel("Título principal", { exact: true }),
+    page.getByLabel("Título accesible de la portada", { exact: true }),
   ).toBeVisible();
   for (const width of [320, 375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 1000 });

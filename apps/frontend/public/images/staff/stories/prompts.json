@@ -1,0 +1,141 @@
+{
+  "tool": "image_gen (built-in)",
+  "reference": "public/images/staff/{id}-demo-v2.webp",
+  "jobs": [
+    {
+      "id": "director",
+      "index": 1,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Leading a calm morning team discussion around a table in a small Valparaiso veterinary clinic, caring leadership, blank notes, no identifiable staff besides reference person."
+    },
+    {
+      "id": "director",
+      "index": 2,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Gently greeting a relaxed senior mixed-breed dog with its Chilean adult owner in a bright consultation room."
+    },
+    {
+      "id": "director",
+      "index": 3,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Off-duty walk in a quiet Valparaiso hillside residential street with colorful Chilean houses, casual linen shirt, late afternoon Pacific light."
+    },
+    {
+      "id": "veterinarian",
+      "index": 1,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Calm preventive checkup with a relaxed tabby cat in a bright small animal clinic in Vina del Mar, white coat teal scrubs."
+    },
+    {
+      "id": "veterinarian",
+      "index": 2,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Explaining a blank pet care notebook to one Chilean adult pet owner at a consultation desk, listening attentively."
+    },
+    {
+      "id": "veterinarian",
+      "index": 3,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Off-duty outdoors on a Vina del Mar coastal promenade with a friendly mixed-breed dog on leash, casual cardigan, soft ocean light."
+    },
+    {
+      "id": "surgeon",
+      "index": 1,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Reviewing a generic blank anatomical canine joint model at a veterinary workstation in Valparaiso, navy scrubs, no visible writing."
+    },
+    {
+      "id": "surgeon",
+      "index": 2,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Gentle postoperative follow-up of a fully awake comfortable mixed-breed dog on a low padded exam table, no wounds or instruments."
+    },
+    {
+      "id": "surgeon",
+      "index": 3,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Off-duty sitting at a Valparaiso outdoor cafe courtyard with greenery, casual navy shirt, thoughtful candid smile."
+    },
+    {
+      "id": "internist",
+      "index": 1,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Listening carefully to a Chilean adult cat owner beside a relaxed cat carrier in a warm Vina del Mar veterinary office, white coat plum blouse."
+    },
+    {
+      "id": "internist",
+      "index": 2,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Examining an unmarked generic ultrasound console beside a calm resting dog, no readable screens or invasive procedure."
+    },
+    {
+      "id": "internist",
+      "index": 3,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Off-duty reading a book with blank cover on a sunlit garden bench in Quilpue Chile, burgundy glasses, casual plum cardigan."
+    },
+    {
+      "id": "trauma",
+      "index": 1,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Observing a comfortable medium mixed-breed dog walking beside its Chilean owner in a small veterinary rehabilitation room, slate scrubs."
+    },
+    {
+      "id": "trauma",
+      "index": 2,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Gentle noninvasive canine mobility examination with dog standing on an anti-slip mat, calm interaction, no injury or pain."
+    },
+    {
+      "id": "trauma",
+      "index": 3,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Off-duty relaxed walk on a wooded trail in the hills near Quilpue Chile, light outdoor jacket, tied-back blond hair."
+    },
+    {
+      "id": "technician",
+      "index": 1,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Comforting a fully awake cat resting on clean bedding in a bright veterinary recovery room in Valparaiso, lavender scrubs."
+    },
+    {
+      "id": "technician",
+      "index": 2,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Preparing clean folded towels and organizing closed unmarked supplies in a tidy veterinary care area, no medicines labels."
+    },
+    {
+      "id": "technician",
+      "index": 3,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Off-duty sitting in a leafy courtyard garden in Villa Alemana Chile with a small relaxed dog, casual lavender sweater."
+    },
+    {
+      "id": "reception",
+      "index": 1,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Welcoming a Chilean adult visitor with a dog at a modern small veterinary reception desk in Valparaiso, light blue shirt navy cardigan."
+    },
+    {
+      "id": "reception",
+      "index": 2,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Coordinating appointments at a tidy reception workstation, blank calendar and unreadable blurred computer screen, candid side angle."
+    },
+    {
+      "id": "reception",
+      "index": 3,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Off-duty walking along a sunny Vina del Mar park path, casual light blue overshirt, green trees, authentic local urban setting."
+    },
+    {
+      "id": "groomer",
+      "index": 1,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Gently brushing a relaxed small curly-haired dog in a bright Valparaiso pet grooming studio, terracotta apron, safe calm handling."
+    },
+    {
+      "id": "groomer",
+      "index": 2,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Drying a comfortable medium dog with a soft towel at a tidy grooming station, no sharp tools near face, warm daylight."
+    },
+    {
+      "id": "groomer",
+      "index": 3,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Off-duty tending potted plants in a colorful Valparaiso residential patio, cream blouse, distinctive short silver-streaked dark pixie hair."
+    },
+    {
+      "id": "exotics",
+      "index": 1,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Calm noninvasive consultation with a comfortable domestic rabbit resting on a soft mat in a Vina del Mar veterinary office, forest green scrubs."
+    },
+    {
+      "id": "exotics",
+      "index": 2,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Discussing an empty clean pet habitat and a blank care notebook with a Chilean adult guardian, no wildlife, natural interior."
+    },
+    {
+      "id": "exotics",
+      "index": 3,
+      "prompt": "Use case: photorealistic-natural. Supporting reference is a wholly fictional AI-created portrait: preserve this exact adult person's facial identity, hair, age, skin tone and recognizable features. Create ONE new landscape 3:2 candid editorial photograph, NOT a collage. Professional fictional veterinary website gallery, Chile Valparaiso region setting, authentic understated Chilean coastal architecture where visible, warm natural light, premium documentary photography with realistic hands and anatomy, sage cream muted palette. No text, logos, university insignia, flags, watermarks, certificates, blood or graphic medicine. Scene: Off-duty birdwatching from a wooden lookout near a central Chile coastal wetland, casual green jacket, binoculars, no handling wild animals."
+    }
+  ]
+}

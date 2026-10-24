@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Prisma, type VeterinaryWebsite } from "@prisma/client";
+import { lockClinic, requireMember } from "../authorization/permission-policy";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   initialWebsiteContent,
@@ -210,18 +211,7 @@ export class WebsiteService {
     clinicId: string,
     userId: string,
   ) {
-    const member = await tx.clinicMembership.findFirst({
-      where: {
-        clinicId,
-        userId,
-        role: { in: ["OWNER", "ADMIN"] },
-        status: "ACTIVE",
-        user: { status: "ACTIVE" },
-        clinic: { status: "ACTIVE" },
-      },
-      select: { id: true },
-    });
-    if (!member) throw new ForbiddenException();
-    return member;
+    await lockClinic(tx, clinicId);
+    return requireMember(tx, clinicId, userId, ["clinic:manage"]);
   }
 }

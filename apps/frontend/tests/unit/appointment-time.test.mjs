@@ -7,6 +7,8 @@ import {
   shiftDate,
   weekStart,
   appointmentInstant,
+  monthRange,
+  shiftMonth,
 } from "../../src/lib/appointment-time.ts";
 
 test("state-only edits preserve the exact original instant", () => {
@@ -52,4 +54,13 @@ test("calendar boundaries use civil dates and include DST days", () => {
   const r = calendarRange("2026-09-06", false, "America/Santiago");
   assert.equal(r.from, "2026-09-06T04:00:00.000Z");
   assert.equal(r.to, "2026-09-07T03:00:00.000Z");
+});
+test("month navigation and bounds preserve leap years and Chilean DST", () => {
+  assert.equal(shiftMonth("2026-12-31", 1), "2027-01-01");
+  const leap = monthRange("2028-02-29", "America/Santiago");
+  assert.equal(leap.start, "2028-02-01");
+  assert.equal(leap.days, 29);
+  const dst = monthRange("2026-09-15", "America/Santiago");
+  assert.equal(dst.from, "2026-09-01T04:00:00.000Z");
+  assert.equal(dst.to, "2026-10-01T03:00:00.000Z");
 });

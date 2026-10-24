@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -8,26 +8,27 @@ import {
   ArrowUpRight,
   Clock3,
   Heart,
-  Mail,
   MapPin,
   Menu,
   PawPrint,
   Phone,
   X,
-  Sparkles,
+  CalendarDays,
 } from "lucide-react";
-import { PawlyMark } from "@/components/brand";
+import { PorvenirHeaderLogo } from "@/components/brand";
 import { PhotoCarousel } from "@/components/marketing/photo-carousel";
 import type { WebsiteContent } from "@/lib/website";
 import styles from "./clinic-website.module.css";
 import { PetGallery } from "./pet-gallery";
 import { ClinicLocation } from "./clinic-location";
 import { ClinicTestimonials } from "./clinic-testimonials";
+import { ClinicTeam } from "./clinic-team";
+import { ClinicWelcome } from "./clinic-welcome";
+import { ClinicFooter } from "./clinic-footer";
 
 export function ClinicWebsite({
   content,
   preview = false,
-  unpublished = false,
   availabilityError = false,
 }: {
   content: WebsiteContent;
@@ -36,6 +37,14 @@ export function ClinicWebsite({
   availabilityError?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    if (preview) return;
+    const update = () => setScrolled(window.scrollY > 72);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, [preview]);
   const trigger = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!menuOpen) return;
@@ -45,7 +54,7 @@ export function ClinicWebsite({
         trigger.current?.focus();
       }
     };
-    const desktop = window.matchMedia("(min-width: 901px)");
+    const desktop = window.matchMedia("(min-width: 1201px)");
     const resize = () => {
       if (desktop.matches) setMenuOpen(false);
     };
@@ -59,9 +68,11 @@ export function ClinicWebsite({
   const services = content.showServices && content.services.length > 0;
   const about = content.showAbout && Boolean(content.aboutText);
   const links = [
+    ["Inicio", "#inicio"],
     ...(services ? [["Servicios", "#servicios"]] : []),
     ...(about ? [["Nuestra veterinaria", "#nosotros"]] : []),
     ["Compañeros", "#companeros"],
+    ["Equipo", "#equipo"],
     ["Contacto y horarios", "#contacto"],
   ];
   const Main = preview ? "div" : "main";
@@ -73,16 +84,34 @@ export function ClinicWebsite({
         </a>
       )}
       <div className={styles.topline}>
-        <span>
+        <div className={styles.contactStrip}>
+          {content.address && (
+            <a href="#ubicacion">
+              <MapPin size={15} aria-hidden="true" />
+              {content.address}
+            </a>
+          )}
+          {content.phone && (
+            <a href={`tel:${content.phone.replace(/[^+\d]/g, "")}`}>
+              <Phone size={15} aria-hidden="true" />
+              {content.phone}
+            </a>
+          )}
+          {content.showHours && content.hours && (
+            <a href="#contacto">
+              <Clock3 size={15} aria-hidden="true" />
+              Ver horarios
+            </a>
+          )}
+        </div>
+        <span className={styles.toplineMessage}>
           <Heart size={13} aria-hidden="true" /> Un mundo mejor empieza por
           cuidarlos.
         </span>
-        <a href="#ubicacion">
-          Encuéntranos <ArrowUpRight size={13} aria-hidden="true" />
-        </a>
       </div>
       <header
         className={styles.header}
+        data-scrolled={scrolled}
         onBlur={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget as Node | null))
             setMenuOpen(false);
@@ -94,8 +123,7 @@ export function ClinicWebsite({
             href="#inicio"
             aria-label={`${content.clinicName}, inicio`}
           >
-            <PawlyMark />
-            <span>{content.clinicName}</span>
+            <PorvenirHeaderLogo className={styles.headerIdentity} />
           </a>
           <nav className={styles.desktopNav} aria-label="Navegación principal">
             {links.map(([label, href]) => (
@@ -104,6 +132,19 @@ export function ClinicWebsite({
               </a>
             ))}
           </nav>
+          {!preview && (
+            <nav className={styles.authActions} aria-label="Acceso a Pawly">
+              <Link href="/agendar-cita" className={styles.bookingAction}>
+                <CalendarDays size={18} aria-hidden="true" />
+                Agendar cita
+              </Link>
+              <Link href="/iniciar-sesion" className={styles.registerAction}>
+                <PawPrint size={18} aria-hidden="true" />
+                Iniciar sesión
+              </Link>
+              <Link href="/registrarse">Registrarse</Link>
+            </nav>
+          )}
           <button
             ref={trigger}
             type="button"
@@ -132,14 +173,19 @@ export function ClinicWebsite({
               <ArrowUpRight size={18} aria-hidden="true" />
             </a>
           ))}
+          {!preview && (
+            <Link href="/agendar-cita" onClick={() => setMenuOpen(false)}>
+              Agendar cita
+              <CalendarDays size={18} aria-hidden="true" />
+            </Link>
+          )}
         </nav>
       </header>
       <Main id="contenido-veterinaria" tabIndex={-1}>
-        {(unpublished || availabilityError) && (
+        {availabilityError && (
           <p className={styles.preparationNotice} role="status">
-            {availabilityError
-              ? "No pudimos actualizar el contenido del sitio. Intenta recargar la página; no se muestran borradores privados."
-              : "El sitio público está en preparación. Los servicios, contactos y horarios se publicarán cuando estén confirmados."}
+            No pudimos actualizar el contenido del sitio. Intenta recargar la
+            página; no se muestran borradores privados.
           </p>
         )}
         <section
@@ -147,80 +193,17 @@ export function ClinicWebsite({
           className={styles.hero}
           aria-labelledby="titulo-veterinaria"
         >
-          <div className={`${styles.container} ${styles.heroGrid}`}>
-            <div className={styles.heroCopy}>
-              <span className={`${styles.eyebrow} ${styles.heroEyebrow}`}>
-                <span />
-                {content.tagline}
-              </span>
-              <h1 id="titulo-veterinaria">{content.heroTitle}</h1>
-              <p>{content.heroDescription}</p>
-              <div className={styles.actions}>
-                <a className={styles.primary} href="#contacto">
-                  Conversemos sobre su cuidado{" "}
-                  <ArrowRight size={18} aria-hidden="true" />
-                </a>
-                {services && (
-                  <a className={styles.textLink} href="#servicios">
-                    Conocer los servicios{" "}
-                    <ArrowUpRight size={17} aria-hidden="true" />
-                  </a>
-                )}
-              </div>
-              <div className={styles.heroNote}>
-                <div className={styles.miniPortraits}>
-                  <Image
-                    src="/images/porvenir/dog.webp"
-                    alt=""
-                    width={42}
-                    height={42}
-                  />
-                  <Image
-                    src="/images/porvenir/cat.webp"
-                    alt=""
-                    width={42}
-                    height={42}
-                  />
-                  <span>
-                    <Heart size={18} aria-hidden="true" />
-                  </span>
-                </div>
-                <span>
-                  No son solo mascotas.
-                  <br />
-                  <strong>Son parte de tu familia.</strong>
-                </span>
-              </div>
-            </div>
-            <div className={styles.heroVisual}>
-              <PhotoCarousel
-                key={content.heroPhotos.join(":")}
-                photoIds={content.heroPhotos}
-                variant="cover"
-              />
-              <p className={styles.photoNote}>
-                Fotografías ilustrativas de cuidado veterinario.
-              </p>
-              <div className={styles.heroSticker}>
-                <Sparkles size={22} strokeWidth={1.4} aria-hidden="true" />
-                <span>
-                  Pequeñas vidas.
-                  <br />
-                  <strong>Grandes vínculos.</strong>
-                </span>
-              </div>
-            </div>
-          </div>
+          <h1 id="titulo-veterinaria" className={styles.srOnly}>
+            {content.heroTitle}
+          </h1>
+          <p className={styles.srOnly}>{content.heroDescription}</p>
+          <PhotoCarousel
+            key={content.heroPhotos.join(":")}
+            photoIds={content.heroPhotos}
+            variant="banner"
+          />
         </section>
-        <div className={styles.valuesRibbon} aria-label="Compañeros de vida">
-          <span>Más que compañía</span>
-          <PawPrint aria-hidden="true" />
-          <span>Una historia juntos</span>
-          <Heart aria-hidden="true" />
-          <span>Un cariño inmenso</span>
-          <PawPrint aria-hidden="true" />
-          <span>Parte de la familia</span>
-        </div>
+        <ClinicWelcome />
         {services && (
           <section
             id="servicios"
@@ -288,184 +271,16 @@ export function ClinicWebsite({
             </div>
           </section>
         )}
+        <ClinicTeam preview={preview} />
         <ClinicTestimonials
           key={JSON.stringify(content.testimonials)}
           items={content.testimonials}
+          address={content.address}
+          preview={preview}
         />
-        <section
-          id="ubicacion"
-          className={styles.location}
-          aria-labelledby="titulo-ubicacion"
-        >
-          <div className={styles.container}>
-            <div className={styles.sectionHeading}>
-              <div>
-                <span className={styles.eyebrow}>
-                  HAGAMOS MÁS FÁCIL ENCONTRARNOS
-                </span>
-                <h2 id="titulo-ubicacion">
-                  Cerca de ti.
-                  <br />
-                  <em>Cerca de su mundo.</em>
-                </h2>
-              </div>
-              <p>
-                {content.address ||
-                  "Estamos preparando la información para tu próxima visita. Aquí encontrarás nuestra ubicación cuando esté confirmada."}
-              </p>
-            </div>
-            <ClinicLocation key={content.address} address={content.address} />
-          </div>
-        </section>
-        <section
-          id="contacto"
-          className={styles.contact}
-          aria-labelledby="titulo-contacto"
-        >
-          <div className={`${styles.container} ${styles.contactGrid}`}>
-            <div>
-              <span className={styles.eyebrow}>
-                HABLEMOS DE QUIEN MÁS QUIERES
-              </span>
-              <h2 id="titulo-contacto">
-                Estamos para <em>acompañarte.</em>
-              </h2>
-              <p>
-                Contacta directamente con {content.clinicName} para consultar
-                por atención y coordinar una visita.
-              </p>
-              <div className={styles.contactActions}>
-                {content.whatsapp && (
-                  <a
-                    className={styles.lightButton}
-                    href={`https://wa.me/${content.whatsapp}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Escribir por WhatsApp{" "}
-                    <ArrowUpRight size={18} aria-hidden="true" />
-                    <span className="sr-only"> (abre otra pestaña)</span>
-                  </a>
-                )}
-                {content.phone && (
-                  <a
-                    className={styles.contactLink}
-                    href={`tel:${content.phone.replace(/[^\d+]/g, "")}`}
-                  >
-                    <Phone size={19} aria-hidden="true" />
-                    {content.phone}
-                  </a>
-                )}
-                {content.email && (
-                  <a
-                    className={styles.contactLink}
-                    href={`mailto:${encodeURIComponent(content.email)}`}
-                  >
-                    <Mail size={19} aria-hidden="true" />
-                    {content.email}
-                  </a>
-                )}
-                {preview &&
-                  !content.whatsapp &&
-                  !content.phone &&
-                  !content.email && (
-                    <p className={styles.previewHint}>
-                      Añade un teléfono, WhatsApp o correo antes de publicar.
-                    </p>
-                  )}
-              </div>
-            </div>
-            <div className={styles.contactDetails}>
-              {content.address && (
-                <div>
-                  <MapPin size={24} strokeWidth={1.5} aria-hidden="true" />
-                  <div>
-                    <h3>Cómo llegar</h3>
-                    <p>{content.address}</p>
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(content.address)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Ver ubicación en el mapa{" "}
-                      <ArrowUpRight size={15} aria-hidden="true" />
-                      <span className="sr-only"> (abre otra pestaña)</span>
-                    </a>
-                  </div>
-                </div>
-              )}
-              {content.showHours && content.hours && (
-                <div>
-                  <Clock3 size={24} strokeWidth={1.5} aria-hidden="true" />
-                  <div>
-                    <h3>Horarios de atención</h3>
-                    <p className={styles.longText}>{content.hours}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
+        <ClinicLocation key={content.address} address={content.address} />
       </Main>
-      <footer className={styles.footer}>
-        <div className={`${styles.container} ${styles.footerTop}`}>
-          <div className={styles.footerBrand}>
-            <PawlyMark />
-            <span>{content.clinicName}</span>
-            <p>
-              Un lugar en la web para quienes ocupan un lugar enorme en tu vida.
-            </p>
-          </div>
-          <div>
-            <h3>Explora Porvenir</h3>
-            <a href="#inicio">Inicio</a>
-            <a href="#companeros">Nuestros compañeros</a>
-            {services && <a href="#servicios">Servicios</a>}
-            {about && <a href="#nosotros">Nuestra veterinaria</a>}
-            <a href="#testimonios">Testimonios</a>
-          </div>
-          <div>
-            <h3>Hablemos</h3>
-            <a href="#contacto">Contacto y horarios</a>
-            <a href="#ubicacion">Ubicación</a>
-            {content.phone && (
-              <a href={`tel:${content.phone.replace(/[^\d+]/g, "")}`}>
-                {content.phone}
-              </a>
-            )}
-            {content.email && (
-              <a href={`mailto:${encodeURIComponent(content.email)}`}>
-                {content.email}
-              </a>
-            )}
-          </div>
-          <div className={styles.footerMessage}>
-            <Heart size={24} strokeWidth={1.4} aria-hidden="true" />
-            <p>
-              Hay huellas que
-              <br />
-              se quedan <em>para siempre.</em>
-            </p>
-            <a href="#inicio">
-              Volver arriba <ArrowUpRight size={17} aria-hidden="true" />
-            </a>
-          </div>
-        </div>
-        <div className={`${styles.container} ${styles.footerInner}`}>
-          <div>
-            <PawlyMark />
-            <span>
-              © {new Date().getFullYear()} {content.clinicName}
-            </span>
-          </div>
-          {!preview && (
-            <Link href="/iniciar-sesion">
-              Acceso del equipo <ArrowUpRight size={16} aria-hidden="true" />
-            </Link>
-          )}
-          <span>Administrado con Pawly.</span>
-        </div>
-      </footer>
+      <ClinicFooter content={content} preview={preview} />
     </div>
   );
 }

@@ -101,14 +101,15 @@ export function ConsultationDetail({
             <Link href={consultationPath(context.clinicId)}>
               Volver a consultas
             </Link>
-            {record.status === "DRAFT" && (
-              <button
-                className="medical-primary"
-                onClick={() => setEditing(true)}
-              >
-                Editar borrador
-              </button>
-            )}
+            {record.status === "DRAFT" &&
+              context.access.permissions.includes("consultation:write") && (
+                <button
+                  className="medical-primary"
+                  onClick={() => setEditing(true)}
+                >
+                  Editar borrador
+                </button>
+              )}
           </div>
         }
       />
@@ -331,38 +332,40 @@ function Rectifications({
           )}
         </>
       )}
-      <form onSubmit={submit}>
-        <fieldset disabled={busy} className="medical-section">
-          <legend>Agregar rectificación</legend>
-          <label>
-            Motivo de la rectificación
-            <textarea
-              required
-              maxLength={1000}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-          </label>
-          <label>
-            Corrección o información adicional
-            <textarea
-              required
-              rows={5}
-              maxLength={8000}
-              value={correction}
-              onChange={(e) => setCorrection(e.target.value)}
-            />
-          </label>
-          {error && (
-            <p role="alert" className="medical-alert">
-              {error}
-            </p>
-          )}
-          <button className="medical-primary" type="submit">
-            {busy ? "Guardando…" : "Guardar rectificación"}
-          </button>
-        </fieldset>
-      </form>
+      {context.access.permissions.includes("consultation:write") && (
+        <form onSubmit={submit}>
+          <fieldset disabled={busy} className="medical-section">
+            <legend>Agregar rectificación</legend>
+            <label>
+              Motivo de la rectificación
+              <textarea
+                required
+                maxLength={1000}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </label>
+            <label>
+              Corrección o información adicional
+              <textarea
+                required
+                rows={5}
+                maxLength={8000}
+                value={correction}
+                onChange={(e) => setCorrection(e.target.value)}
+              />
+            </label>
+            {error && (
+              <p role="alert" className="medical-alert">
+                {error}
+              </p>
+            )}
+            <button className="medical-primary" type="submit">
+              {busy ? "Guardando…" : "Guardar rectificación"}
+            </button>
+          </fieldset>
+        </form>
+      )}
     </section>
   );
 }

@@ -1,3 +1,4 @@
+import { withAccessFixture } from "./support/access-fixture";
 import { expect, test, type Page } from "@playwright/test";
 
 // Synthetic HTTP fixtures only. Every API request is intercepted; these tests
@@ -246,7 +247,7 @@ async function mockModules(page: Page, role = "OWNER") {
       status = 404;
       body = { statusCode: 404, message: "Fixture no disponible" };
     }
-    await route.fulfill({ status, headers, json: body });
+    await route.fulfill({ status, headers, json: withAccessFixture(body) });
   });
   return state;
 }
