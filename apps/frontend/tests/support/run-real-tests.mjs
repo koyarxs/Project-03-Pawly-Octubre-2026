@@ -19,7 +19,7 @@ async function runProject(project, spec) {
         ...process.env,
         PAWLY_QA_WEBSITE_CLINIC_ID: websiteClinicId,
         PAWLY_QA_PERSONAL_DEMO:
-          spec === "personal-demo.real.spec.ts" ? "1" : "0",
+          ["personal-demo.real.spec.ts", "documentation.real.spec.ts"].includes(spec) ? "1" : "0",
       },
     },
   );
@@ -102,6 +102,8 @@ const specs = [
   "staff.real.spec.ts",
 ];
 const args = process.argv.slice(2);
+// Documentation capture is explicit: it is not part of the default test run.
+const availableSpecs = [...specs, "documentation.real.spec.ts"];
 const requested = args.filter((arg) => !arg.startsWith("--project="));
 const projectArgs = args
   .filter((arg) => arg.startsWith("--project="))
@@ -111,10 +113,10 @@ if (projectArgs.some((project) => !["desktop", "mobile"].includes(project)))
 const projects = projectArgs.length
   ? [...new Set(projectArgs)]
   : ["desktop", "mobile"];
-if (requested.some((spec) => !specs.includes(spec)))
+if (requested.some((spec) => !availableSpecs.includes(spec)))
   throw new Error("Unknown real test spec");
 const selected = requested.length
-  ? specs.filter((spec) => requested.includes(spec))
+  ? availableSpecs.filter((spec) => requested.includes(spec))
   : specs;
 outer: for (const project of projects) {
   for (const spec of selected) {
