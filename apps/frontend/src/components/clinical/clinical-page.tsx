@@ -1,7 +1,14 @@
 "use client";
+import { ClinicalHistory } from "@/components/consultations/consultation-list";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Archive, ArrowLeft, LoaderCircle, Pencil } from "lucide-react";
+import { Archive, ArrowLeft, Pencil } from "lucide-react";
+import {
+  LoadingState,
+  PageHeader,
+  RecordIdentity,
+  StatusBadge,
+} from "@/components/ui/workspace-ui";
 import { AuthError } from "@/lib/auth";
 import {
   archiveRecord,
@@ -68,11 +75,14 @@ function ClinicalContent({
   if (view === "list") return <ClinicalList context={context} kind={kind} />;
   if (
     (view === "new" || view === "edit") &&
-    !canWrite(kind, context.access.role)
+    !canWrite(kind, context.access, view === "edit" ? "update" : "create")
   )
     return (
       <section className="clinical-state" role="alert">
-        <h1>No tienes permiso para editar pacientes.</h1>
+        <h1>
+          No tienes permiso para editar{" "}
+          {kind === "tutores" ? "tutores" : "pacientes"}.
+        </h1>
         <p>
           Tu rol permite consultar las fichas. Solicita la gestión a un
           integrante autorizado de la clínica.
@@ -106,13 +116,7 @@ function RecordPage({
     [context.clinicId, kind, id],
   );
   const { state, retry } = useClinicalLoad(`${kind}:${id}`, load, context);
-  if (state.kind === "loading")
-    return (
-      <div className="clinical-state" role="status">
-        <LoaderCircle className="auth-spinner" size={25} />
-        <p>Cargando ficha…</p>
-      </div>
-    );
+  if (state.kind === "loading") return <LoadingState label="Cargando ficha…" />;
   if (state.kind === "error")
     return (
       <div className="clinical-state" role="alert">
@@ -225,95 +229,114 @@ function ClinicalDetail({
         <ArrowLeft size={16} />
         Volver a {kind}
       </Link>
-      <div className="clinical-heading">
-        <div>
-          <span className="dashboard-eyebrow">
-            FICHA DE {kind === "tutores" ? "TUTOR" : "PACIENTE"}
-          </span>
-          <h1>{name}</h1>
-          <p>{context.access.name}</p>
-        </div>
-        <div className="clinical-detail-actions">
-          <span className={`clinical-status ${record.status.toLowerCase()}`}>
-            {statusNames[record.status]}
-          </span>
-          {record.status !== "ARCHIVED" &&
-            canWrite(kind, context.access.role) && (
-              <Link
-                className="clinical-secondary"
-                href={clinicalPath(context.clinicId, kind, record.id, true)}
-              >
-                <Pencil size={15} />
-                Editar {kind === "tutores" ? "tutor" : "paciente"}
-              </Link>
-            )}
-        </div>
-      </div>
+      <PageHeader
+        eyebrow={`FICHA DE ${kind === "tutores" ? "TUTOR" : "PACIENTE"}`}
+        title={name}
+        description={context.access.name}
+        actions={
+          <div className="clinical-detail-actions">
+            <StatusBadge
+              tone={record.status === "ACTIVE" ? "positive" : "neutral"}
+            >
+              {statusNames[record.status]}
+            </StatusBadge>
+            {record.status !== "ARCHIVED" &&
+              canWrite(kind, context.access, "update") && (
+                <Link
+                  className="clinical-secondary"
+                  href={clinicalPath(context.clinicId, kind, record.id, true)}
+                >
+                  <Pencil size={15} />
+                  Editar {kind === "tutores" ? "tutor" : "paciente"}
+                </Link>
+              )}
+          </div>
+        }
+      />
       {archived && (
         <div className="clinical-notice" role="status">
           Registro archivado.
         </div>
       )}
-      <section
-        className="clinical-detail-card"
-        aria-label="Información registrada"
+      <div
+        className={`clinical-profile-layout ${kind === "pacientes" ? "clinical-profile-patient" : ""}`}
       >
-        <h2>
-          Información {kind === "tutores" ? "de contacto" : "del paciente"}
-        </h2>
-        <dl className="clinical-detail-grid">
-          {values.map(([label, value]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>{value ?? "Sin registrar"}</dd>
-            </div>
-          ))}
-        </dl>
-        <div className="clinical-notes">
-          <h3>Observaciones</h3>
-          <p>{record.notes || "Sin observaciones registradas."}</p>
-        </div>
-        <div className="clinical-dates">
-          <span>
-            Creado:{" "}
-            {new Date(record.createdAt).toLocaleDateString("es-CL", {
-              timeZone: "UTC",
-            })}
-          </span>
-          <span>
-            Actualizado:{" "}
-            {new Date(record.updatedAt).toLocaleDateString("es-CL", {
-              timeZone: "UTC",
-            })}
-          </span>
-        </div>
-      </section>
-      {kind === "pacientes" && (
         <section
           className="clinical-detail-card"
-          aria-label="Responsables del paciente"
+          aria-label="Información registrada"
         >
-          <h2>Responsables asociados</h2>
-          <div className="clinical-related">
-            {(record as Patient).tutors.map((tutor) => (
-              <Link
-                key={tutor.id}
-                href={clinicalPath(context.clinicId, "tutores", tutor.id)}
-              >
-                <span className="clinical-avatar" aria-hidden="true">
-                  {tutor.firstName.slice(0, 1).toUpperCase()}
-                </span>
-                <strong>{fullName(tutor)}</strong>
-                <span>Ver ficha</span>
-              </Link>
+          <h2>
+            Información {kind === "tutores" ? "de contacto" : "del paciente"}
+          </h2>
+          <dl className="clinical-detail-grid">
+            {values.map(([label, value]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{value ?? "Sin registrar"}</dd>
+              </div>
             ))}
+          </dl>
+          {(kind === "tutores" ||
+            context.access.permissions.includes("patient:notes")) && (
+            <div className="clinical-notes">
+              <h3>Observaciones</h3>
+              <p>{record.notes || "Sin observaciones registradas."}</p>
+            </div>
+          )}
+          <div className="clinical-dates">
+            <span>
+              Creado:{" "}
+              {new Date(record.createdAt).toLocaleDateString("es-CL", {
+                timeZone: "UTC",
+              })}
+            </span>
+            <span>
+              Actualizado:{" "}
+              {new Date(record.updatedAt).toLocaleDateString("es-CL", {
+                timeZone: "UTC",
+              })}
+            </span>
           </div>
         </section>
+        {kind === "pacientes" && (
+          <section
+            className="clinical-detail-card"
+            aria-label="Responsables del paciente"
+          >
+            <h2>Responsables asociados</h2>
+            <div className="clinical-related">
+              {(record as Patient).tutors.map((tutor) =>
+                context.access.permissions.includes("tutor:read") ? (
+                  <Link
+                    key={tutor.id}
+                    href={clinicalPath(context.clinicId, "tutores", tutor.id)}
+                  >
+                    <RecordIdentity name={fullName(tutor)} kind="person" />
+                    <span>Ver ficha</span>
+                  </Link>
+                ) : (
+                  <RecordIdentity
+                    key={tutor.id}
+                    name={fullName(tutor)}
+                    kind="person"
+                  />
+                ),
+              )}
+            </div>
+          </section>
+        )}
+      </div>
+      {kind === "pacientes" && (
+        <ClinicalHistory
+          context={context}
+          patientId={record.id}
+          active={record.status === "ACTIVE"}
+        />
       )}
       {kind === "tutores" && (
         <ClinicalList context={context} kind="pacientes" tutorId={record.id} />
       )}
-      {record.status !== "ARCHIVED" && canArchive(context.access.role) && (
+      {record.status !== "ARCHIVED" && canArchive(context.access) && (
         <section className="clinical-archive">
           <div>
             <h2>Archivar registro</h2>

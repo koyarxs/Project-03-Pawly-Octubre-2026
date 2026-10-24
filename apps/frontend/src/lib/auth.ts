@@ -1,4 +1,23 @@
-export type ClinicRole = "OWNER" | "ADMIN" | "VETERINARIAN" | "RECEPTIONIST";
+export type ClinicRole =
+  | "OWNER"
+  | "ADMIN"
+  | "VETERINARIAN"
+  | "RECEPTIONIST"
+  | "CLINIC_DIRECTOR"
+  | "VET_TECHNICIAN"
+  | "PET_GROOMER";
+export interface ClinicAccess {
+  id: string;
+  name: string;
+  slug: string;
+  role: ClinicRole;
+  membershipId: string;
+  permissions: string[];
+  accessVersion: number;
+  patientScope: "CLINIC" | "ASSIGNED";
+  job: string | null;
+  medicalPracticeEnabled: boolean;
+}
 export interface Clinic {
   id: string;
   name: string;
@@ -33,6 +52,9 @@ const roles: readonly string[] = [
   "ADMIN",
   "VETERINARIAN",
   "RECEPTIONIST",
+  "CLINIC_DIRECTOR",
+  "VET_TECHNICIAN",
+  "PET_GROOMER",
 ];
 const user = (value: unknown): value is PublicUser =>
   record(value) &&
@@ -118,7 +140,7 @@ export async function getSession(signal?: AbortSignal): Promise<Session> {
 export async function checkClinicAccess(
   id: string,
   signal?: AbortSignal,
-): Promise<{ id: string; name: string; slug: string; role: ClinicRole }> {
+): Promise<ClinicAccess> {
   const value = await request(
     `/clinics/${encodeURIComponent(id)}/access`,
     undefined,
@@ -131,15 +153,17 @@ export async function checkClinicAccess(
     typeof value.clinic.name !== "string" ||
     typeof value.clinic.slug !== "string" ||
     typeof value.clinic.role !== "string" ||
-    !roles.includes(value.clinic.role)
+    !roles.includes(value.clinic.role) ||
+    typeof value.clinic.membershipId !== "string" ||
+    !Array.isArray(value.clinic.permissions) ||
+    !value.clinic.permissions.every((p) => typeof p === "string") ||
+    !Number.isInteger(value.clinic.accessVersion) ||
+    !["CLINIC", "ASSIGNED"].includes(String(value.clinic.patientScope)) ||
+    !(value.clinic.job === null || typeof value.clinic.job === "string") ||
+    typeof value.clinic.medicalPracticeEnabled !== "boolean"
   )
     throw new AuthError(502);
-  return value.clinic as {
-    id: string;
-    name: string;
-    slug: string;
-    role: ClinicRole;
-  };
+  return value.clinic as unknown as ClinicAccess;
 }
 export async function logout(): Promise<void> {
   await request("/auth/logout", {});

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "stories-header",
+    "prompt": "Use case: photorealistic-natural. One new wide cinematic 2.5:1 editorial lifestyle photograph for a Chilean veterinary website stories section. A wholly fictional Chilean woman around 35 with dark curly hair in a loose bun wearing a muted blue linen blouse, gently embracing a friendly chocolate brown mixed-breed dog with white chest, in a bright warm Chilean coastal home with greenery and pale wood, subtle Pacific window light. Place woman and dog on the RIGHT HALF of the frame with their full faces visible, quiet dark navy out-of-focus interior with generous empty space on the LEFT for HTML text overlay. Soft depth of field, realistic skin and fur, beautiful candid emotion, high-end documentary photography. No text, logos, watermark, collage, golden retriever, medical uniform or reference-photo copying."
+  },
+  {
+    "id": "catalina-story",
+    "prompt": "Use case: photorealistic-natural. Reference image is a fictional generated person, not a real client. Preserve exactly this person's identity, facial features, age, hair and skin tone. Create one new landscape 3:2 editorial lifestyle photo for a clearly labeled demo veterinary testimonial card. Composition: person and pet faces in central 70 percent, fully visible, eye-level medium shot, affectionate natural moment with realistic anatomy/hands, warm Chilean coastal daylight, premium restrained photography, no words, logos, watermark, badges, graphics, collage or medical claims. Scene: The exact fictional woman from reference in a cream cardigan, cuddling a calm grey-and-white mixed-breed female cat Olivia at home in Vina del Mar Chile, natural relaxed candid moment, different setting and pose from all other scenes."
+  },
+  {
+    "id": "rodrigo-story",
+    "prompt": "Use case: photorealistic-natural. Reference image is a fictional generated person, not a real client. Preserve exactly this person's identity, facial features, age, hair and skin tone. Create one new landscape 3:2 editorial lifestyle photo for a clearly labeled demo veterinary testimonial card. Composition: person and pet faces in central 70 percent, fully visible, eye-level medium shot, affectionate natural moment with realistic anatomy/hands, warm Chilean coastal daylight, premium restrained photography, no words, logos, watermark, badges, graphics, collage or medical claims. Scene: The exact fictional man from reference in a navy casual shirt, kneeling beside a happy black Labrador Bruno on a leafy Valparaiso residential patio, hand gently on dog's chest, warm gentle companionship."
+  },
+  {
+    "id": "isabel-story",
+    "prompt": "Use case: photorealistic-natural. Reference image is a fictional generated person, not a real client. Preserve exactly this person's identity, facial features, age, hair and skin tone. Create one new landscape 3:2 editorial lifestyle photo for a clearly labeled demo veterinary testimonial card. Composition: person and pet faces in central 70 percent, fully visible, eye-level medium shot, affectionate natural moment with realistic anatomy/hands, warm Chilean coastal daylight, premium restrained photography, no words, logos, watermark, badges, graphics, collage or medical claims. Scene: The exact fictional woman from reference in a charcoal knit sweater and black glasses, sitting on a sofa with a relaxed rescued calico cat Luna in Concon Chile, soft light, affectionate eye contact."
+  },
+  {
+    "id": "andres-story",
+    "prompt": "Use case: photorealistic-natural. Reference image is a fictional generated person, not a real client. Preserve exactly this person's identity, facial features, age, hair and skin tone. Create one new landscape 3:2 editorial lifestyle photo for a clearly labeled demo veterinary testimonial card. Composition: person and pet faces in central 70 percent, fully visible, eye-level medium shot, affectionate natural moment with realistic anatomy/hands, warm Chilean coastal daylight, premium restrained photography, no words, logos, watermark, badges, graphics, collage or medical claims. Scene: The exact fictional man from reference in a light blue casual shirt, seated in a green Quilpue garden next to a medium tan mixed-breed dog Milo, quiet joyful connection, dog comfortable at same level."
+  },
+  {
+    "id": "paula-story",
+    "prompt": "Use case: photorealistic-natural. Reference image is a fictional generated person, not a real client. Preserve exactly this person's identity, facial features, age, hair and skin tone. Create one new landscape 3:2 editorial lifestyle photo for a clearly labeled demo veterinary testimonial card. Composition: person and pet faces in central 70 percent, fully visible, eye-level medium shot, affectionate natural moment with realistic anatomy/hands, warm Chilean coastal daylight, premium restrained photography, no words, logos, watermark, badges, graphics, collage or medical claims. Scene: The exact fictional silver-haired woman from reference in a plum cardigan, sitting beside a calm white domestic rabbit Nube on a secure low cushioned bench in a Villa Alemana garden, rabbit supported naturally, no squeezing."
+  },
+  {
+    "id": "felipe-story",
+    "prompt": "Use case: photorealistic-natural. Reference image is a fictional generated person, not a real client. Preserve exactly this person's identity, facial features, age, hair and skin tone. Create one new landscape 3:2 editorial lifestyle photo for a clearly labeled demo veterinary testimonial card. Composition: person and pet faces in central 70 percent, fully visible, eye-level medium shot, affectionate natural moment with realistic anatomy/hands, warm Chilean coastal daylight, premium restrained photography, no words, logos, watermark, badges, graphics, collage or medical claims. Scene: The exact fictional man with glasses from reference in a navy polo, gently scratching an adult ginger cat Simon resting on a wooden windowsill in Vina del Mar Chile, warm interior and Pacific daylight."
+  }
+]

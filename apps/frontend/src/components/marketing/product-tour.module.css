@@ -1,0 +1,440 @@
+.productTour {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #dce7e7;
+  border-radius: 16px;
+  color: #102b35;
+  background: #fff;
+  box-shadow:
+    0 8px 24px #102b3506,
+    0 28px 72px #102b3509;
+}
+
+.productTour :is(button, a, [tabindex]):focus-visible {
+  outline: 3px solid #147d83;
+  outline-offset: 4px;
+}
+
+.tourToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+}
+
+.tourTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #e7eeee;
+  border-radius: 12px;
+  background: #f4f8f8;
+}
+
+.tourTabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 15px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #526a72;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.tourTabs button[aria-selected="true"] {
+  border-color: #deebeb;
+  color: #126c72;
+  background: #fff;
+  box-shadow: 0 2px 4px #102b3505;
+}
+
+.tourTabs button:hover:not([aria-selected="true"]) {
+  color: #126c72;
+  background: #eaf2f2;
+}
+
+.tourLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #607980;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  line-height: 1.6;
+}
+
+.tourLabel::before {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #147d83;
+  content: "";
+}
+
+.previewHeading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 25px;
+  border-top: 1px solid #e6eded;
+  border-bottom: 1px solid #e6eded;
+  color: #5d747b;
+  background: #fafcfc;
+  font-size: 11px;
+}
+
+.previewBrand {
+  color: #147d83;
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: -0.05em;
+}
+
+.previewDivider {
+  color: #c1d0d2;
+}
+
+.previewType {
+  margin-left: auto;
+  color: #5d747b;
+  font-size: 10px;
+}
+
+.tourPanel {
+  max-height: 520px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #b9cecf #f0f6f5;
+  scrollbar-width: thin;
+  background: #f1f6f5;
+}
+
+.tourPanel[hidden] {
+  display: none;
+}
+
+.screenshotFrame {
+  padding: 22px;
+}
+
+.screenshotFrame img {
+  display: block;
+  width: 100%;
+  min-width: 860px;
+  height: auto;
+  border: 1px solid #dfe9e8;
+  border-radius: 10px;
+  background: #f4f7f6;
+}
+
+.tourCaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 25px 26px 16px;
+  border-top: 1px solid #e6eded;
+}
+
+.tourCaption h3 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  line-height: 1.35;
+}
+
+.tourCaption p {
+  max-width: 610px;
+  margin: 8px 0 0;
+  color: #5d747b;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.tourActions {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.tourActions :is(button, a) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 13px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #126c72;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.4;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tourActions button {
+  border-color: #d9e8e8;
+  background: #f8fbfb;
+}
+
+.tourActions :is(button, a):hover {
+  background: #eaf4f3;
+}
+
+.tourFootnote {
+  margin: 0;
+  padding: 0 26px 23px;
+  color: #5d747b;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.mobilePanHint {
+  display: none;
+  margin: 0;
+  padding: 0 26px 10px;
+  color: #5d747b;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.captureDialog {
+  position: fixed;
+  inset: 0;
+  width: min(1250px, calc(100% - 48px));
+  max-width: none;
+  max-height: calc(100dvh - 48px);
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #d6e4e4;
+  border-radius: 16px;
+  color: #102b35;
+  background: #fff;
+  box-shadow: 0 30px 120px #102b3540;
+}
+
+.captureDialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.captureDialog::backdrop {
+  background: #102b35bd;
+}
+
+.dialogHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+  padding: 20px 24px 12px;
+}
+
+.dialogEyebrow {
+  color: #147d83;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+}
+
+.captureDialog .dialogHeading h2 {
+  margin: 6px 0 0;
+  font-size: clamp(16px, 2vw, 22px);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  line-height: 1.35;
+}
+
+.dialogHeading button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: 1px solid #dce8e8;
+  border-radius: 10px;
+  color: #102b35;
+  background: #f6fafa;
+  cursor: pointer;
+}
+
+.dialogHeading button:hover {
+  background: #eaf4f3;
+}
+
+.dialogDescription {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0 24px 18px;
+  color: #60777f;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.dialogImageFrame {
+  min-height: 0;
+  padding: 22px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid #dfe9e8;
+  background: #f1f6f5;
+  scrollbar-color: #b9cecf #f0f6f5;
+  scrollbar-width: thin;
+}
+
+.expandedImage {
+  display: block;
+  width: 100%;
+  min-width: 800px;
+  height: auto;
+  border: 1px solid #dfe9e8;
+  border-radius: 10px;
+}
+
+@media (max-width: 767px) {
+  .tourToolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 13px;
+    padding: 14px;
+  }
+
+  .tourTabs {
+    width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .tourTabs button {
+    gap: 6px;
+    flex: 1;
+    padding: 9px 8px;
+    font-size: 12px;
+  }
+
+  .tourTabs button svg {
+    width: 15px;
+    flex-shrink: 0;
+  }
+
+  .tourLabel {
+    font-size: 10px;
+  }
+
+  .previewHeading {
+    gap: 8px;
+    min-height: 43px;
+    padding: 9px 17px;
+    font-size: 10px;
+  }
+
+  .previewType {
+    display: none;
+  }
+
+  .tourPanel {
+    max-height: 430px;
+  }
+
+  .screenshotFrame {
+    padding: 14px;
+  }
+
+  .tourCaption {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 16px;
+    padding: 21px 18px 14px;
+  }
+
+  .tourCaption h3 {
+    font-size: 18px;
+  }
+
+  .tourActions {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .tourActions :is(button, a) {
+    padding-inline: 10px;
+    font-size: 12px;
+  }
+
+  .mobilePanHint {
+    display: block;
+    padding-inline: 18px;
+  }
+
+  .tourFootnote {
+    padding: 0 18px 20px;
+  }
+
+  .captureDialog {
+    width: calc(100% - 24px);
+    max-height: calc(100dvh - 24px);
+    border-radius: 14px;
+  }
+
+  .dialogHeading {
+    gap: 10px;
+    padding: 16px 15px 10px;
+  }
+
+  .dialogEyebrow {
+    font-size: 10px;
+  }
+
+  .dialogDescription {
+    padding: 0 15px 14px;
+    font-size: 11px;
+  }
+
+  .dialogImageFrame {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .tourTabs button {
+    padding-inline: 6px;
+    font-size: 11px;
+  }
+
+  .tourTabs button svg {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tourTabs button {
+    transition: none;
+  }
+}

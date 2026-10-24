@@ -22,6 +22,7 @@ enum ClinicStatus {
 enum MembershipStatus {
   ACTIVE
   SUSPENDED
+  INVITED
 }
 
 enum Role {
@@ -29,6 +30,64 @@ enum Role {
   ADMIN
   VETERINARIAN
   RECEPTIONIST
+  CLINIC_DIRECTOR
+  VET_TECHNICIAN
+  PET_GROOMER
+}
+
+enum StaffJob {
+  CLINIC_DIRECTOR
+  VETERINARIAN
+  VET_TECHNICIAN
+  RECEPTIONIST
+  PET_GROOMER
+}
+
+enum CredentialStatus {
+  UNVERIFIED
+  VERIFIED
+  REVOKED
+}
+
+enum PatientScope {
+  CLINIC
+  ASSIGNED
+}
+
+enum PermissionKey {
+  CLINIC_READ
+  CLINIC_MANAGE
+  STAFF_READ
+  STAFF_CREATE
+  STAFF_UPDATE
+  STAFF_DEACTIVATE
+  PERMISSIONS_MANAGE
+  CREDENTIALS_VERIFY
+  PUBLIC_PROFILES_MANAGE
+  AUDIT_READ
+  TUTOR_READ
+  TUTOR_WRITE
+  PATIENT_READ
+  PATIENT_CREATE
+  PATIENT_UPDATE
+  PATIENT_NOTES
+  PATIENT_ASSIGN
+  CLINICAL_ARCHIVE
+  APPOINTMENT_READ
+  APPOINTMENT_WRITE
+  APPOINTMENT_CLINICAL
+  CONSULTATION_READ
+  CONSULTATION_WRITE
+  PRESCRIPTION_CREATE
+  VACCINATION_MANAGE
+  HOSPITALIZATION_READ
+  HOSPITALIZATION_UPDATE
+  INVENTORY_MANAGE
+  CASH_REGISTER_OPEN
+  CASH_REGISTER_CLOSE
+  PAYMENTS_MANAGE
+  FINANCIAL_REPORTS_READ
+  GROOMING_MANAGE
 }
 
 model User {
@@ -46,31 +105,94 @@ model User {
 }
 
 model VeterinaryClinic {
-  id          String             @id @default(uuid()) @db.Uuid
-  name        String             @db.VarChar(160)
-  slug        String             @unique @db.VarChar(100)
-  status      ClinicStatus       @default(ACTIVE)
-  timezone    String             @default("America/Santiago") @db.VarChar(100)
-  createdAt   DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime           @updatedAt @db.Timestamptz(3)
-  memberships ClinicMembership[]
-  tutors      Tutor[]
-  patients    Patient[]
+  bookingSettings BookingSettings?
+  bookingServices BookingService[]
+  bookingRequests BookingRequest[]
+  bookingEvents BookingEvent[]
+  bookingNotifications BookingNotification[]
+  conciergeSettings ConciergeSettings?
+  conciergeConversations ConciergeConversation[]
+  conciergeMessages ConciergeMessage[]
+  conciergePresence ConciergePresence[]
+  conciergeProposals ConciergeBookingProposal[]
+  conciergeUsage ConciergeUsage[]
+  id                 String              @id @default(uuid()) @db.Uuid
+  name               String              @db.VarChar(160)
+  slug               String              @unique @db.VarChar(100)
+  status             ClinicStatus        @default(ACTIVE)
+  timezone           String              @default("America/Santiago") @db.VarChar(100)
+  createdAt          DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @db.Timestamptz(3)
+  memberships        ClinicMembership[]
+  tutors             Tutor[]
+  patients           Patient[]
+  appointments       Appointment[]
+  consultations      Consultation[]
+  website            VeterinaryWebsite?
+  newsletterSubscribers NewsletterSubscriber[]
+  staffProfiles      StaffProfile[]
+  staffInvitations   StaffInvitation[]
+  accessAuditLogs    AccessAuditLog[]
+  patientAssignments PatientAssignment[]
 }
 
 model ClinicMembership {
-  id        String           @id @default(uuid()) @db.Uuid
-  userId    String           @db.Uuid
-  clinicId  String           @db.Uuid
-  role      Role
-  status    MembershipStatus @default(ACTIVE)
-  createdAt DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime         @updatedAt @db.Timestamptz(3)
-  user      User             @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  clinic    VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  bookingServices BookingServiceProfessional[]
+  bookingRequests BookingRequest[]
+  bookingEvents BookingEvent[]
+  conciergePresence ConciergePresence?
+  conciergeAssignments ConciergeConversation[] @relation("ConciergeAssignment")
+  id                     String                  @id @default(uuid()) @db.Uuid
+  userId                 String                  @db.Uuid
+  clinicId               String                  @db.Uuid
+  role                   Role
+  status                 MembershipStatus        @default(ACTIVE)
+  createdAt              DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime                @updatedAt @db.Timestamptz(3)
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  clinic                 VeterinaryClinic        @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  appointments           Appointment[]           @relation("AppointmentProfessional")
+  appointmentEvents      AppointmentEvent[]
+  consultations          Consultation[]          @relation("ConsultationProfessional")
+  createdConsultations   Consultation[]          @relation("ConsultationCreator")
+  finalizedConsultations Consultation[]          @relation("ConsultationFinalizer")
+  consultationEvents     ConsultationEvent[]
+  consultationAmendments ConsultationAmendment[]
+  websiteEdits           VeterinaryWebsite[]     @relation("WebsiteEditor")
+  websitePublications    VeterinaryWebsite[]     @relation("WebsitePublisher")
+  permissionGrants       PermissionKey[]         @default([])
+  permissionDenials      PermissionKey[]         @default([])
+  accessVersion          Int                     @default(1)
+  patientScope           PatientScope            @default(CLINIC)
+  staffProfile           StaffProfile?           @relation("StaffMember")
+  credentialsVerified    StaffProfile[]          @relation("CredentialVerifier")
+  receivedInvitations    StaffInvitation[]       @relation("InvitationMember")
+  issuedInvitations      StaffInvitation[]       @relation("InvitationIssuer")
+  auditActions           AccessAuditLog[]        @relation("AccessAuditActor")
+  auditChanges           AccessAuditLog[]        @relation("AccessAuditTarget")
+  assignedPatients       PatientAssignment[]     @relation("AssignedStaff")
+  patientAssignmentsMade PatientAssignment[]     @relation("AssignmentAuthor")
 
   @@unique([userId, clinicId])
+  @@unique([id, clinicId])
   @@index([clinicId, status, role])
+}
+
+// One explicitly configured clinic controls the deployment's public website.
+// Drafts and published content are independent; clinical data is never public.
+model VeterinaryWebsite {
+  id                      String            @id @default("main") @db.VarChar(32)
+  clinicId                String            @unique @db.Uuid
+  draft                   Json              @db.JsonB
+  published               Json?             @db.JsonB
+  version                 Int               @default(1)
+  publishedAt             DateTime?         @db.Timestamptz(3)
+  updatedAt               DateTime          @updatedAt @db.Timestamptz(3)
+  updatedByMembershipId   String            @db.Uuid
+  publishedByMembershipId String?           @db.Uuid
+  clinic                  VeterinaryClinic  @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  editor                  ClinicMembership  @relation("WebsiteEditor", fields: [updatedByMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  publisher               ClinicMembership? @relation("WebsitePublisher", fields: [publishedByMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
 }
 
 model Session {
@@ -116,45 +238,131 @@ enum PatientSex {
 }
 
 model Tutor {
-  id         String           @id @default(uuid()) @db.Uuid
-  clinicId   String           @db.Uuid
-  firstName  String           @db.VarChar(100)
-  lastName   String           @db.VarChar(100)
-  email      String?          @db.VarChar(254)
-  phone      String           @db.VarChar(32)
-  address    String?          @db.VarChar(500)
-  notes      String?          @db.VarChar(2000)
-  status     TutorStatus      @default(ACTIVE)
-  createdAt  DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt  DateTime         @updatedAt @db.Timestamptz(3)
-  clinic     VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  patients   PatientTutor[]
+  id           String           @id @default(uuid()) @db.Uuid
+  clinicId     String           @db.Uuid
+  firstName    String           @db.VarChar(100)
+  lastName     String           @db.VarChar(100)
+  email        String?          @db.VarChar(254)
+  phone        String           @db.VarChar(32)
+  address      String?          @db.VarChar(500)
+  notes        String?          @db.VarChar(2000)
+  status       TutorStatus      @default(ACTIVE)
+  createdAt    DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime         @updatedAt @db.Timestamptz(3)
+  clinic       VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  patients     PatientTutor[]
+  appointments Appointment[]
 
   @@unique([id, clinicId])
   @@index([clinicId, status, lastName, firstName])
 }
 
 model Patient {
-  id         String           @id @default(uuid()) @db.Uuid
-  clinicId   String           @db.Uuid
-  name       String           @db.VarChar(100)
-  species    Species
-  breed      String?          @db.VarChar(100)
-  sex        PatientSex       @default(UNKNOWN)
-  birthDate  DateTime?         @db.Date
-  weightKg   Decimal?         @db.Decimal(8, 3)
-  color      String?          @db.VarChar(100)
-  microchip  String?          @db.VarChar(64)
-  status     PatientStatus    @default(ACTIVE)
-  notes      String?          @db.VarChar(2000)
-  createdAt  DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt  DateTime         @updatedAt @db.Timestamptz(3)
-  clinic     VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  tutors     PatientTutor[]
+  id            String              @id @default(uuid()) @db.Uuid
+  clinicId      String              @db.Uuid
+  name          String              @db.VarChar(100)
+  species       Species
+  breed         String?             @db.VarChar(100)
+  sex           PatientSex          @default(UNKNOWN)
+  birthDate     DateTime?           @db.Date
+  weightKg      Decimal?            @db.Decimal(8, 3)
+  color         String?             @db.VarChar(100)
+  microchip     String?             @db.VarChar(64)
+  status        PatientStatus       @default(ACTIVE)
+  notes         String?             @db.VarChar(2000)
+  createdAt     DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime            @updatedAt @db.Timestamptz(3)
+  clinic        VeterinaryClinic    @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  tutors        PatientTutor[]
+  appointments  Appointment[]
+  consultations Consultation[]
+  assignments   PatientAssignment[]
 
   @@unique([id, clinicId])
   @@unique([clinicId, microchip])
   @@index([clinicId, status, name])
+}
+
+model StaffProfile {
+  membershipId           String            @id @db.Uuid
+  clinicId               String            @db.Uuid
+  displayName            String            @db.VarChar(120)
+  job                    StaffJob
+  specialty              String            @default("") @db.VarChar(160)
+  biography              String            @default("") @db.VarChar(1500)
+  photoKey               String            @default("initials") @db.VarChar(40)
+  professionalPhone      String?           @db.VarChar(32)
+  credentialNumber       String?           @db.VarChar(120)
+  credentialStatus       CredentialStatus  @default(UNVERIFIED)
+  credentialEvidence     String?           @db.VarChar(500)
+  credentialVerifiedAt   DateTime?         @db.Timestamptz(3)
+  credentialVerifiedById String?           @db.Uuid
+  medicalPracticeEnabled Boolean           @default(false)
+  publicConsentHash      String?           @db.VarChar(64)
+  publicConsentAt        DateTime?         @db.Timestamptz(3)
+  publicSnapshot         Json?             @db.JsonB
+  publishedAt            DateTime?         @db.Timestamptz(3)
+  publishedConsentHash   String?           @db.VarChar(64)
+  publicOrder            Int               @default(0)
+  version                Int               @default(1)
+  updatedAt              DateTime          @updatedAt @db.Timestamptz(3)
+  clinic                 VeterinaryClinic  @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  membership             ClinicMembership  @relation("StaffMember", fields: [membershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  verifier               ClinicMembership? @relation("CredentialVerifier", fields: [credentialVerifiedById, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([membershipId, clinicId])
+  @@index([clinicId, job])
+}
+
+model StaffInvitation {
+  id                   String           @id @default(uuid()) @db.Uuid
+  clinicId             String           @db.Uuid
+  membershipId         String           @db.Uuid
+  issuedByMembershipId String           @db.Uuid
+  tokenHash            String           @unique @db.VarChar(64)
+  accountCreated       Boolean          @default(false)
+  createdAt            DateTime         @default(now()) @db.Timestamptz(3)
+  expiresAt            DateTime         @db.Timestamptz(3)
+  consumedAt           DateTime?        @db.Timestamptz(3)
+  revokedAt            DateTime?        @db.Timestamptz(3)
+  clinic               VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  membership           ClinicMembership @relation("InvitationMember", fields: [membershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  issuer               ClinicMembership @relation("InvitationIssuer", fields: [issuedByMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([clinicId, membershipId, expiresAt])
+}
+
+model AccessAuditLog {
+  id                 String           @id @default(uuid()) @db.Uuid
+  clinicId           String           @db.Uuid
+  actorMembershipId  String           @db.Uuid
+  targetMembershipId String           @db.Uuid
+  action             String           @db.VarChar(60)
+  before             Json?            @db.JsonB
+  after              Json             @db.JsonB
+  reason             String           @db.VarChar(500)
+  createdAt          DateTime         @default(now()) @db.Timestamptz(3)
+  clinic             VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actor              ClinicMembership @relation("AccessAuditActor", fields: [actorMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  target             ClinicMembership @relation("AccessAuditTarget", fields: [targetMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([clinicId, createdAt, id])
+  @@index([clinicId, targetMembershipId, createdAt])
+}
+
+model PatientAssignment {
+  clinicId               String           @db.Uuid
+  membershipId           String           @db.Uuid
+  patientId              String           @db.Uuid
+  assignedByMembershipId String           @db.Uuid
+  createdAt              DateTime         @default(now()) @db.Timestamptz(3)
+  clinic                 VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  membership             ClinicMembership @relation("AssignedStaff", fields: [membershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  patient                Patient          @relation(fields: [patientId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  author                 ClinicMembership @relation("AssignmentAuthor", fields: [assignedByMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([clinicId, membershipId, patientId])
+  @@index([clinicId, patientId])
 }
 
 // Both composite foreign keys include the same clinicId: cross-clinic links
@@ -168,4 +376,377 @@ model PatientTutor {
 
   @@id([clinicId, patientId, tutorId])
   @@index([clinicId, tutorId])
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  ARRIVED
+  NO_SHOW
+}
+
+model Appointment {
+  serviceId                String?            @db.Uuid
+  resourceKey              String?            @db.VarChar(80)
+  blockedUntil             DateTime?          @db.Timestamptz(3)
+  source                   String             @default("INTERNAL") @db.VarChar(16)
+  service                  BookingService?    @relation(fields: [serviceId, clinicId], references: [id, clinicId], onDelete: Restrict)
+  publicBooking            BookingRequest?
+  notifications            BookingNotification[]
+  id                       String             @id @default(uuid()) @db.Uuid
+  clinicId                 String             @db.Uuid
+  patientId                String             @db.Uuid
+  tutorId                  String             @db.Uuid
+  professionalMembershipId String?            @db.Uuid
+  startsAt                 DateTime           @db.Timestamptz(3)
+  endsAt                   DateTime           @db.Timestamptz(3)
+  reason                   String             @db.VarChar(1000)
+  status                   AppointmentStatus  @default(SCHEDULED)
+  cancellationReason       String?            @db.VarChar(500)
+  version                  Int                @default(1)
+  createdAt                DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime           @updatedAt @db.Timestamptz(3)
+  clinic                   VeterinaryClinic   @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  patient                  Patient            @relation(fields: [patientId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  tutor                    Tutor              @relation(fields: [tutorId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  professional             ClinicMembership?  @relation("AppointmentProfessional", fields: [professionalMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  events                   AppointmentEvent[]
+  consultation             Consultation?
+
+  @@unique([id, clinicId])
+  @@unique([id, patientId, clinicId])
+  @@index([clinicId, startsAt])
+  @@index([clinicId, professionalMembershipId, startsAt, endsAt])
+}
+
+model AppointmentEvent {
+  id                String           @id @default(uuid()) @db.Uuid
+  clinicId          String           @db.Uuid
+  appointmentId     String           @db.Uuid
+  actorMembershipId String           @db.Uuid
+  before            Json?
+  after             Json
+  createdAt         DateTime         @default(now()) @db.Timestamptz(3)
+  appointment       Appointment      @relation(fields: [appointmentId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  actor             ClinicMembership @relation(fields: [actorMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([clinicId, appointmentId, createdAt])
+}
+
+enum ConsultationStatus {
+  DRAFT
+  FINALIZED
+}
+
+enum DiagnosisType {
+  PRESUMPTIVE
+  DEFINITIVE
+}
+
+model Consultation {
+  id                       String                  @id @default(uuid()) @db.Uuid
+  clinicId                 String                  @db.Uuid
+  patientId                String                  @db.Uuid
+  appointmentId            String?                 @unique @db.Uuid
+  requestId                String                  @db.Uuid
+  professionalMembershipId String                  @db.Uuid
+  createdByMembershipId    String                  @db.Uuid
+  finalizedByMembershipId  String?                 @db.Uuid
+  attendedAt               DateTime                @db.Timestamptz(3)
+  reason                   String                  @db.VarChar(1000)
+  anamnesis                String                  @default("") @db.VarChar(8000)
+  physicalExam             String                  @default("") @db.VarChar(8000)
+  findings                 String                  @default("") @db.VarChar(8000)
+  diagnosis                String                  @default("") @db.VarChar(4000)
+  diagnosisType            DiagnosisType?
+  treatment                String                  @default("") @db.VarChar(8000)
+  instructions             String                  @default("") @db.VarChar(8000)
+  notes                    String                  @default("") @db.VarChar(4000)
+  weightKg                 Decimal?                @db.Decimal(8, 3)
+  temperatureC             Decimal?                @db.Decimal(4, 1)
+  heartRate                Int?
+  respiratoryRate          Int?
+  nextControlAt            DateTime?               @db.Timestamptz(3)
+  status                   ConsultationStatus      @default(DRAFT)
+  version                  Int                     @default(1)
+  createdAt                DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime                @updatedAt @db.Timestamptz(3)
+  finalizedAt              DateTime?               @db.Timestamptz(3)
+  clinic                   VeterinaryClinic        @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  patient                  Patient                 @relation(fields: [patientId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  appointment              Appointment?            @relation(fields: [appointmentId, patientId, clinicId], references: [id, patientId, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  professional             ClinicMembership        @relation("ConsultationProfessional", fields: [professionalMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  creator                  ClinicMembership        @relation("ConsultationCreator", fields: [createdByMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  finalizer                ClinicMembership?       @relation("ConsultationFinalizer", fields: [finalizedByMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  events                   ConsultationEvent[]
+  amendments               ConsultationAmendment[]
+
+  @@unique([id, clinicId])
+  @@unique([clinicId, requestId])
+  @@unique([appointmentId, patientId, clinicId])
+  @@index([clinicId, patientId, attendedAt])
+  @@index([clinicId, status, attendedAt])
+}
+
+model ConsultationEvent {
+  id                String           @id @default(uuid()) @db.Uuid
+  clinicId          String           @db.Uuid
+  consultationId    String           @db.Uuid
+  actorMembershipId String           @db.Uuid
+  kind              String           @db.VarChar(32)
+  snapshot          Json
+  createdAt         DateTime         @default(now()) @db.Timestamptz(3)
+  consultation      Consultation     @relation(fields: [consultationId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  actor             ClinicMembership @relation(fields: [actorMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([clinicId, consultationId, createdAt])
+}
+
+model ConsultationAmendment {
+  id                String           @id @default(uuid()) @db.Uuid
+  clinicId          String           @db.Uuid
+  consultationId    String           @db.Uuid
+  actorMembershipId String           @db.Uuid
+  requestId         String           @db.Uuid
+  reason            String           @db.VarChar(1000)
+  correction        String           @db.VarChar(8000)
+  createdAt         DateTime         @default(now()) @db.Timestamptz(3)
+  consultation      Consultation     @relation(fields: [consultationId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+  actor             ClinicMembership @relation(fields: [actorMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([clinicId, requestId])
+  @@index([clinicId, consultationId, createdAt])
+}
+
+model BookingSettings {
+  clinicId String @id @db.Uuid
+  configuration Json @db.JsonB
+  version Int @default(1)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  clinic VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict)
+}
+
+model BookingService {
+  id String @id @default(uuid()) @db.Uuid
+  clinicId String @db.Uuid
+  name String @db.VarChar(100)
+  description String @default("") @db.VarChar(500)
+  durationMinutes Int
+  bufferMinutes Int @default(0)
+  resourceKey String? @db.VarChar(80)
+  enabled Boolean @default(false)
+  version Int @default(1)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  clinic VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict)
+  professionals BookingServiceProfessional[]
+  appointments Appointment[]
+  requests BookingRequest[]
+  @@unique([id, clinicId])
+  @@index([clinicId, enabled])
+}
+
+model BookingServiceProfessional {
+  clinicId String @db.Uuid
+  serviceId String @db.Uuid
+  membershipId String @db.Uuid
+  service BookingService @relation(fields: [serviceId, clinicId], references: [id, clinicId], onDelete: Restrict)
+  professional ClinicMembership @relation(fields: [membershipId, clinicId], references: [id, clinicId], onDelete: Restrict)
+  @@id([clinicId, serviceId, membershipId])
+}
+
+model BookingRequest {
+  id String @id @default(uuid()) @db.Uuid
+  clinicId String @db.Uuid
+  requestId String @db.Uuid
+  tokenHash String @db.VarChar(64)
+  serviceId String @db.Uuid
+  professionalMembershipId String @db.Uuid
+  appointmentId String? @unique @db.Uuid
+  startsAt DateTime @db.Timestamptz(3)
+  endsAt DateTime @db.Timestamptz(3)
+  blockedUntil DateTime @db.Timestamptz(3)
+  resourceKey String? @db.VarChar(80)
+  status String @default("PENDING") @db.VarChar(16)
+  ownerName String @db.VarChar(120)
+  email String @db.VarChar(254)
+  phone String @db.VarChar(32)
+  petName String @db.VarChar(100)
+  species Species
+  reason String @db.VarChar(1000)
+  additionalInfo String @default("") @db.VarChar(1000)
+  cancellationReason String? @db.VarChar(500)
+  consentAt DateTime @default(now()) @db.Timestamptz(3)
+  version Int @default(1)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  clinic VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict)
+  service BookingService @relation(fields: [serviceId, clinicId], references: [id, clinicId], onDelete: Restrict)
+  professional ClinicMembership @relation(fields: [professionalMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict)
+  appointment Appointment? @relation(fields: [appointmentId, clinicId], references: [id, clinicId], onDelete: Restrict)
+  events BookingEvent[]
+  notifications BookingNotification[]
+  @@unique([id, clinicId])
+  @@unique([clinicId, requestId])
+  @@unique([appointmentId, clinicId])
+  @@index([clinicId, startsAt, status])
+  @@index([clinicId, professionalMembershipId, startsAt, blockedUntil])
+}
+
+model BookingEvent {
+  id String @id @default(uuid()) @db.Uuid
+  clinicId String @db.Uuid
+  bookingId String @db.Uuid
+  actorMembershipId String? @db.Uuid
+  action String @db.VarChar(40)
+  snapshot Json @db.JsonB
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  clinic VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict)
+  booking BookingRequest @relation(fields: [bookingId, clinicId], references: [id, clinicId], onDelete: Restrict)
+  actor ClinicMembership? @relation(fields: [actorMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict)
+  @@index([clinicId, bookingId, createdAt])
+}
+
+model BookingNotification {
+  id String @id @default(uuid()) @db.Uuid
+  clinicId String @db.Uuid
+  bookingId String? @db.Uuid
+  appointmentId String? @db.Uuid
+  eventKey String @unique @db.VarChar(200)
+  kind String @db.VarChar(32)
+  state String @default("PENDING") @db.VarChar(16)
+  deliverAt DateTime @db.Timestamptz(3)
+  attempts Int @default(0)
+  deliveredAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  clinic VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict)
+  booking BookingRequest? @relation(fields: [bookingId, clinicId], references: [id, clinicId], onDelete: Restrict)
+  appointment Appointment? @relation(fields: [appointmentId, clinicId], references: [id, clinicId], onDelete: Restrict)
+  @@index([state, deliverAt])
+}
+
+model NewsletterSubscriber {
+  id String @id @default(uuid()) @db.Uuid
+  clinicId String @db.Uuid
+  email String @db.VarChar(254)
+  consentVersion String @default("newsletter-v1") @db.VarChar(32)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  clinic VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([clinicId, email])
+}
+
+enum ConciergeSeat {
+  CUSTOMER_CARE
+  SCHEDULING
+  FOLLOW_UP
+}
+enum ConciergeMessageRole {
+  VISITOR
+  AI
+  HUMAN
+  SYSTEM
+}
+enum ConciergeHandoffState {
+  NONE
+  WAITING
+  REQUESTED
+  ASSIGNED
+  CLOSED
+}
+enum ConciergeBookingState {
+  PROPOSED
+  REQUESTED
+  HANDLED
+}
+enum ConciergeUsageState {
+  RESERVED
+  COMPLETED
+  FAILED
+}
+model ConciergeSettings {
+  clinicId String @id @db.Uuid
+  configuration Json
+  version Int @default(1)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  clinic VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict)
+}
+model ConciergeConversation {
+  id String @id @default(uuid()) @db.Uuid
+  clinicId String @db.Uuid
+  tokenHash String @unique @db.VarChar(64)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt DateTime @db.Timestamptz(3)
+  busyUntil DateTime? @db.Timestamptz(3)
+  handoffState ConciergeHandoffState @default(NONE)
+  handoffSeat ConciergeSeat?
+  contact String? @db.VarChar(254)
+  assignedMembershipId String? @db.Uuid
+  clinic VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict)
+  assignedMember ClinicMembership? @relation("ConciergeAssignment", fields: [assignedMembershipId, clinicId], references: [id, clinicId], onDelete: Restrict)
+  messages ConciergeMessage[]
+  proposals ConciergeBookingProposal[]
+  @@unique([id, clinicId])
+  @@index([clinicId, expiresAt])
+}
+model ConciergeMessage {
+  id String @id @default(uuid()) @db.Uuid
+  clinicId String @db.Uuid
+  conversationId String @db.Uuid
+  role ConciergeMessageRole
+  text String @db.VarChar(4000)
+  authorLabel String? @db.VarChar(120)
+  requestId String? @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  clinic VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict)
+  conversation ConciergeConversation @relation(fields: [conversationId, clinicId], references: [id, clinicId], onDelete: Cascade)
+  @@unique([conversationId, requestId])
+  @@index([clinicId, conversationId, createdAt])
+}
+model ConciergePresence {
+  availability String @default("AVAILABLE") @db.VarChar(16)
+  clinicId String @db.Uuid
+  membershipId String @unique @db.Uuid
+  seat ConciergeSeat
+  onlineUntil DateTime @db.Timestamptz(3)
+  clinic VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict)
+  member ClinicMembership @relation(fields: [membershipId, clinicId], references: [id, clinicId], onDelete: Cascade)
+  @@id([clinicId, membershipId])
+  @@unique([membershipId, clinicId])
+  @@index([clinicId, onlineUntil])
+}
+model ConciergeBookingProposal {
+  id String @id @default(uuid()) @db.Uuid
+  clinicId String @db.Uuid
+  conversationId String @db.Uuid
+  startsAt DateTime @db.Timestamptz(3)
+  endsAt DateTime @db.Timestamptz(3)
+  reason String @db.VarChar(500)
+  status ConciergeBookingState @default(PROPOSED)
+  contact Json?
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  clinic VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict)
+  conversation ConciergeConversation @relation(fields: [conversationId, clinicId], references: [id, clinicId], onDelete: Cascade)
+  @@unique([id, clinicId])
+  @@index([clinicId, status, createdAt])
+}
+model ConciergeUsage {
+  id String @id @default(uuid()) @db.Uuid
+  clinicId String @db.Uuid
+  conversationId String @db.Uuid
+  model String @db.VarChar(100)
+  state ConciergeUsageState @default(RESERVED)
+  reservedMicros Int
+  estimatedMicros Int?
+  inputTokens Int @default(0)
+  outputTokens Int @default(0)
+  inputRate Float
+  outputRate Float
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  clinic VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict)
+  @@index([clinicId, createdAt])
 }

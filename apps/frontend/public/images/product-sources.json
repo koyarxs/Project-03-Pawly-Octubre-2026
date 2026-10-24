@@ -1,0 +1,22 @@
+{
+  "createdOn": "2026-10-19",
+  "source": "Pawly application components in this repository, captured from the local development frontend in a fresh Playwright/Edge context.",
+  "usage": "Actual application interface with entirely fictional example data. These are screenshots, not a public interactive application or real clinical records.",
+  "data": "Browser-local GET fixtures only. No database, real accounts, sessions or patient information accessed.",
+  "assets": [
+    {
+      "file": "product-agenda.webp",
+      "width": 1130,
+      "height": 932,
+      "component": "src/components/appointments/appointment-page.tsx",
+      "view": "Weekly agenda, October 19–25, 2026, with fictional appointments."
+    },
+    {
+      "file": "product-clinical.webp",
+      "width": 1130,
+      "height": 978,
+      "component": "src/components/consultations/consultation-detail.tsx",
+      "view": "Finalized consultation for the fictional patient Luna."
+    }
+  ]
+}

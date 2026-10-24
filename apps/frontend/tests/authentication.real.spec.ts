@@ -12,7 +12,12 @@ test("registro, login, selección y logout con Nest/PostgreSQL reales", async ({
   const password = "Frase privada de pruebas Pawly 2026";
   await page.goto("/app");
   await expect(page).toHaveURL(/\/iniciar-sesion$/);
-  await page.getByRole("link", { name: "Registra tu clínica" }).click();
+  await expect(
+    page.getByRole("link", { name: "Registra tu clínica" }),
+  ).toHaveCount(0);
+  // Retained development registration is tested directly; the clinic website
+  // no longer advertises public onboarding for a SaaS product.
+  await page.goto("/registrarse");
   await page.getByLabel("Nombre del responsable").fill(name);
   await page.getByLabel("Correo electrónico").fill(email);
   await page.getByLabel("Contraseña", { exact: true }).fill(password);

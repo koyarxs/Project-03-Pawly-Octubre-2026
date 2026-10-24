@@ -20,6 +20,7 @@ import {
 } from "@/lib/clinical";
 import type { WorkspaceContext } from "@/components/workspace/workspace-shell";
 import { useClinicalLoad } from "./use-clinical-load";
+import { PageHeader } from "@/components/ui/workspace-ui";
 
 type Fields = Record<string, string>;
 const optional = (value: string | undefined) => value?.trim() || null;
@@ -384,7 +385,9 @@ export function ClinicalForm({
             color: optional(values.color),
             microchip: optional(values.microchip),
             status: values.status as "ACTIVE" | "DECEASED",
-            notes: optional(values.notes),
+            notes: context.access.permissions.includes("patient:notes")
+              ? optional(values.notes)
+              : null,
             tutorIds: selected.map((item) => item.id),
           };
     const controller = new AbortController();
@@ -451,247 +454,323 @@ export function ClinicalForm({
     );
   return (
     <>
-      <div className="clinical-heading">
-        <div>
-          <span className="dashboard-eyebrow">{context.access.name}</span>
-          <h1>
-            {initial
-              ? kind === "tutores"
-                ? "Editar tutor"
-                : "Editar paciente"
-              : kind === "tutores"
-                ? "Registrar tutor"
-                : "Registrar paciente"}
-          </h1>
+      <PageHeader
+        eyebrow={context.access.name}
+        title={
+          initial
+            ? kind === "tutores"
+              ? "Editar tutor"
+              : "Editar paciente"
+            : kind === "tutores"
+              ? "Registrar tutor"
+              : "Registrar paciente"
+        }
+        description={
+          kind === "tutores"
+            ? "Completa los datos de contacto del responsable."
+            : "Crea una ficha y vincula a sus responsables."
+        }
+        actions={
+          <Link
+            className="clinical-record-link"
+            href={
+              initial
+                ? clinicalPath(context.clinicId, kind, initial.id)
+                : clinicalPath(context.clinicId, kind)
+            }
+          >
+            Cancelar
+          </Link>
+        }
+      />
+      <div className="clinical-form-layout">
+        <aside className="clinical-form-guide" aria-label="Guía del registro">
+          <span className="pw-eyebrow">UN REGISTRO COMPLETO</span>
+          <h2>
+            {kind === "tutores"
+              ? "Conoce a quien lo cuida."
+              : "Su cuidado empieza aquí."}
+          </h2>
           <p>
             {kind === "tutores"
-              ? "Completa los datos de contacto del responsable."
-              : "Crea una ficha y vincula a sus responsables."}
+              ? "Mantén un contacto directo con las personas responsables de cada paciente."
+              : "Una ficha clara ayuda a tu equipo a mantener la continuidad de la atención."}
           </p>
-        </div>
-        <Link
-          className="clinical-record-link"
-          href={
-            initial
-              ? clinicalPath(context.clinicId, kind, initial.id)
-              : clinicalPath(context.clinicId, kind)
-          }
+          <ol>
+            <li>
+              <span>01</span>
+              <div>
+                <strong>
+                  {kind === "tutores" ? "Datos personales" : "Identificación"}
+                </strong>
+                <p>
+                  {kind === "tutores"
+                    ? "Nombre y apellidos del responsable."
+                    : "Nombre, especie y características."}
+                </p>
+              </div>
+            </li>
+            <li>
+              <span>02</span>
+              <div>
+                <strong>
+                  {kind === "tutores" ? "Contacto" : "Información del paciente"}
+                </strong>
+                <p>
+                  {kind === "tutores"
+                    ? "Un teléfono para comunicarse."
+                    : "Registra solo los datos conocidos."}
+                </p>
+              </div>
+            </li>
+            <li>
+              <span>03</span>
+              <div>
+                <strong>
+                  {kind === "tutores" ? "Observaciones" : "Responsables"}
+                </strong>
+                <p>
+                  {kind === "tutores"
+                    ? "Contexto útil para tu equipo."
+                    : "Vincula al menos un tutor activo."}
+                </p>
+              </div>
+            </li>
+          </ol>
+          <p className="clinical-guide-note">
+            Los datos se guardan en {context.access.name}.
+          </p>
+        </aside>
+        <form
+          className="clinical-form"
+          noValidate
+          onSubmit={submit}
+          aria-busy={busy}
         >
-          Cancelar
-        </Link>
-      </div>
-      <form
-        className="clinical-form"
-        noValidate
-        onSubmit={submit}
-        aria-busy={busy}
-      >
-        <fieldset disabled={busy}>
-          <legend className="clinical-form-legend">
-            {kind === "tutores"
-              ? "Información del tutor"
-              : "Información del paciente"}
-          </legend>
-          <div className="clinical-form-grid">
-            {kind === "tutores" ? (
-              <>
+          <fieldset disabled={busy}>
+            <legend className="clinical-form-legend">
+              {kind === "tutores"
+                ? "Información del tutor"
+                : "Información del paciente"}
+            </legend>
+            <div className="clinical-form-grid">
+              <div className="clinical-form-section-label">
+                <h2>
+                  {kind === "tutores"
+                    ? "Datos personales y contacto"
+                    : "Identificación del paciente"}
+                </h2>
+                <p>
+                  {kind === "tutores"
+                    ? "Los datos esenciales para cuidar la comunicación."
+                    : "Distingue su ficha del resto de pacientes."}
+                </p>
+              </div>
+              {kind === "tutores" ? (
+                <>
+                  <InputField
+                    id="firstName"
+                    label="Nombre"
+                    values={values}
+                    update={update}
+                    errors={errors}
+                    required
+                  />
+                  <InputField
+                    id="lastName"
+                    label="Apellidos"
+                    values={values}
+                    update={update}
+                    errors={errors}
+                    required
+                  />
+                  <InputField
+                    id="phone"
+                    label="Teléfono de contacto"
+                    values={values}
+                    update={update}
+                    errors={errors}
+                    type="tel"
+                    required
+                    maxLength={32}
+                    hint="Incluye el código de país cuando corresponda."
+                  />
+                  <InputField
+                    id="email"
+                    label="Correo electrónico"
+                    values={values}
+                    update={update}
+                    errors={errors}
+                    type="email"
+                    maxLength={254}
+                  />
+                  <InputField
+                    id="address"
+                    label="Dirección"
+                    values={values}
+                    update={update}
+                    errors={errors}
+                    maxLength={500}
+                    multiline
+                  />
+                </>
+              ) : (
+                <>
+                  <InputField
+                    id="name"
+                    label="Nombre de la mascota"
+                    values={values}
+                    update={update}
+                    errors={errors}
+                    required
+                  />
+                  <div className="clinical-field">
+                    <label htmlFor="clinical-species">Especie</label>
+                    <select
+                      id="clinical-species"
+                      required
+                      aria-invalid={Boolean(errors.species)}
+                      aria-describedby={
+                        errors.species ? "clinical-species-error" : undefined
+                      }
+                      value={values.species}
+                      onChange={(event) =>
+                        update("species", event.target.value)
+                      }
+                    >
+                      <option value="">Selecciona una especie</option>
+                      {Object.entries(speciesNames).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.species && (
+                      <small
+                        className="clinical-field-error"
+                        id="clinical-species-error"
+                      >
+                        {errors.species}
+                      </small>
+                    )}
+                  </div>
+                  <InputField
+                    id="breed"
+                    label="Raza"
+                    values={values}
+                    update={update}
+                    errors={errors}
+                  />
+                  <div className="clinical-field">
+                    <label htmlFor="clinical-sex">Sexo</label>
+                    <select
+                      id="clinical-sex"
+                      value={values.sex}
+                      onChange={(event) => update("sex", event.target.value)}
+                    >
+                      {Object.entries(sexNames).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <InputField
+                    id="birthDate"
+                    label="Fecha de nacimiento"
+                    values={values}
+                    update={update}
+                    errors={errors}
+                    type="date"
+                    hint="Si la fecha es desconocida, deja este campo vacío."
+                  />
+                  <InputField
+                    id="weightKg"
+                    label="Peso (kg)"
+                    values={values}
+                    update={update}
+                    errors={errors}
+                    type="number"
+                    hint="Kilogramos, con hasta 3 decimales."
+                  />
+                  <InputField
+                    id="color"
+                    label="Color"
+                    values={values}
+                    update={update}
+                    errors={errors}
+                  />
+                  <InputField
+                    id="microchip"
+                    label="Microchip"
+                    values={values}
+                    update={update}
+                    errors={errors}
+                    maxLength={64}
+                  />
+                  <div className="clinical-field">
+                    <label htmlFor="clinical-status">Estado del paciente</label>
+                    <select
+                      id="clinical-status"
+                      value={values.status}
+                      onChange={(event) => update("status", event.target.value)}
+                    >
+                      <option value="ACTIVE">Activo</option>
+                      <option value="DECEASED">Fallecido</option>
+                    </select>
+                  </div>
+                </>
+              )}
+              {(kind === "tutores" ||
+                context.access.permissions.includes("patient:notes")) && (
                 <InputField
-                  id="firstName"
-                  label="Nombre"
+                  id="notes"
+                  label="Observaciones"
                   values={values}
                   update={update}
                   errors={errors}
-                  required
-                />
-                <InputField
-                  id="lastName"
-                  label="Apellidos"
-                  values={values}
-                  update={update}
-                  errors={errors}
-                  required
-                />
-                <InputField
-                  id="phone"
-                  label="Teléfono de contacto"
-                  values={values}
-                  update={update}
-                  errors={errors}
-                  type="tel"
-                  required
-                  maxLength={32}
-                  hint="Incluye el código de país cuando corresponda."
-                />
-                <InputField
-                  id="email"
-                  label="Correo electrónico"
-                  values={values}
-                  update={update}
-                  errors={errors}
-                  type="email"
-                  maxLength={254}
-                />
-                <InputField
-                  id="address"
-                  label="Dirección"
-                  values={values}
-                  update={update}
-                  errors={errors}
-                  maxLength={500}
+                  maxLength={2000}
                   multiline
                 />
-              </>
-            ) : (
-              <>
-                <InputField
-                  id="name"
-                  label="Nombre de la mascota"
-                  values={values}
-                  update={update}
-                  errors={errors}
-                  required
-                />
-                <div className="clinical-field">
-                  <label htmlFor="clinical-species">Especie</label>
-                  <select
-                    id="clinical-species"
-                    required
-                    aria-invalid={Boolean(errors.species)}
-                    aria-describedby={
-                      errors.species ? "clinical-species-error" : undefined
-                    }
-                    value={values.species}
-                    onChange={(event) => update("species", event.target.value)}
-                  >
-                    <option value="">Selecciona una especie</option>
-                    {Object.entries(speciesNames).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.species && (
-                    <small
-                      className="clinical-field-error"
-                      id="clinical-species-error"
-                    >
-                      {errors.species}
-                    </small>
-                  )}
-                </div>
-                <InputField
-                  id="breed"
-                  label="Raza"
-                  values={values}
-                  update={update}
-                  errors={errors}
-                />
-                <div className="clinical-field">
-                  <label htmlFor="clinical-sex">Sexo</label>
-                  <select
-                    id="clinical-sex"
-                    value={values.sex}
-                    onChange={(event) => update("sex", event.target.value)}
-                  >
-                    {Object.entries(sexNames).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <InputField
-                  id="birthDate"
-                  label="Fecha de nacimiento"
-                  values={values}
-                  update={update}
-                  errors={errors}
-                  type="date"
-                  hint="Si la fecha es desconocida, deja este campo vacío."
-                />
-                <InputField
-                  id="weightKg"
-                  label="Peso (kg)"
-                  values={values}
-                  update={update}
-                  errors={errors}
-                  type="number"
-                  hint="Kilogramos, con hasta 3 decimales."
-                />
-                <InputField
-                  id="color"
-                  label="Color"
-                  values={values}
-                  update={update}
-                  errors={errors}
-                />
-                <InputField
-                  id="microchip"
-                  label="Microchip"
-                  values={values}
-                  update={update}
-                  errors={errors}
-                  maxLength={64}
-                />
-                <div className="clinical-field">
-                  <label htmlFor="clinical-status">Estado del paciente</label>
-                  <select
-                    id="clinical-status"
-                    value={values.status}
-                    onChange={(event) => update("status", event.target.value)}
-                  >
-                    <option value="ACTIVE">Activo</option>
-                    <option value="DECEASED">Fallecido</option>
-                  </select>
-                </div>
-              </>
+              )}
+            </div>
+            {kind === "pacientes" && (
+              <TutorPicker
+                context={context}
+                selected={selected}
+                onSelect={setSelected}
+                error={errors.tutorIds}
+              />
             )}
-            <InputField
-              id="notes"
-              label="Observaciones"
-              values={values}
-              update={update}
-              errors={errors}
-              maxLength={2000}
-              multiline
-            />
-          </div>
-          {kind === "pacientes" && (
-            <TutorPicker
-              context={context}
-              selected={selected}
-              onSelect={setSelected}
-              error={errors.tutorIds}
-            />
+          </fieldset>
+          {Object.values(errors).some(Boolean) && (
+            <div className="clinical-alert" role="alert">
+              Revisa los campos indicados antes de guardar.
+            </div>
           )}
-        </fieldset>
-        {Object.values(errors).some(Boolean) && (
-          <div className="clinical-alert" role="alert">
-            Revisa los campos indicados antes de guardar.
-          </div>
-        )}
-        {message && (
-          <div className="clinical-alert" role="alert">
-            {message}
-            <button type="button" onClick={context.refresh}>
-              Verificar mi acceso
+          {message && (
+            <div className="clinical-alert" role="alert">
+              {message}
+              <button type="button" onClick={context.refresh}>
+                Verificar mi acceso
+              </button>
+            </div>
+          )}
+          <div className="clinical-form-footer">
+            <p>Los campos sin la indicación «Opcional» son obligatorios.</p>
+            <button className="clinical-primary" disabled={busy} type="submit">
+              {busy && <LoaderCircle className="auth-spinner" size={17} />}
+              {busy
+                ? "Guardando…"
+                : initial
+                  ? "Guardar cambios"
+                  : kind === "tutores"
+                    ? "Registrar tutor"
+                    : "Registrar paciente"}
             </button>
           </div>
-        )}
-        <div className="clinical-form-footer">
-          <p>Los campos sin la indicación «Opcional» son obligatorios.</p>
-          <button className="clinical-primary" disabled={busy} type="submit">
-            {busy && <LoaderCircle className="auth-spinner" size={17} />}
-            {busy
-              ? "Guardando…"
-              : initial
-                ? "Guardar cambios"
-                : kind === "tutores"
-                  ? "Registrar tutor"
-                  : "Registrar paciente"}
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </>
   );
 }

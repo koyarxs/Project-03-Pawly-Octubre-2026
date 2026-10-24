@@ -1,0 +1,112 @@
+{
+  "capturedAt": "2026-10-24T18:51:12.418Z",
+  "source": "Isolated Nest API + PostgreSQL + Next.js",
+  "data": "Exclusively fictional fixtures; not production data",
+  "captures": [
+    {
+      "file": "inicio-sesion.webp",
+      "route": "/iniciar-sesion",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
+    {
+      "file": "dashboard.webp",
+      "route": "/app/clinicas/:id/dashboard",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
+    {
+      "file": "agenda.webp",
+      "route": "/app/clinicas/:id/agenda",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": true
+    },
+    {
+      "file": "servicios.webp",
+      "route": "/app/clinicas/:id/agenda",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": true
+    },
+    {
+      "file": "disponibilidad.webp",
+      "route": "/app/clinicas/:id/agenda",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
+    {
+      "file": "configuracion-reservas.webp",
+      "route": "/app/clinicas/:id/agenda",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
+    {
+      "file": "tutores.webp",
+      "route": "/app/clinicas/:id/tutores",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
+    {
+      "file": "pacientes.webp",
+      "route": "/app/clinicas/:id/pacientes",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
+    {
+      "file": "personal.webp",
+      "route": "/app/clinicas/:id/personal",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
+    {
+      "file": "editor-web.webp",
+      "route": "/app/clinicas/:id/sitio-web",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
+    {
+      "file": "ficha-paciente.webp",
+      "route": "/app/clinicas/:id/pacientes/:id",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": true
+    },
+    {
+      "file": "consulta-clinica.webp",
+      "route": "/app/clinicas/:id/consultas/:id",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": true
+    },
+    {
+      "file": "reserva-profesionales.webp",
+      "route": "/reservar/qa-:id",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": true
+    },
+    {
+      "file": "reserva-horarios.webp",
+      "route": "/reservar/qa-:id",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": true
+    },
+    {
+      "file": "reserva-movil.webp",
+      "route": "/reservar/qa-:id",
+      "width": 390,
+      "height": 844,
+      "fullPage": false
+    }
+  ]
+}

@@ -7,17 +7,14 @@ import {
   ArrowRight,
   Building2,
   CalendarDays,
-  ChartNoAxesCombined,
   ClipboardList,
+  Globe,
   LayoutDashboard,
   LoaderCircle,
   LogOut,
   Menu,
-  Package,
   PawPrint,
-  Settings,
   ShieldCheck,
-  Syringe,
   Users,
   X,
 } from "lucide-react";
@@ -25,12 +22,12 @@ import { Brand } from "@/components/brand";
 import { PrivateWorkspaceGate } from "@/components/auth/private-workspace-gate";
 import { usePrivateWorkspace } from "@/components/auth/use-private-workspace";
 import {
-  dashboardPath,
   workspacePath,
   roleNames,
   type WorkspaceSection,
 } from "@/lib/workspace";
-import type { Session } from "@/lib/auth";
+import type { Session, ClinicAccess } from "@/lib/auth";
+import { hasPermission, sectionPermissions } from "@/lib/permissions";
 import type { WorkspaceState } from "@/components/auth/use-private-workspace";
 export type WorkspaceContext = {
   clinicId: string;
@@ -44,57 +41,38 @@ import "@/components/auth/auth.css";
 import "./dashboard.css";
 
 const modules = [
-  ["Agenda", CalendarDays],
-  ["Tutores", Users],
-  ["Pacientes", PawPrint],
-  ["Consultas", ClipboardList],
-  ["Vacunación", Syringe],
-  ["Inventario", Package],
-  ["Reportes", ChartNoAxesCombined],
-  ["Configuración", Settings],
+  ["dashboard", "Dashboard", LayoutDashboard],
+  ["agenda", "Agendamiento", CalendarDays],
+  ["tutores", "Tutores", Users],
+  ["pacientes", "Pacientes", PawPrint],
+  ["consultas", "Consultas", ClipboardList],
+  ["personal", "Personal y Accesos", ShieldCheck],
+  ["sitio-web", "Sitio web", Globe],
+  ["mi-perfil", "Mi perfil público", Users],
 ] as const;
-
 function Navigation({
   clinicId,
   section,
+  access,
 }: {
   clinicId: string;
   section: WorkspaceSection;
+  access: ClinicAccess;
 }) {
   return (
     <nav aria-label="Navegación de la clínica">
-      <Link
-        href={dashboardPath(clinicId)}
-        aria-current={section === "dashboard" ? "page" : undefined}
-      >
-        <LayoutDashboard size={19} aria-hidden="true" />
-        Dashboard
-      </Link>
-      {modules.map(([name, Icon]) =>
-        name === "Tutores" || name === "Pacientes" ? (
+      {modules
+        .filter(([key]) => hasPermission(access, sectionPermissions[key]))
+        .map(([key, label, Icon]) => (
           <Link
-            key={name}
-            href={workspacePath(
-              clinicId,
-              name === "Tutores" ? "tutores" : "pacientes",
-            )}
-            aria-current={
-              section === (name === "Tutores" ? "tutores" : "pacientes")
-                ? "page"
-                : undefined
-            }
+            key={key}
+            href={workspacePath(clinicId, key)}
+            aria-current={section === key ? "page" : undefined}
           >
             <Icon size={19} aria-hidden="true" />
-            {name}
+            {label}
           </Link>
-        ) : (
-          <button key={name} disabled>
-            <Icon size={19} aria-hidden="true" />
-            <span>{name}</span>
-            <small>Próximamente</small>
-          </button>
-        ),
-      )}
+        ))}
     </nav>
   );
 }
@@ -120,12 +98,16 @@ export function WorkspaceShell({
     revision,
   } = usePrivateWorkspace(clinicId);
   const [changing, setChanging] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const desktop = window.matchMedia("(min-width: 1001px)");
     const closeOnDesktop = () => {
-      if (desktop.matches) dialog.current?.close();
+      if (desktop.matches) {
+        dialog.current?.close();
+        setMenuOpen(false);
+      }
     };
     desktop.addEventListener("change", closeOnDesktop);
     return () => desktop.removeEventListener("change", closeOnDesktop);
@@ -153,22 +135,30 @@ export function WorkspaceShell({
         onRetry={refresh}
       />
     );
+  const sectionAllowed = hasPermission(access, sectionPermissions[section]);
   function closeMenu() {
     dialog.current?.close();
+    setMenuOpen(false);
     menuButton.current?.focus();
   }
   return (
     <div className="pawly-dashboard">
+      <a className="dashboard-skip-link" href="#contenido-clinica">
+        Saltar al contenido de la clínica
+      </a>
       <aside className="dashboard-sidebar">
-        <Brand inverse />
-        <span className="dashboard-eyebrow">WORKSPACE</span>
-        <Navigation clinicId={clinicId} section={section} />
+        <div className="dashboard-sidebar-brand">
+          <Brand inverse />
+          <span>GESTIÓN VETERINARIA</span>
+        </div>
+        <span className="dashboard-eyebrow">ESPACIO CLÍNICO</span>
+        <Navigation clinicId={clinicId} section={section} access={access} />
         <div className="dashboard-sidebar-note">
           <ShieldCheck size={21} />
           <p>
-            Tu clínica.
+            Cada cuidado, conectado.
             <br />
-            Un espacio conectado.
+            Tu equipo en un mismo lugar.
           </p>
         </div>
         <Link className="dashboard-back" href="/app">
@@ -177,9 +167,11 @@ export function WorkspaceShell({
       </aside>
       <dialog
         ref={dialog}
+        id="navegacion-clinica-movil"
         className="dashboard-mobile-menu"
         aria-label="Navegación móvil"
         onCancel={closeMenu}
+        onClose={() => setMenuOpen(false)}
       >
         <div className="dashboard-menu-heading">
           <Brand inverse />
@@ -187,7 +179,7 @@ export function WorkspaceShell({
             <X size={22} />
           </button>
         </div>
-        <Navigation clinicId={clinicId} section={section} />
+        <Navigation clinicId={clinicId} section={section} access={access} />
         <Link className="dashboard-back" href="/app">
           Mis clínicas <ArrowRight size={16} />
         </Link>
@@ -198,14 +190,19 @@ export function WorkspaceShell({
             ref={menuButton}
             className="dashboard-menu-toggle"
             aria-label="Abrir navegación"
-            onClick={() => dialog.current?.showModal()}
+            aria-expanded={menuOpen}
+            aria-controls="navegacion-clinica-movil"
+            onClick={() => {
+              dialog.current?.showModal();
+              setMenuOpen(true);
+            }}
           >
             <Menu size={22} />
           </button>
           <div className="dashboard-clinic-picker">
             <Building2 size={21} aria-hidden="true" />
             <label>
-              <span>CLÍNICA ACTIVA</span>
+              <span>TU CLÍNICA</span>
               <select
                 aria-label="Cambiar clínica"
                 value={clinicId}
@@ -218,7 +215,7 @@ export function WorkspaceShell({
               >
                 {session.memberships.map(({ clinic }) => (
                   <option key={clinic.id} value={clinic.id}>
-                    {clinic.name}
+                    {clinic.name.replace(/\s*·?\s*DEMOSTRACIÓN.*$/u, "").trim()}
                   </option>
                 ))}
               </select>
@@ -246,25 +243,62 @@ export function WorkspaceShell({
             <span>{leaving ? "Cerrando sesión…" : "Cerrar sesión"}</span>
           </button>
         </header>
-        <main className="dashboard-content">
+        <main
+          className="dashboard-content"
+          id="contenido-clinica"
+          tabIndex={-1}
+        >
           {logoutError && (
             <div className="auth-alert" role="alert">
               {logoutError}
             </div>
           )}
           {revalidationError && (
-            <div role="status" className="auth-alert">{revalidationError}</div>
+            <div role="status" className="auth-alert">
+              {revalidationError}
+            </div>
           )}
-          {children({
-            clinicId,
-            access,
-            session,
-            refresh,
-            endSession,
-            revision,
-          })}
+          {sectionAllowed ? (
+            <>
+              {session.memberships
+                .find((m) => m.clinic.id === clinicId)
+                ?.clinic.name.includes("DEMOSTRACIÓN") && (
+                <p role="note" style={{ fontSize: 11, color: "#637b70", margin: "0 0 18px", lineHeight: 1.6 }}>
+                  Proyecto personal · Personas, pacientes y atenciones ficticios.
+                </p>
+              )}
+              {children({
+                clinicId,
+                access,
+                session,
+                refresh,
+                endSession,
+                revision,
+              })}
+            </>
+          ) : (
+            <section className="dashboard-panel" role="alert">
+              <h1>
+                {section === "consultas"
+                  ? "Acceso clínico restringido"
+                  : section === "sitio-web"
+                    ? "Administración del sitio restringida"
+                    : "No tienes permiso para este módulo."}
+              </h1>
+              <p>
+                Tu cuenta mantiene acceso a esta clínica, pero no a este módulo.
+                Solicita los permisos correspondientes a un administrador.
+              </p>
+              <Link
+                className="dashboard-available"
+                href={workspacePath(clinicId, "dashboard")}
+              >
+                Volver al dashboard <ArrowRight size={16} />
+              </Link>
+            </section>
+          )}
           <footer className="dashboard-footer">
-            Pawly Workspace <span>Más tiempo para cuidar.</span>
+            Pawly <span>Más tiempo para cuidar.</span>
           </footer>
         </main>
       </div>

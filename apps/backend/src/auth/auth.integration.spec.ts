@@ -10,7 +10,9 @@ import request from "supertest";
 import * as argon2 from "argon2";
 import { configureHttp } from "../http/configure-http";
 import { ClinicAuthorizationService } from "../authorization/authorization.module";
+import { lockClinic } from "../authorization/permission-policy";
 import { PrismaService } from "../prisma/prisma.service";
+import { initialWebsiteContent } from "../website/website.dto";
 
 // Capture structure and row fingerprints without printing credentials or real rows.
 async function publicSnapshot(client: PrismaClient) {
@@ -51,7 +53,10 @@ async function publicSnapshot(client: PrismaClient) {
       }
       return { columns, constraints, indexes, enums, rows };
     },
-    { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    {
+      isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+      timeout: 30000,
+    },
   );
 }
 
@@ -68,6 +73,9 @@ describe("authentication with isolated PostgreSQL", () => {
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
     CORS_ORIGINS: process.env.CORS_ORIGINS,
+    WEBSITE_CLINIC_ID: process.env.WEBSITE_CLINIC_ID,
+    WEBSITE_PUBLIC_NAME: process.env.WEBSITE_PUBLIC_NAME,
+    MAIL_MODE: process.env.MAIL_MODE,
   };
   let cookie: string;
   let userId: string;
@@ -130,6 +138,7 @@ describe("authentication with isolated PostgreSQL", () => {
     process.env.DATABASE_URL = url.toString();
     process.env.NODE_ENV = "test";
     process.env.CORS_ORIGINS = origin;
+    process.env.MAIL_MODE = "disabled";
     prisma = new PrismaClient({ datasourceUrl: url.toString() });
     await assertTestConnection();
     console.info(
@@ -163,14 +172,25 @@ describe("authentication with isolated PostgreSQL", () => {
         // RESTRICT blocks external dependencies; never cascade into another schema.
         await assertTestConnection();
         await control.$executeRawUnsafe(
-          `DROP TABLE IF EXISTS "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership",
+          `DROP TABLE IF EXISTS "${schema}"."BookingNotification","${schema}"."BookingEvent","${schema}"."BookingRequest","${schema}"."BookingServiceProfessional","${schema}"."BookingService","${schema}"."BookingSettings","${schema}"."ConciergeMessage","${schema}"."ConciergeBookingProposal","${schema}"."ConciergeConversation","${schema}"."ConciergePresence","${schema}"."ConciergeUsage","${schema}"."ConciergeSettings","${schema}"."NewsletterSubscriber","${schema}"."PatientAssignment", "${schema}"."StaffInvitation", "${schema}"."AccessAuditLog", "${schema}"."StaffProfile", "${schema}"."VeterinaryWebsite", "${schema}"."ConsultationEvent", "${schema}"."ConsultationAmendment", "${schema}"."Consultation", "${schema}"."AppointmentEvent", "${schema}"."Appointment", "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership",
            "${schema}"."User", "${schema}"."VeterinaryClinic",
            "${schema}"."_prisma_migrations" RESTRICT`,
         );
         await control.$executeRawUnsafe(
-          `DROP TYPE IF EXISTS "${schema}"."TutorStatus", "${schema}"."PatientStatus", "${schema}"."Species", "${schema}"."PatientSex", "${schema}"."UserStatus", "${schema}"."ClinicStatus",
+          `DROP TYPE IF EXISTS "${schema}"."ConciergeSeat","${schema}"."ConciergeMessageRole","${schema}"."ConciergeHandoffState","${schema}"."ConciergeBookingState","${schema}"."ConciergeUsageState","${schema}"."StaffJob", "${schema}"."CredentialStatus", "${schema}"."PatientScope", "${schema}"."PermissionKey", "${schema}"."ConsultationStatus", "${schema}"."DiagnosisType", "${schema}"."AppointmentStatus", "${schema}"."TutorStatus", "${schema}"."PatientStatus", "${schema}"."Species", "${schema}"."PatientSex", "${schema}"."UserStatus", "${schema}"."ClinicStatus",
            "${schema}"."MembershipStatus", "${schema}"."Role" RESTRICT`,
         );
+        for (const fn of [
+          "protectAccessAudit",
+          "protectFinalizedConsultation",
+          "protectClinicalAppendOnly",
+          "requireFinalizedForAmendment",
+          "checkClinicalAppointment",
+        ]) {
+          await control.$executeRawUnsafe(
+            `DROP FUNCTION "${schema}"."${fn}"() RESTRICT`,
+          );
+        }
         await control.$executeRawUnsafe(`DROP SCHEMA "${schema}" RESTRICT`);
         ownsSchema = false;
         const remaining = await control.$queryRaw<
@@ -201,15 +221,9 @@ describe("authentication with isolated PostgreSQL", () => {
 
   beforeEach(async () => {
     await assertTestConnection();
-    await prisma.$transaction([
-      prisma.patientTutor.deleteMany(),
-      prisma.patient.deleteMany(),
-      prisma.tutor.deleteMany(),
-      prisma.session.deleteMany(),
-      prisma.clinicMembership.deleteMany(),
-      prisma.user.deleteMany(),
-      prisma.veterinaryClinic.deleteMany(),
-    ]);
+    await prisma.$executeRawUnsafe(
+      `TRUNCATE TABLE "${schema}"."BookingNotification","${schema}"."BookingEvent","${schema}"."BookingRequest","${schema}"."BookingServiceProfessional","${schema}"."BookingService","${schema}"."BookingSettings","${schema}"."ConciergeMessage","${schema}"."ConciergeBookingProposal","${schema}"."ConciergeConversation","${schema}"."ConciergePresence","${schema}"."ConciergeUsage","${schema}"."ConciergeSettings","${schema}"."NewsletterSubscriber","${schema}"."PatientAssignment","${schema}"."StaffInvitation","${schema}"."AccessAuditLog","${schema}"."StaffProfile","${schema}"."VeterinaryWebsite","${schema}"."ConsultationEvent","${schema}"."ConsultationAmendment","${schema}"."Consultation","${schema}"."AppointmentEvent","${schema}"."Appointment","${schema}"."PatientTutor","${schema}"."Patient","${schema}"."Tutor","${schema}"."Session","${schema}"."ClinicMembership","${schema}"."User","${schema}"."VeterinaryClinic" RESTRICT`,
+    );
     const owner = await prisma.user.create({
       data: {
         name: input.name,
@@ -232,6 +246,7 @@ describe("authentication with isolated PostgreSQL", () => {
     });
     userId = owner.id;
     clinicId = owner.memberships[0]!.clinicId;
+    app.get(ConfigService).set("WEBSITE_CLINIC_ID", clinicId);
     const other = await prisma.user.create({
       data: {
         name: "Other owner",
@@ -253,6 +268,24 @@ describe("authentication with isolated PostgreSQL", () => {
       include: { memberships: true },
     });
     otherClinicId = other.memberships[0]!.clinicId;
+    // Independently verified doctor fixture, exclusively in this owned test schema.
+    const reviewer = await prisma.clinicMembership.create({
+      data: { userId: other.id, clinicId, role: "RECEPTIONIST" },
+    });
+    await prisma.staffProfile.create({
+      data: {
+        clinicId,
+        membershipId: owner.memberships[0]!.id,
+        displayName: input.name,
+        job: "VETERINARIAN",
+        credentialNumber: "QA-ONLY",
+        credentialEvidence: "Synthetic isolated test fixture",
+        credentialStatus: "VERIFIED",
+        medicalPracticeEnabled: true,
+        credentialVerifiedAt: new Date(),
+        credentialVerifiedById: reviewer.id,
+      },
+    });
     app.get<ThrottlerStorageService>(ThrottlerStorage).onApplicationShutdown();
     const login = await post("/api/auth/login")
       .send({ email, password })
@@ -260,6 +293,844 @@ describe("authentication with isolated PostgreSQL", () => {
     cookie = String(login.get("set-cookie")?.[0]).split(";")[0]!;
     // Every scenario has fresh fixtures and independent counters, with limits enabled.
     app.get<ThrottlerStorageService>(ThrottlerStorage).onApplicationShutdown();
+  });
+
+  describe("clinic staff and effective permissions", () => {
+    const staffPath = () => `/api/clinics/${clinicId}/staff`;
+    const patch = (url: string) =>
+      request(app.getHttpServer())
+        .patch(url)
+        .set("Origin", origin)
+        .set("X-Pawly-CSRF", "1")
+        .set("Cookie", cookie);
+    async function invite(
+      role:
+        | "VETERINARIAN"
+        | "RECEPTIONIST"
+        | "VET_TECHNICIAN"
+        | "PET_GROOMER"
+        | "CLINIC_DIRECTOR" = "RECEPTIONIST",
+    ) {
+      const address = `staff-${randomUUID()}@example.invalid`;
+      const result = await post(staffPath())
+        .set("Cookie", cookie)
+        .send({
+          name: "Profesional QA ficticio",
+          email: address,
+          role,
+          job: role,
+          reason: "Crear acceso de prueba aislado",
+        })
+        .expect(201);
+      return {
+        email: address,
+        id: String(result.body.membershipId),
+        token: String(result.body.activationToken),
+      };
+    }
+    async function activate(
+      role: Parameters<typeof invite>[0] = "RECEPTIONIST",
+    ) {
+      const worker = await invite(role);
+      await post("/api/auth/staff-invitations/accept")
+        .send({ token: worker.token, password })
+        .expect(201);
+      const login = await post("/api/auth/login")
+        .send({ email: worker.email, password })
+        .expect(200);
+      return {
+        ...worker,
+        cookie: String(login.get("set-cookie")?.[0]).split(";")[0]!,
+      };
+    }
+    it("creates a one-use invitation without granting access before acceptance", async () => {
+      const worker = await invite("VETERINARIAN");
+      const member = await prisma.clinicMembership.findUniqueOrThrow({
+        where: { id: worker.id },
+      });
+      expect(member.status).toBe("INVITED");
+      expect(member.patientScope).toBe("ASSIGNED");
+      await post("/api/auth/staff-invitations/accept")
+        .send({ token: worker.token, password: "too-short" })
+        .expect(400);
+      await post("/api/auth/staff-invitations/accept")
+        .send({ token: worker.token, password })
+        .expect(201);
+      await post("/api/auth/staff-invitations/accept")
+        .send({ token: worker.token, password })
+        .expect(400);
+      expect(
+        await prisma.accessAuditLog.count({
+          where: { clinicId, targetMembershipId: worker.id },
+        }),
+      ).toBe(2);
+    });
+    it("rejects ownership assignment, self escalation, and foreign-clinic administration", async () => {
+      await post(staffPath())
+        .set("Cookie", cookie)
+        .send({
+          name: "Forbidden",
+          email: "forbidden@example.invalid",
+          role: "OWNER",
+          job: "CLINIC_DIRECTOR",
+          reason: "Attempt ownership",
+        })
+        .expect(403);
+      const owner = await prisma.clinicMembership.findUniqueOrThrow({
+        where: { userId_clinicId: { userId, clinicId } },
+      });
+      const access = {
+        role: "ADMIN",
+        patientScope: "CLINIC",
+        grants: [],
+        denials: [],
+        version: 1,
+        reason: "Attempt self change",
+      };
+      await patch(`${staffPath()}/${owner.id}/access`).send(access).expect(403);
+      const foreign = await prisma.clinicMembership.findFirstOrThrow({
+        where: { clinicId: otherClinicId },
+      });
+      await patch(`${staffPath()}/${foreign.id}/access`)
+        .send(access)
+        .expect(404);
+      await request(app.getHttpServer())
+        .get(`/api/clinics/${otherClinicId}/staff`)
+        .set("Cookie", cookie)
+        .expect(403);
+    });
+    it("suspends access in an existing session without deleting the global account", async () => {
+      const worker = await activate();
+      await request(app.getHttpServer())
+        .get(`/api/clinics/${clinicId}/access`)
+        .set("Cookie", worker.cookie)
+        .expect(200);
+      await patch(`${staffPath()}/${worker.id}/status`)
+        .send({
+          status: "SUSPENDED",
+          version: 2,
+          reason: "Suspend fixture access",
+        })
+        .expect(200);
+      await request(app.getHttpServer())
+        .get(`/api/clinics/${clinicId}/access`)
+        .set("Cookie", worker.cookie)
+        .expect(403);
+      await request(app.getHttpServer())
+        .get("/api/auth/me")
+        .set("Cookie", worker.cookie)
+        .expect(200);
+      await patch(`${staffPath()}/${worker.id}/status`)
+        .send({
+          status: "ACTIVE",
+          version: 3,
+          reason: "Reactivate fixture access",
+        })
+        .expect(200);
+      await request(app.getHttpServer())
+        .get(`/api/clinics/${clinicId}/access`)
+        .set("Cookie", worker.cookie)
+        .expect(200);
+    });
+    it("revokes a capability immediately and refuses pending module grants", async () => {
+      const worker = await activate();
+      const dto = {
+        role: "RECEPTIONIST",
+        patientScope: "CLINIC",
+        grants: [],
+        denials: ["APPOINTMENT_WRITE"],
+        version: 2,
+        reason: "Restrict booking permission",
+      };
+      await patch(`${staffPath()}/${worker.id}/access`)
+        .send({ ...dto, grants: ["PAYMENTS_MANAGE"] })
+        .expect(400);
+      await patch(`${staffPath()}/${worker.id}/access`).send(dto).expect(200);
+      const access = await request(app.getHttpServer())
+        .get(`/api/clinics/${clinicId}/access`)
+        .set("Cookie", worker.cookie)
+        .expect(200);
+      expect(access.body.clinic.permissions).not.toContain("appointment:write");
+      await request(app.getHttpServer())
+        .post(`/api/clinics/${clinicId}/appointments`)
+        .set("Origin", origin)
+        .set("X-Pawly-CSRF", "1")
+        .set("Cookie", worker.cookie)
+        .send({})
+        .expect(403);
+      await patch(`${staffPath()}/${worker.id}/access`).send(dto).expect(409);
+    });
+    it("requires independent credential verification and then respects medical revocation", async () => {
+      const worker = await activate("VETERINARIAN");
+      const getAccess = () =>
+        request(app.getHttpServer())
+          .get(`/api/clinics/${clinicId}/access`)
+          .set("Cookie", worker.cookie)
+          .expect(200);
+      expect((await getAccess()).body.clinic.permissions).not.toContain(
+        "consultation:write",
+      );
+      await request(app.getHttpServer())
+        .get(`/api/clinics/${clinicId}/consultations`)
+        .set("Cookie", worker.cookie)
+        .expect(403);
+      const dto = {
+        verified: true,
+        credentialNumber: "QA-DOCTOR",
+        evidence: "Synthetic documentary review in isolated tests",
+        version: 1,
+        reason: "Independent credential fixture verification",
+      };
+      await patch(`${staffPath()}/${worker.id}/credential`)
+        .send(dto)
+        .expect(200);
+      expect((await getAccess()).body.clinic.permissions).toContain(
+        "consultation:write",
+      );
+      await patch(`${staffPath()}/${worker.id}/credential`)
+        .send({ ...dto, verified: false, version: 2 })
+        .expect(200);
+      expect((await getAccess()).body.clinic.permissions).not.toContain(
+        "consultation:write",
+      );
+      const owner = await prisma.clinicMembership.findUniqueOrThrow({
+        where: { userId_clinicId: { userId, clinicId } },
+      });
+      await patch(`${staffPath()}/${owner.id}/credential`)
+        .send(dto)
+        .expect(403);
+    });
+    it("limits assigned patients and redacts clinical notes for technical staff", async () => {
+      const worker = await activate("VET_TECHNICIAN");
+      const patient = await prisma.patient.create({
+        data: {
+          clinicId,
+          name: "Assigned QA patient",
+          species: "DOG",
+          notes: "Private clinical fixture",
+        },
+      });
+      const list = () =>
+        request(app.getHttpServer())
+          .get(`/api/clinics/${clinicId}/patients`)
+          .set("Cookie", worker.cookie)
+          .expect(200);
+      expect((await list()).body.total).toBe(0);
+      await request(app.getHttpServer())
+        .get(`/api/clinics/${clinicId}/patients/${patient.id}`)
+        .set("Cookie", worker.cookie)
+        .expect(404);
+      await post(`${staffPath()}/${worker.id}/patients`)
+        .set("Cookie", cookie)
+        .send({
+          patientId: patient.id,
+          assigned: true,
+          reason: "Assign care responsibility",
+        })
+        .expect(201);
+      expect((await list()).body.total).toBe(1);
+      const detail = await request(app.getHttpServer())
+        .get(`/api/clinics/${clinicId}/patients/${patient.id}`)
+        .set("Cookie", worker.cookie)
+        .expect(200);
+      expect(detail.body.notes).toBeNull();
+      expect(detail.body.notesRestricted).toBe(true);
+      await request(app.getHttpServer())
+        .get(`/api/clinics/${clinicId}/consultations`)
+        .set("Cookie", worker.cookie)
+        .expect(403);
+      await post(`${staffPath()}/${worker.id}/patients`)
+        .set("Cookie", cookie)
+        .send({
+          patientId: patient.id,
+          assigned: false,
+          reason: "Remove care assignment",
+        })
+        .expect(201);
+      expect((await list()).body.total).toBe(0);
+    });
+    it("publishes only a consented snapshot and never exposes private identity fields", async () => {
+      const worker = await activate();
+      const dto = {
+        displayName: "Public QA name",
+        job: "RECEPTIONIST",
+        specialty: "Care coordination",
+        biography: "Public description",
+        photoKey: "initials",
+        professionalPhone: "private-internal-phone",
+        publicOrder: 1,
+        version: 1,
+        reason: "Prepare public presentation",
+      };
+      await patch(`${staffPath()}/${worker.id}/profile`).send(dto).expect(200);
+      await post(`${staffPath()}/${worker.id}/publication`)
+        .set("Cookie", cookie)
+        .send({ visible: true, version: 2, reason: "Attempt without consent" })
+        .expect(403);
+      await post(`${staffPath()}/me/consent`)
+        .set("Cookie", worker.cookie)
+        .send({
+          consent: true,
+          version: 2,
+          reason: "Reviewed public presentation",
+        })
+        .expect(201);
+      await post(`${staffPath()}/${worker.id}/publication`)
+        .set("Cookie", cookie)
+        .send({
+          visible: true,
+          version: 3,
+          reason: "Publish consented version",
+        })
+        .expect(201);
+      const team = await request(app.getHttpServer())
+        .get("/api/website/team")
+        .expect(200);
+      expect(team.body.items).toEqual([
+        {
+          displayName: dto.displayName,
+          job: dto.job,
+          specialty: dto.specialty,
+          biography: dto.biography,
+          photoKey: "initials",
+        },
+      ]);
+      expect(JSON.stringify(team.body).includes(worker.email)).toBe(false);
+      await patch(`${staffPath()}/${worker.id}/profile`)
+        .send({ ...dto, biography: "Unconsented new draft", version: 4 })
+        .expect(200);
+      expect(
+        (await request(app.getHttpServer()).get("/api/website/team")).body
+          .items[0].biography,
+      ).toBe(dto.biography);
+      await post(`${staffPath()}/me/consent`)
+        .set("Cookie", worker.cookie)
+        .send({
+          consent: false,
+          version: 5,
+          reason: "Withdraw publication consent",
+        })
+        .expect(201);
+      expect(
+        (await request(app.getHttpServer()).get("/api/website/team")).body
+          .items,
+      ).toEqual([]);
+    });
+    it("rechecks authority after a concurrent access revocation", async () => {
+      const worker = await activate();
+      const member = await prisma.clinicMembership.findUniqueOrThrow({
+        where: { id: worker.id },
+      });
+      let unlock!: () => void, locked!: () => void, guardChecked!: () => void;
+      const hasLock = new Promise<void>((resolve) => {
+          locked = resolve;
+        }),
+        release = new Promise<void>((resolve) => {
+          unlock = resolve;
+        }),
+        checked = new Promise<void>((resolve) => {
+          guardChecked = resolve;
+        });
+      const authorization = app.get(ClinicAuthorizationService),
+        original = authorization.authorize.bind(authorization);
+      const spy = jest
+        .spyOn(authorization, "authorize")
+        .mockImplementation(async (uid, cid, required) => {
+          const result = await original(uid, cid, required);
+          if (uid === member.userId && required.includes("tutor:write"))
+            guardChecked();
+          return result;
+        });
+      const changing = prisma.$transaction(
+        async (tx) => {
+          await lockClinic(tx, clinicId);
+          await tx.clinicMembership.update({
+            where: { id: worker.id },
+            data: {
+              permissionDenials: ["TUTOR_WRITE"],
+              accessVersion: { increment: 1 },
+            },
+          });
+          locked();
+          await release;
+        },
+        {
+          timeout: 15000,
+          isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+        },
+      );
+      try {
+        await hasLock;
+        const pending = post(`/api/clinics/${clinicId}/tutors`)
+          .set("Cookie", worker.cookie)
+          .send({
+            firstName: "Blocked",
+            lastName: "Concurrent",
+            phone: "+56911111111",
+          })
+          .then((response) => response);
+        await checked;
+        unlock();
+        await changing;
+        expect((await pending).status).toBe(403);
+        expect(
+          await prisma.tutor.count({
+            where: { clinicId, firstName: "Blocked" },
+          }),
+        ).toBe(0);
+      } finally {
+        unlock();
+        await changing;
+        spy.mockRestore();
+      }
+    });
+    it("preserves an existing global account password when joining another clinic", async () => {
+      const address = `existing-${randomUUID()}@example.invalid`;
+      const other = await prisma.user.create({
+        data: {
+          name: "Existing worker fixture",
+          email: address,
+          normalizedEmail: address,
+          passwordHash: fixtureHash,
+          memberships: {
+            create: { clinicId: otherClinicId, role: "RECEPTIONIST" },
+          },
+        },
+      });
+      const original = other.passwordHash;
+      const invite = await post(staffPath())
+        .set("Cookie", cookie)
+        .send({
+          name: "Existing account",
+          email: other.email,
+          role: "VETERINARIAN",
+          job: "VETERINARIAN",
+          reason: "Join with existing account",
+        })
+        .expect(201);
+      const token = String(invite.body.activationToken);
+      const inspected = await post("/api/auth/staff-invitations/inspect")
+        .send({ token })
+        .expect(201);
+      expect(inspected.body.mode).toBe("EXISTING_PASSWORD");
+      await post("/api/auth/staff-invitations/accept")
+        .send({ token, password: "incorrect" })
+        .expect(400);
+      await post("/api/auth/staff-invitations/accept")
+        .send({ token, password })
+        .expect(201);
+      expect(
+        (await prisma.user.findUniqueOrThrow({ where: { id: other.id } }))
+          .passwordHash === original,
+      ).toBe(true);
+    });
+    it("cannot bypass a manager's denials through role defaults, invitations or assignments", async () => {
+      const director = await activate("CLINIC_DIRECTOR"),
+        worker = await activate();
+      const changes = {
+        role: "CLINIC_DIRECTOR",
+        patientScope: "ASSIGNED",
+        grants: [],
+        denials: ["TUTOR_WRITE"],
+        version: 2,
+        reason: "Restrict manager's operational ceiling",
+      };
+      await patch(`${staffPath()}/${director.id}/access`)
+        .send(changes)
+        .expect(200);
+      const invitation = {
+        name: "Restricted invitation",
+        email: `ceiling-${randomUUID()}@example.invalid`,
+        role: "RECEPTIONIST",
+        job: "RECEPTIONIST",
+        reason: "Attempt to regain a denied default",
+      };
+      const count = await prisma.user.count();
+      await post(staffPath())
+        .set("Cookie", director.cookie)
+        .send(invitation)
+        .expect(403);
+      expect(await prisma.user.count()).toBe(count);
+      const pending = await invite();
+      await post(`${staffPath()}/${pending.id}/invitation`)
+        .set("Cookie", director.cookie)
+        .send({
+          version: 1,
+          reason: "Attempt to rotate a higher access invitation",
+        })
+        .expect(403);
+      await patch(`${staffPath()}/${worker.id}/access`)
+        .send({ ...changes, role: "RECEPTIONIST" })
+        .expect(200);
+      await patch(`${staffPath()}/${worker.id}/access`)
+        .set("Cookie", director.cookie)
+        .send({ ...changes, role: "RECEPTIONIST", denials: [], version: 3 })
+        .expect(403);
+      await patch(`${staffPath()}/${worker.id}/access`)
+        .set("Cookie", director.cookie)
+        .send({ ...changes, role: "VETERINARIAN", denials: [], version: 3 })
+        .expect(403);
+      const patient = await prisma.patient.create({
+        data: { clinicId, name: "Unassigned private patient", species: "CAT" },
+      });
+      await post(`${staffPath()}/${director.id}/patients`)
+        .set("Cookie", director.cookie)
+        .send({
+          patientId: patient.id,
+          assigned: true,
+          reason: "Attempt self assignment beyond scope",
+        })
+        .expect(404);
+      await patch(`${staffPath()}/${director.id}/access`)
+        .send({ ...changes, denials: [], version: 3 })
+        .expect(200);
+      const invited = await post(staffPath())
+        .set("Cookie", director.cookie)
+        .send(invitation)
+        .expect(201);
+      expect(
+        (
+          await prisma.clinicMembership.findUniqueOrThrow({
+            where: { id: String(invited.body.membershipId) },
+          })
+        ).patientScope,
+      ).toBe("ASSIGNED");
+    });
+    it("keeps director permissions distinct from ownership and rejects anonymous or CSRF writes", async () => {
+      const director = await activate("CLINIC_DIRECTOR");
+      const access = await request(app.getHttpServer())
+        .get(`/api/clinics/${clinicId}/access`)
+        .set("Cookie", director.cookie)
+        .expect(200);
+      expect(access.body.clinic.permissions).toContain("staff:create");
+      expect(access.body.clinic.permissions).toContain("permissions:manage");
+      const worker = await activate();
+      const operational = {
+        role: "RECEPTIONIST",
+        patientScope: "CLINIC",
+        grants: [],
+        denials: ["APPOINTMENT_WRITE"],
+        version: 2,
+        reason: "Director adjusts operational access",
+      };
+      await patch(`${staffPath()}/${worker.id}/access`)
+        .set("Cookie", director.cookie)
+        .send({ ...operational, grants: ["CREDENTIALS_VERIFY"] })
+        .expect(403);
+      await patch(`${staffPath()}/${worker.id}/access`)
+        .set("Cookie", director.cookie)
+        .send({ ...operational, role: "ADMIN" })
+        .expect(403);
+      await patch(`${staffPath()}/${worker.id}/access`)
+        .set("Cookie", director.cookie)
+        .send(operational)
+        .expect(200);
+      const own = await prisma.clinicMembership.findUniqueOrThrow({
+        where: { id: director.id },
+      });
+      await patch(`${staffPath()}/${director.id}/access`)
+        .set("Cookie", director.cookie)
+        .send({ ...operational, version: own.accessVersion })
+        .expect(403);
+      await post(staffPath())
+        .set("Cookie", director.cookie)
+        .send({
+          name: "Forbidden administrator",
+          email: "forbidden@example.invalid",
+          role: "ADMIN",
+          job: "CLINIC_DIRECTOR",
+          reason: "Attempt privileged invitation",
+        })
+        .expect(403);
+      await request(app.getHttpServer()).get(staffPath()).expect(401);
+      await request(app.getHttpServer())
+        .post(staffPath())
+        .set("Cookie", cookie)
+        .send({})
+        .expect(403);
+    });
+  });
+
+  describe("single-clinic public website administration", () => {
+    const content = () => ({
+      ...initialWebsiteContent("Clínica Veterinaria Porvenir"),
+      heroDescription: "Contenido ficticio para verificar el editor.",
+      email: "contact@example.invalid",
+      showServices: true,
+      services: [
+        {
+          title: "Servicio de ejemplo",
+          description:
+            "Prestación ficticia usada solamente en pruebas aisladas.",
+        },
+      ],
+    });
+    const sitePath = () => `/api/clinics/${clinicId}/website`;
+    const save = (version = 0, draft = content()) =>
+      request(app.getHttpServer())
+        .patch(sitePath())
+        .set("Cookie", cookie)
+        .set("Origin", origin)
+        .set("X-Pawly-CSRF", "1")
+        .send({ version, content: draft });
+    const publish = (version: number) =>
+      post(`${sitePath()}/publish`).set("Cookie", cookie).send({ version });
+    it("keeps drafts private and publishes only an explicitly confirmed version", async () => {
+      const initial = await request(app.getHttpServer())
+        .get(sitePath())
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(initial.body.version).toBe(0);
+      expect(await prisma.veterinaryWebsite.count()).toBe(0);
+      const saved = await save().expect(200);
+      expect(saved.body.version).toBe(1);
+      const hidden = await request(app.getHttpServer())
+        .get("/api/website")
+        .expect(200);
+      expect(hidden.body).toEqual({ content: null, publishedAt: null });
+      await publish(1).expect(201);
+      const visible = await request(app.getHttpServer())
+        .get("/api/website")
+        .expect(200);
+      expect(visible.body.content).toEqual(content());
+      expect(Object.keys(visible.body).sort()).toEqual([
+        "content",
+        "publishedAt",
+      ]);
+      expect(visible.headers["cache-control"]).toBe("no-store");
+      await save(2, {
+        ...content(),
+        heroTitle: "Borrador todavía privado",
+      }).expect(200);
+      expect(
+        (await request(app.getHttpServer()).get("/api/website")).body.content
+          .heroTitle,
+      ).toBe(content().heroTitle);
+      await publish(3).expect(201);
+      expect(
+        (await request(app.getHttpServer()).get("/api/website")).body.content
+          .heroTitle,
+      ).toBe("Borrador todavía privado");
+    });
+    it("keeps legacy content compatible and publishes testimonials only with the saved draft", async () => {
+      const legacy = { ...content() };
+      delete legacy.testimonials;
+      await save(0, legacy).expect(200);
+      const testimonials = [
+        {
+          author: "Responsable ficticio QA",
+          companion: "Mascota QA",
+          quote: "Texto de ejemplo para una prueba aislada.",
+        },
+      ];
+      await save(1, { ...content(), testimonials }).expect(200);
+      expect(
+        (await request(app.getHttpServer()).get("/api/website")).body.content,
+      ).toBeNull();
+      await publish(2).expect(201);
+      expect(
+        (await request(app.getHttpServer()).get("/api/website")).body.content
+          .testimonials,
+      ).toEqual(testimonials);
+    });
+    it("rejects invalid and oversized testimonials without writing content", async () => {
+      for (const testimonials of [
+        null,
+        [{}],
+        [{ author: "", companion: "", quote: "Texto" }],
+        [{ author: "QA", companion: "", quote: "x".repeat(601) }],
+        [{ author: "QA", companion: "", quote: "Texto", role: "ADMIN" }],
+        Array.from({ length: 13 }, () => ({
+          author: "QA",
+          companion: "",
+          quote: "Texto",
+        })),
+      ]) {
+        await request(app.getHttpServer())
+          .patch(sitePath())
+          .set("Cookie", cookie)
+          .set("Origin", origin)
+          .set("X-Pawly-CSRF", "1")
+          .send({ version: 0, content: { ...content(), testimonials } })
+          .expect(400);
+      }
+      expect(await prisma.veterinaryWebsite.count()).toBe(0);
+    });
+    it("rejects missing content, unknown nested fields, unsafe links and invalid versions", async () => {
+      for (const invalid of [
+        { version: 0 },
+        { version: "0", content: content() },
+        { version: 0, content: { ...content(), clinicId: otherClinicId } },
+        {
+          version: 0,
+          content: {
+            ...content(),
+            heroPhotos: ["https://untrusted.invalid/image.svg"],
+          },
+        },
+        {
+          version: 0,
+          content: { ...content(), whatsapp: "javascript:alert(1)" },
+        },
+        {
+          version: 0,
+          content: { ...content(), heroDescription: "x".repeat(601) },
+        },
+        {
+          version: 0,
+          content: {
+            ...content(),
+            services: [
+              { title: "Servicio", description: "Texto", role: "ADMIN" },
+            ],
+          },
+        },
+      ])
+        await request(app.getHttpServer())
+          .patch(sitePath())
+          .set("Cookie", cookie)
+          .set("Origin", origin)
+          .set("X-Pawly-CSRF", "1")
+          .send(invalid)
+          .expect(400);
+      expect(await prisma.veterinaryWebsite.count()).toBe(0);
+    });
+    it("requires a real contact and complete enabled sections before publishing", async () => {
+      const incomplete = {
+        ...content(),
+        email: "",
+        showServices: true,
+        services: [],
+      };
+      await save(0, incomplete).expect(200);
+      await publish(1).expect(400);
+      await save(1, { ...content(), showAbout: true, aboutText: "" }).expect(
+        200,
+      );
+      await publish(2).expect(400);
+      await save(2, { ...content(), showHours: true, hours: "" }).expect(200);
+      await publish(3).expect(400);
+      expect(
+        (await request(app.getHttpServer()).get("/api/website")).body.content,
+      ).toBeNull();
+    });
+    it("protects stale saves and concurrent updates without overwriting another editor", async () => {
+      await save().expect(200);
+      const results = await Promise.all([
+        save(1, { ...content(), heroTitle: "Versión A" }),
+        save(1, { ...content(), heroTitle: "Versión B" }),
+      ]);
+      expect(results.map((result) => result.status).sort()).toEqual([200, 409]);
+      await save(1).expect(409);
+      await publish(1).expect(409);
+      const row = await prisma.veterinaryWebsite.findUniqueOrThrow({
+        where: { id: "main" },
+      });
+      expect(row.version).toBe(2);
+      expect(row.published).toBeNull();
+    });
+    it("allows only owner and administration to edit or publish", async () => {
+      await save().expect(200);
+      for (const role of ["VETERINARIAN", "RECEPTIONIST"] as const) {
+        await prisma.clinicMembership.update({
+          where: { userId_clinicId: { userId, clinicId } },
+          data: { role },
+        });
+        await request(app.getHttpServer())
+          .get(sitePath())
+          .set("Cookie", cookie)
+          .expect(403);
+        await save(1).expect(403);
+        await publish(1).expect(403);
+      }
+      await prisma.clinicMembership.update({
+        where: { userId_clinicId: { userId, clinicId } },
+        data: { role: "ADMIN" },
+      });
+      await save(1).expect(200);
+      await publish(2).expect(201);
+    });
+    it("cannot control the configured site through a different authorized clinic", async () => {
+      await prisma.clinicMembership.create({
+        data: { userId, clinicId: otherClinicId, role: "OWNER" },
+      });
+      const foreign = `/api/clinics/${otherClinicId}/website`;
+      await request(app.getHttpServer())
+        .get(foreign)
+        .set("Cookie", cookie)
+        .expect(403);
+      await request(app.getHttpServer())
+        .patch(foreign)
+        .set("Cookie", cookie)
+        .set("Origin", origin)
+        .set("X-Pawly-CSRF", "1")
+        .send({ version: 0, content: content() })
+        .expect(403);
+      await save().expect(200);
+      const otherMember = await prisma.clinicMembership.findUniqueOrThrow({
+        where: { userId_clinicId: { userId, clinicId: otherClinicId } },
+      });
+      await expect(
+        prisma.veterinaryWebsite.update({
+          where: { id: "main" },
+          data: { updatedByMembershipId: otherMember.id },
+        }),
+      ).rejects.toMatchObject({ code: "P2003" });
+    });
+    it("withdraws publication while preserving the draft and clinical records", async () => {
+      await save().expect(200);
+      await publish(1).expect(201);
+      await post(`${sitePath()}/unpublish`)
+        .set("Cookie", cookie)
+        .send({ version: 2 })
+        .expect(201);
+      const result = await request(app.getHttpServer())
+        .get("/api/website")
+        .expect(200);
+      expect(result.body).toEqual({ content: null, publishedAt: null });
+      const saved = await request(app.getHttpServer())
+        .get(sitePath())
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(saved.body.content).toEqual(content());
+      expect(saved.body.version).toBe(3);
+      expect(await prisma.veterinaryClinic.count()).toBe(2);
+    });
+    it("removes public content when the clinic is suspended and fails closed without binding", async () => {
+      await save().expect(200);
+      await publish(1).expect(201);
+      await prisma.veterinaryClinic.update({
+        where: { id: clinicId },
+        data: { status: "SUSPENDED" },
+      });
+      expect(
+        (await request(app.getHttpServer()).get("/api/website")).body.content,
+      ).toBeNull();
+      await request(app.getHttpServer())
+        .get(sitePath())
+        .set("Cookie", cookie)
+        .expect(403);
+      app.get(ConfigService).set("WEBSITE_CLINIC_ID", undefined);
+      expect(
+        (await request(app.getHttpServer()).get("/api/website")).body.content,
+      ).toBeNull();
+    });
+    it("requires a session and preserves origin and CSRF protections on writes", async () => {
+      await request(app.getHttpServer()).get(sitePath()).expect(401);
+      await request(app.getHttpServer())
+        .patch(sitePath())
+        .set("Cookie", cookie)
+        .send({ version: 0, content: content() })
+        .expect(403);
+      await request(app.getHttpServer())
+        .patch(sitePath())
+        .set("Cookie", cookie)
+        .set("Origin", "https://untrusted.invalid")
+        .set("X-Pawly-CSRF", "1")
+        .send({ version: 0, content: content() })
+        .expect(403);
+      expect(await prisma.veterinaryWebsite.count()).toBe(0);
+    });
   });
 
   it("rejects unauthenticated requests and invalid input, including arbitrary roles", async () => {
@@ -1048,10 +1919,10 @@ describe("authentication with isolated PostgreSQL", () => {
             sex: "UNKNOWN",
             tutorIds: [tutor.id],
           })
-          .expect(role === "RECEPTIONIST" ? 403 : 201);
+          .expect(201);
         await patch(`${patients()}/${existing.id}`)
           .send({ name: "Updated" })
-          .expect(role === "RECEPTIONIST" ? 403 : 200);
+          .expect(200);
         await patch(`${patients()}/${existing.id}/archive`)
           .send({})
           .expect(["OWNER", "ADMIN"].includes(role) ? 200 : 403);
@@ -1147,6 +2018,789 @@ describe("authentication with isolated PostgreSQL", () => {
         .send(input)
         .expect(409);
       expect(JSON.stringify(duplicate.body)).not.toContain("QA-CHIP");
+    });
+  });
+
+  describe("appointments", () => {
+    const endpoint = () => `/api/clinics/${clinicId}/appointments`;
+    const range = "?from=2030-01-07T00:00:00Z&to=2030-01-14T00:00:00Z";
+    const patch = (id: string) =>
+      request(app.getHttpServer())
+        .patch(`${endpoint()}/${id}`)
+        .set("Cookie", cookie)
+        .set("Origin", origin)
+        .set("X-Pawly-CSRF", "1");
+    async function fixture(target = clinicId) {
+      const tutor = await prisma.tutor.create({
+        data: {
+          clinicId: target,
+          firstName: "Tutor QA",
+          lastName: "Agenda",
+          phone: "+56912345678",
+        },
+      });
+      const patient = await prisma.patient.create({
+        data: {
+          clinicId: target,
+          name: "Paciente QA Agenda",
+          species: "CAT",
+          tutors: { create: { tutorId: tutor.id } },
+        },
+      });
+      const member = await prisma.clinicMembership.findFirstOrThrow({
+        where: { clinicId: target },
+      });
+      return {
+        patientId: patient.id,
+        tutorId: tutor.id,
+        professionalMembershipId: member.id,
+        startsAt: "2030-01-07T12:00:00.000Z",
+        durationMinutes: 30,
+        reason: "Control QA",
+      };
+    }
+    async function create(input: Awaited<ReturnType<typeof fixture>>) {
+      return (
+        await post(endpoint()).set("Cookie", cookie).send(input).expect(201)
+      ).body as { id: string; version: number; status: string };
+    }
+    it("creates, reschedules, confirms, progresses and retains complete history", async () => {
+      const input = await fixture();
+      const created = await create(input);
+      const updated = await patch(created.id)
+        .send({
+          ...input,
+          startsAt: "2030-01-07T13:00:00.000Z",
+          version: 1,
+          status: "CONFIRMED",
+        })
+        .expect(200);
+      expect(updated.body.version).toBe(2);
+      await patch(created.id)
+        .send({
+          ...input,
+          startsAt: "2030-01-07T13:00:00.000Z",
+          version: 2,
+          status: "IN_PROGRESS",
+        })
+        .expect(200);
+      await patch(created.id)
+        .send({
+          ...input,
+          startsAt: "2030-01-07T13:00:00.000Z",
+          version: 3,
+          status: "COMPLETED",
+        })
+        .expect(200);
+      await patch(created.id)
+        .send({ ...input, version: 4, status: "CONFIRMED" })
+        .expect(409);
+      const history = await request(app.getHttpServer())
+        .get(`${endpoint()}/${created.id}/history`)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(history.body).toHaveLength(4);
+      expect(history.body[1].before.startsAt).toBe(input.startsAt);
+      expect(history.body[3].after.status).toBe("COMPLETED");
+    });
+    it("cancels without deletion and frees the professional slot", async () => {
+      const input = await fixture();
+      const a = await create(input);
+      await patch(a.id)
+        .send({ ...input, version: 1, status: "CANCELLED" })
+        .expect(400);
+      await patch(a.id)
+        .send({
+          ...input,
+          version: 1,
+          status: "CANCELLED",
+          cancellationReason: "Tutor cancela QA",
+        })
+        .expect(200);
+      await create(input);
+      expect(await prisma.appointment.count()).toBe(2);
+      expect(await prisma.appointmentEvent.count()).toBe(3);
+      await patch(a.id)
+        .send({ ...input, version: 2, status: "SCHEDULED" })
+        .expect(409);
+    });
+    it("rejects overlaps, permits adjacent slots and protects stale edits", async () => {
+      const input = await fixture();
+      const a = await create(input);
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({ ...input, startsAt: "2030-01-07T12:15:00Z" })
+        .expect(409);
+      const b = await create({ ...input, startsAt: "2030-01-07T12:30:00Z" });
+      await patch(b.id)
+        .send({ ...input, version: 1, status: "SCHEDULED" })
+        .expect(409);
+      await patch(a.id)
+        .send({ ...input, version: 1, status: "CONFIRMED" })
+        .expect(200);
+      await patch(a.id)
+        .send({
+          ...input,
+          version: 1,
+          status: "CANCELLED",
+          cancellationReason: "stale",
+        })
+        .expect(409);
+    });
+    it("serializes simultaneous bookings with one winner and no duplicate history", async () => {
+      const input = await fixture();
+      const results = await Promise.all([
+        post(endpoint()).set("Cookie", cookie).send(input),
+        post(endpoint()).set("Cookie", cookie).send(input),
+      ]);
+      expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+      expect(await prisma.appointment.count()).toBe(1);
+      expect(await prisma.appointmentEvent.count()).toBe(1);
+    });
+    it("allows unassigned appointments without inventing professionals", async () => {
+      const input = await fixture();
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({ ...input, professionalMembershipId: null })
+        .expect(201);
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({ ...input, professionalMembershipId: null })
+        .expect(201);
+    });
+    it("validates real dates, duration, past dates, bounds and injected scope", async () => {
+      const input = await fixture();
+      for (const invalid of [
+        { startsAt: "2030-02-30T12:00:00Z" },
+        { startsAt: "2030-01-07T09:00:00-03:00" },
+        { startsAt: "2020-01-01T00:00:00Z" },
+        { durationMinutes: 0 },
+        { durationMinutes: 481 },
+        { reason: " " },
+        { clinicId: otherClinicId },
+      ])
+        await post(endpoint())
+          .set("Cookie", cookie)
+          .send({ ...input, ...invalid })
+          .expect(400);
+      await request(app.getHttpServer())
+        .get(endpoint() + "?from=2030-01-01T00:00:00Z&to=2030-05-01T00:00:00Z")
+        .set("Cookie", cookie)
+        .expect(400);
+    });
+    it("enforces patient/tutor association and active eligible professionals", async () => {
+      const input = await fixture();
+      const extra = await prisma.tutor.create({
+        data: {
+          clinicId,
+          firstName: "No asociado",
+          lastName: "QA",
+          phone: "+56912345678",
+        },
+      });
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({ ...input, tutorId: extra.id })
+        .expect(400);
+      const unqualified = await prisma.user.create({
+        data: {
+          name: "Recepcion QA",
+          email: "reception-agenda@example.invalid",
+          normalizedEmail: "reception-agenda@example.invalid",
+          passwordHash: fixtureHash,
+          memberships: { create: { clinicId, role: "RECEPTIONIST" } },
+        },
+        include: { memberships: true },
+      });
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({
+          ...input,
+          professionalMembershipId: unqualified.memberships[0]!.id,
+        })
+        .expect(400);
+      const professionals = await request(app.getHttpServer())
+        .get(endpoint() + "/professionals")
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(professionals.body.map((p: { id: string }) => p.id)).not.toContain(
+        unqualified.memberships[0]!.id,
+      );
+      await prisma.user.update({
+        where: { id: userId },
+        data: { status: "SUSPENDED" },
+      });
+      await post(endpoint()).set("Cookie", cookie).send(input).expect(401);
+    });
+    it("restricts clinical states for reception, checks suspension and missing session", async () => {
+      const input = await fixture();
+      const a = await create(input);
+      await prisma.clinicMembership.update({
+        where: { userId_clinicId: { userId, clinicId } },
+        data: { role: "RECEPTIONIST" },
+      });
+      await patch(a.id)
+        .send({
+          ...input,
+          professionalMembershipId: null,
+          version: 1,
+          status: "IN_PROGRESS",
+        })
+        .expect(403);
+      await patch(a.id)
+        .send({
+          ...input,
+          professionalMembershipId: null,
+          version: 1,
+          status: "CONFIRMED",
+        })
+        .expect(200);
+      await prisma.clinicMembership.update({
+        where: { userId_clinicId: { userId, clinicId } },
+        data: { status: "SUSPENDED" },
+      });
+      await request(app.getHttpServer())
+        .get(endpoint() + range)
+        .set("Cookie", cookie)
+        .expect(403);
+      await request(app.getHttpServer())
+        .get(endpoint() + range)
+        .expect(401);
+    });
+    it("isolates listing, history and mutations even for a user in both clinics", async () => {
+      const input = await fixture();
+      const foreign = await fixture(otherClinicId);
+      const a = await create(input);
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({
+          ...input,
+          patientId: foreign.patientId,
+          tutorId: foreign.tutorId,
+        })
+        .expect(400);
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({
+          ...input,
+          professionalMembershipId: foreign.professionalMembershipId,
+        })
+        .expect(400);
+      const path = `/api/clinics/${otherClinicId}/appointments`;
+      await request(app.getHttpServer())
+        .get(path + range)
+        .set("Cookie", cookie)
+        .expect(403);
+      await prisma.clinicMembership.create({
+        data: { clinicId: otherClinicId, userId, role: "VETERINARIAN" },
+      });
+      const list = await request(app.getHttpServer())
+        .get(path + range)
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(list.body.total).toBe(0);
+      await request(app.getHttpServer())
+        .get(`${path}/${a.id}/history`)
+        .set("Cookie", cookie)
+        .expect(404);
+      await request(app.getHttpServer())
+        .patch(`${path}/${a.id}`)
+        .set("Cookie", cookie)
+        .set("Origin", origin)
+        .set("X-Pawly-CSRF", "1")
+        .send({ ...foreign, version: 1, status: "CONFIRMED" })
+        .expect(404);
+      expect(await prisma.appointmentEvent.count()).toBe(1);
+    });
+    it("enforces composite foreign keys and bounds in PostgreSQL independently of API", async () => {
+      const input = await fixture(),
+        foreign = await fixture(otherClinicId);
+      const a = await create(input);
+      await expect(
+        prisma.appointment.update({
+          where: { id: a.id },
+          data: { patientId: foreign.patientId },
+        }),
+      ).rejects.toThrow();
+      await expect(
+        prisma.appointment.update({
+          where: { id: a.id },
+          data: { tutorId: foreign.tutorId },
+        }),
+      ).rejects.toThrow();
+      await expect(
+        prisma.appointment.update({
+          where: { id: a.id },
+          data: { professionalMembershipId: foreign.professionalMembershipId },
+        }),
+      ).rejects.toThrow();
+      await expect(
+        prisma.appointment.update({
+          where: { id: a.id },
+          data: { endsAt: new Date(input.startsAt) },
+        }),
+      ).rejects.toThrow();
+      await expect(
+        prisma.appointment.update({
+          where: { id: a.id },
+          data: { status: "CANCELLED" },
+        }),
+      ).rejects.toThrow();
+    });
+    it("filters by period, status and professional and keeps CSRF/no-store", async () => {
+      const input = await fixture();
+      await create(input);
+      const list = await request(app.getHttpServer())
+        .get(
+          endpoint() +
+            range +
+            `&status=SCHEDULED&professionalMembershipId=${input.professionalMembershipId}`,
+        )
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(list.body.total).toBe(1);
+      expect(list.headers["cache-control"]).toBe("no-store");
+      const empty = await request(app.getHttpServer())
+        .get(endpoint() + range + "&status=CANCELLED")
+        .set("Cookie", cookie)
+        .expect(200);
+      expect(empty.body.total).toBe(0);
+      await request(app.getHttpServer())
+        .post(endpoint())
+        .set("Cookie", cookie)
+        .send(input)
+        .expect(403);
+    });
+  });
+
+  describe("consultations and electronic medical history", () => {
+    const endpoint = (target = clinicId) =>
+      `/api/clinics/${target}/consultations`;
+    const get = (url: string) =>
+      request(app.getHttpServer()).get(url).set("Cookie", cookie);
+    const patch = (id: string, target = clinicId) =>
+      request(app.getHttpServer())
+        .patch(`${endpoint(target)}/${id}`)
+        .set("Cookie", cookie)
+        .set("Origin", origin)
+        .set("X-Pawly-CSRF", "1");
+    async function fixture(target = clinicId) {
+      const patient = await prisma.patient.create({
+        data: { clinicId: target, name: "Clinical QA", species: "CAT" },
+      });
+      const member = await prisma.clinicMembership.findFirstOrThrow({
+        where: { clinicId: target },
+      });
+      return {
+        patientId: patient.id,
+        professionalMembershipId: member.id,
+        requestId: randomUUID(),
+        attendedAt: new Date(Date.now() - 60000).toISOString(),
+        reason: "Control clínico",
+        anamnesis: "Antecedentes QA",
+        physicalExam: "Examen QA",
+        diagnosis: "Diagnóstico QA",
+        diagnosisType: "PRESUMPTIVE",
+        treatment: "Plan QA",
+        weightKg: 4.125,
+        temperatureC: 38.5,
+      };
+    }
+    async function create(input: Awaited<ReturnType<typeof fixture>>) {
+      return (
+        await post(endpoint()).set("Cookie", cookie).send(input).expect(201)
+      ).body as { id: string; version: number; status: string };
+    }
+    async function booking(input: Awaited<ReturnType<typeof fixture>>) {
+      const tutor = await prisma.tutor.create({
+        data: {
+          clinicId,
+          firstName: "Tutor",
+          lastName: "QA",
+          phone: "+56912345678",
+        },
+      });
+      await prisma.patientTutor.create({
+        data: { clinicId, patientId: input.patientId, tutorId: tutor.id },
+      });
+      return prisma.appointment.create({
+        data: {
+          clinicId,
+          patientId: input.patientId,
+          tutorId: tutor.id,
+          professionalMembershipId: input.professionalMembershipId,
+          startsAt: new Date("2030-01-07T12:00:00Z"),
+          endsAt: new Date("2030-01-07T12:30:00Z"),
+          reason: input.reason,
+        },
+      });
+    }
+    const updateFields = (input: Awaited<ReturnType<typeof fixture>>) => {
+      const { patientId, requestId, ...fields } = input;
+      void patientId;
+      void requestId;
+      return fields;
+    };
+    it("creates, edits, finalizes and appends a correction without rewriting the original", async () => {
+      const input = await fixture(),
+        c = await create(input),
+        fields = updateFields(input);
+      expect(c.status).toBe("DRAFT");
+      await patch(c.id)
+        .send({
+          ...fields,
+          reason: "Control editado",
+          version: 1,
+          status: "DRAFT",
+        })
+        .expect(200);
+      await patch(c.id)
+        .send({ ...fields, version: 1, status: "DRAFT" })
+        .expect(409);
+      await post(`${endpoint()}/${c.id}/amendments`)
+        .set("Cookie", cookie)
+        .send({
+          requestId: randomUUID(),
+          reason: "Corrección",
+          correction: "QA",
+        })
+        .expect(409);
+      await patch(c.id)
+        .send({ ...fields, treatment: "", version: 2, status: "FINALIZED" })
+        .expect(400);
+      await patch(c.id)
+        .send({ ...fields, version: 2, status: "FINALIZED" })
+        .expect(200);
+      const original = await prisma.consultation.findUniqueOrThrow({
+        where: { id: c.id },
+      });
+      await patch(c.id)
+        .send({ ...fields, version: 3, status: "DRAFT" })
+        .expect(409);
+      const amendment = await post(`${endpoint()}/${c.id}/amendments`)
+        .set("Cookie", cookie)
+        .send({
+          requestId: randomUUID(),
+          reason: "Dato adicional",
+          correction: "Información corregida QA",
+        })
+        .expect(201);
+      expect(
+        await prisma.consultation.findUniqueOrThrow({ where: { id: c.id } }),
+      ).toEqual(original);
+      expect(
+        (await get(`${endpoint()}/${c.id}/history`).expect(200)).body.total,
+      ).toBe(4);
+      expect(
+        (await get(`${endpoint()}/${c.id}/amendments`).expect(200)).body.total,
+      ).toBe(1);
+      await expect(
+        prisma.consultation.update({
+          where: { id: c.id },
+          data: { notes: "rewrite" },
+        }),
+      ).rejects.toThrow();
+      await expect(
+        prisma.consultation.delete({ where: { id: c.id } }),
+      ).rejects.toThrow();
+      await expect(
+        prisma.consultationAmendment.update({
+          where: { id: String(amendment.body.id) },
+          data: { correction: "rewrite" },
+        }),
+      ).rejects.toThrow();
+      const event = await prisma.consultationEvent.findFirstOrThrow({
+        where: { consultationId: c.id },
+      });
+      await expect(
+        prisma.consultationEvent.update({
+          where: { id: event.id },
+          data: { kind: "rewrite" },
+        }),
+      ).rejects.toThrow();
+    });
+    it("starts the booked appointment atomically, prevents duplicates and completes only on finalization", async () => {
+      const input = await fixture(),
+        a = await booking(input);
+      const c = await create({ ...input, appointmentId: a.id } as typeof input);
+      expect(
+        (await prisma.appointment.findUniqueOrThrow({ where: { id: a.id } }))
+          .status,
+      ).toBe("IN_PROGRESS");
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({ ...input, requestId: randomUUID(), appointmentId: a.id })
+        .expect(409);
+      await request(app.getHttpServer())
+        .patch(`/api/clinics/${clinicId}/appointments/${a.id}`)
+        .set("Cookie", cookie)
+        .set("Origin", origin)
+        .set("X-Pawly-CSRF", "1")
+        .send({
+          patientId: input.patientId,
+          tutorId: a.tutorId,
+          professionalMembershipId: input.professionalMembershipId,
+          startsAt: a.startsAt.toISOString(),
+          durationMinutes: 30,
+          version: 2,
+          status: "CANCELLED",
+          reason: "QA",
+          cancellationReason: "QA",
+        })
+        .expect(409);
+      await expect(
+        prisma.appointment.update({
+          where: { id: a.id },
+          data: { status: "CONFIRMED" },
+        }),
+      ).rejects.toThrow();
+      await patch(c.id)
+        .send({ ...updateFields(input), version: 1, status: "FINALIZED" })
+        .expect(200);
+      expect(
+        (await prisma.appointment.findUniqueOrThrow({ where: { id: a.id } }))
+          .status,
+      ).toBe("COMPLETED");
+      expect(
+        await prisma.appointmentEvent.count({ where: { appointmentId: a.id } }),
+      ).toBe(2);
+    });
+    it("serializes simultaneous starts so exactly one clinical record exists", async () => {
+      const input = await fixture(),
+        a = await booking(input);
+      const results = await Promise.all(
+        [0, 1].map(() =>
+          post(endpoint())
+            .set("Cookie", cookie)
+            .send({ ...input, requestId: randomUUID(), appointmentId: a.id }),
+        ),
+      );
+      expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+      expect(
+        await prisma.consultation.count({ where: { appointmentId: a.id } }),
+      ).toBe(1);
+    });
+    it("isolates reads, history, edits, patient and professional relationships across clinics", async () => {
+      const input = await fixture(),
+        foreign = await fixture(otherClinicId),
+        c = await create(input);
+      await get(endpoint(otherClinicId)).expect(403);
+      await prisma.clinicMembership.create({
+        data: { clinicId: otherClinicId, userId, role: "VETERINARIAN" },
+      });
+      const scoped = await prisma.clinicMembership.findUniqueOrThrow({
+        where: { userId_clinicId: { userId, clinicId: otherClinicId } },
+      });
+      const verifier = await prisma.clinicMembership.findFirstOrThrow({
+        where: { clinicId: otherClinicId, userId: { not: userId } },
+      });
+      await prisma.staffProfile.create({
+        data: {
+          clinicId: otherClinicId,
+          membershipId: scoped.id,
+          displayName: "Verified other-clinic fixture",
+          job: "VETERINARIAN",
+          credentialStatus: "VERIFIED",
+          credentialNumber: "QA-ONLY",
+          credentialEvidence: "Synthetic independent verification",
+          credentialVerifiedAt: new Date(),
+          credentialVerifiedById: verifier.id,
+          medicalPracticeEnabled: true,
+        },
+      });
+      expect((await get(endpoint(otherClinicId)).expect(200)).body.total).toBe(
+        0,
+      );
+      for (const suffix of ["", "/history", "/amendments"])
+        await get(`${endpoint(otherClinicId)}/${c.id}${suffix}`).expect(404);
+      await patch(c.id, otherClinicId)
+        .send({ ...updateFields(foreign), version: 1, status: "DRAFT" })
+        .expect(404);
+      for (const extra of [
+        { patientId: foreign.patientId },
+        { professionalMembershipId: foreign.professionalMembershipId },
+        { clinicId: otherClinicId },
+        { createdByMembershipId: foreign.professionalMembershipId },
+      ])
+        await post(endpoint())
+          .set("Cookie", cookie)
+          .send({ ...input, requestId: randomUUID(), ...extra })
+          .expect(400);
+      await expect(
+        prisma.consultation.update({
+          where: { id: c.id },
+          data: { patientId: foreign.patientId },
+        }),
+      ).rejects.toThrow();
+      await expect(
+        prisma.consultation.update({
+          where: { id: c.id },
+          data: { professionalMembershipId: foreign.professionalMembershipId },
+        }),
+      ).rejects.toThrow();
+    });
+    it("denies clinical content to reception, suspended members and unauthenticated clients", async () => {
+      const input = await fixture(),
+        c = await create(input);
+      await prisma.clinicMembership.update({
+        where: { id: input.professionalMembershipId },
+        data: { role: "RECEPTIONIST" },
+      });
+      for (const path of [
+        endpoint(),
+        `${endpoint()}/${c.id}`,
+        `${endpoint()}/${c.id}/history`,
+        `${endpoint()}/${c.id}/amendments`,
+      ])
+        await get(path).expect(403);
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({ ...input, requestId: randomUUID() })
+        .expect(403);
+      await patch(c.id)
+        .send({ ...updateFields(input), version: 1, status: "DRAFT" })
+        .expect(403);
+      await prisma.clinicMembership.update({
+        where: { id: input.professionalMembershipId },
+        data: { role: "VETERINARIAN", status: "SUSPENDED" },
+      });
+      await get(endpoint()).expect(403);
+      await request(app.getHttpServer()).get(endpoint()).expect(401);
+    });
+    it("validates dates, vital bounds, query filters and database constraints", async () => {
+      const input = await fixture(),
+        c = await create(input);
+      for (const extra of [
+        { attendedAt: "2026-02-30T12:00:00Z" },
+        { attendedAt: new Date(Date.now() + 3600000).toISOString() },
+        { nextControlAt: input.attendedAt },
+        { weightKg: -1 },
+        { temperatureC: 60 },
+        { heartRate: 1.2 },
+        { reason: " " },
+      ])
+        await post(endpoint())
+          .set("Cookie", cookie)
+          .send({ ...input, requestId: randomUUID(), ...extra })
+          .expect(400);
+      await expect(
+        prisma.consultation.update({
+          where: { id: c.id },
+          data: { weightKg: -1 },
+        }),
+      ).rejects.toThrow();
+      await expect(
+        prisma.consultation.update({
+          where: { id: c.id },
+          data: { status: "FINALIZED" },
+        }),
+      ).rejects.toThrow();
+      expect(
+        (
+          await get(
+            `${endpoint()}?patientId=${input.patientId}&status=DRAFT`,
+          ).expect(200)
+        ).body.total,
+      ).toBe(1);
+      expect(
+        (await get(`${endpoint()}?status=FINALIZED`).expect(200)).body.total,
+      ).toBe(0);
+      await get(`${endpoint()}?from=2026-01-01T00:00:00Z`).expect(400);
+      await get(
+        `${endpoint()}?from=2026-10-18T00:00:00Z&to=2026-01-01T00:00:00Z`,
+      ).expect(400);
+      await request(app.getHttpServer())
+        .post(endpoint())
+        .set("Cookie", cookie)
+        .send(input)
+        .expect(403);
+    });
+    it.each(["OWNER", "ADMIN", "VETERINARIAN"] as const)(
+      "allows authorized %s clinical work",
+      async (role) => {
+        const input = await fixture();
+        await prisma.clinicMembership.update({
+          where: { id: input.professionalMembershipId },
+          data: { role },
+        });
+        const c = await create(input);
+        await patch(c.id)
+          .send({ ...updateFields(input), version: 1, status: "FINALIZED" })
+          .expect(200);
+      },
+    );
+    it("paginates a patient timeline chronologically and filters UTC periods without leaking other patients", async () => {
+      const input = await fixture(),
+        other = await fixture();
+      await prisma.consultation.createMany({
+        data: Array.from({ length: 22 }, (_, i) => ({
+          clinicId,
+          patientId: i === 21 ? other.patientId : input.patientId,
+          professionalMembershipId: input.professionalMembershipId,
+          createdByMembershipId: input.professionalMembershipId,
+          requestId: randomUUID(),
+          attendedAt: new Date(Date.UTC(2025, 0, i + 1)),
+          reason: `Control ${i}`,
+        })),
+      });
+      const first = await get(
+        `${endpoint()}?patientId=${input.patientId}`,
+      ).expect(200);
+      expect(first.body.total).toBe(21);
+      expect(first.body.items).toHaveLength(20);
+      expect(first.body.items[0].reason).toBe("Control 20");
+      const second = await get(
+        `${endpoint()}?patientId=${input.patientId}&page=2`,
+      ).expect(200);
+      expect(second.body.items).toHaveLength(1);
+      expect(second.body.items[0].reason).toBe("Control 0");
+      const range = await get(
+        `${endpoint()}?patientId=${input.patientId}&from=2025-01-01T00:00:00Z&to=2025-01-03T00:00:00Z`,
+      ).expect(200);
+      expect(range.body.total).toBe(2);
+    });
+    it("rejects a concurrent stale draft edit without duplicating version history", async () => {
+      const input = await fixture(),
+        c = await create(input);
+      const results = await Promise.all(
+        [0, 1].map((i) =>
+          patch(c.id).send({
+            ...updateFields(input),
+            reason: `Edición ${i}`,
+            version: 1,
+            status: "DRAFT",
+          }),
+        ),
+      );
+      expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+      expect(
+        (await prisma.consultation.findUniqueOrThrow({ where: { id: c.id } }))
+          .version,
+      ).toBe(2);
+      expect(
+        await prisma.consultationEvent.count({
+          where: { consultationId: c.id },
+        }),
+      ).toBe(2);
+    });
+    it("rejects cancelled appointments and patient mismatches without partial records", async () => {
+      const input = await fixture(),
+        second = await fixture(),
+        a = await booking(input);
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({ ...second, appointmentId: a.id })
+        .expect(400);
+      await prisma.appointment.update({
+        where: { id: a.id },
+        data: { status: "CANCELLED", cancellationReason: "QA" },
+      });
+      await post(endpoint())
+        .set("Cookie", cookie)
+        .send({ ...input, appointmentId: a.id })
+        .expect(409);
+      expect(await prisma.consultation.count()).toBe(0);
+      expect(await prisma.consultationEvent.count()).toBe(0);
     });
   });
 

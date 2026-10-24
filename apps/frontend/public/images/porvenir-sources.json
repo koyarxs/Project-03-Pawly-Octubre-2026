@@ -1,0 +1,59 @@
+{
+  "license": "Pexels License",
+  "licenseUrl": "https://www.pexels.com/license/",
+  "reviewedOn": "2026-10-21",
+  "usage": "Editorial pet photographs, not real clinic patients or testimonials. Breed labels identify illustrative varieties, not certified pedigrees.",
+  "processing": "Locally optimized to WebP using the existing sharp dependency.",
+  "assets": [
+    {
+      "file": "dog.webp",
+      "id": 2253275,
+      "author": "Helena Lopes",
+      "sourceUrl": "https://www.pexels.com/photo/short-coated-tan-dog-2253275/",
+      "downloadUrl": "https://images.pexels.com/photos/2253275/pexels-photo-2253275.jpeg?auto=compress&cs=tinysrgb&w=1600",
+      "width": 1000,
+      "height": 667,
+      "bytes": 39336
+    },
+    {
+      "file": "cat.webp",
+      "id": 11187387,
+      "author": "Wijs (Wise)",
+      "sourceUrl": "https://www.pexels.com/photo/close-up-shot-of-a-persian-cat-11187387/",
+      "downloadUrl": "https://images.pexels.com/photos/11187387/pexels-photo-11187387.jpeg?auto=compress&cs=tinysrgb&w=1600",
+      "width": 1000,
+      "height": 1500,
+      "bytes": 69286
+    },
+    {
+      "file": "rabbit.webp",
+      "id": 19958074,
+      "author": "Nikolett Emmert",
+      "sourceUrl": "https://www.pexels.com/photo/rabbit-in-a-studio-19958074/",
+      "downloadUrl": "https://images.pexels.com/photos/19958074/pexels-photo-19958074.jpeg?auto=compress&cs=tinysrgb&w=1600",
+      "width": 1000,
+      "height": 1500,
+      "bytes": 112628
+    },
+    {
+      "file": "guinea-pig.webp",
+      "id": 4383759,
+      "author": "Faris Subriun",
+      "sourceUrl": "https://www.pexels.com/photo/white-and-brown-guinea-pig-on-black-background-4383759/",
+      "downloadUrl": "https://images.pexels.com/photos/4383759/pexels-photo-4383759.jpeg?auto=compress&cs=tinysrgb&w=1600",
+      "width": 1000,
+      "height": 667,
+      "bytes": 32476
+    },
+    {
+      "file": "cockatiel.webp",
+      "id": 7154562,
+      "author": "Jiří Mikoláš",
+      "sourceUrl": "https://www.pexels.com/photo/close-up-photo-of-cockatiel-7154562/",
+      "downloadUrl": "https://images.pexels.com/photos/7154562/pexels-photo-7154562.jpeg?auto=compress&cs=tinysrgb&w=1600",
+      "width": 1000,
+      "height": 1510,
+      "bytes": 139326
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+.section { position: relative; isolation: isolate; overflow: hidden; padding: 65px 0 30px; background: #faf8f3; color: #234d42; }
+.section::before { content: ""; position: absolute; z-index: -1; width: 500px; height: 540px; background: #e8e9e0; border-radius: 50%; left: 13%; top: -390px; transform: rotate(-30deg); }
+.section::after { content: ""; position: absolute; z-index: -1; width: 480px; height: 480px; background: #1d5948; border-radius: 48%; right: -270px; top: -300px; transform: rotate(30deg); }
+.container { width: min(1280px, calc(100% - 112px)); margin-inline: auto; display: grid; grid-template-columns: minmax(0, .82fr) minmax(0, 1.6fr); gap: 34px; align-items: stretch; }
+.introduction { display: flex; flex-direction: column; min-width: 0; }
+.eyebrow { display: flex; align-items: center; gap: 16px; color: #46766a; font-size: 9px; letter-spacing: .24em; font-weight: 650; }
+.eyebrow::after { content: ""; display: block; width: 65px; height: 1px; background: #b9cbc0; }
+.introText { position: relative; margin-top: 58px; }
+.kicker { display: block; color: #69857b; font-size: 8px; letter-spacing: .22em; font-weight: 600; }
+.introText h2 { color: #204e42; font: 400 clamp(30px, 3vw, 43px)/1.16 Georgia, serif; letter-spacing: -.04em; margin: 15px 0 22px !important; }
+.introText h2 em { font-weight: 400; color: #568174; }
+.introText > p { color: #76887e; font-size: 12px; line-height: 1.9; max-width: 320px; }
+.actions { display: flex; align-items: center; gap: 12px; margin-top: 23px; }
+.mapsButton { display: inline-flex; align-items: center; justify-content: center; gap: 20px; min-height: 47px; padding: 12px 20px; background: #205344; color: white; border-radius: 30px; font-size: 11px; box-shadow: 0 8px 20px #244e3616; }
+.directionButton { display: grid; place-items: center; width: 47px; height: 47px; border-radius: 50%; background: white; color: #315d4c; box-shadow: 0 8px 20px #244e3612; }
+.handwritten { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 18px; margin-right: 15px; font: italic 19px/1.25 Georgia, serif; color: #78978a; transform: rotate(-10deg); }
+.companions { position: relative; margin-top: auto; margin-left: -45px; width: calc(100% + 50px); }
+.companions::before { content: ""; position: absolute; z-index: -1; width: 75%; height: 75%; border-radius: 50%; background: #eee1d0; bottom: 0; left: 8%; }
+.companions img { display: block; width: 100%; height: auto; }
+.locationContent { min-width: 0; display: flex; }
+.mapCanvas { position: relative; flex: 1; min-width: 0; min-height: 500px; overflow: hidden; border: 1px solid #c8d9cd; border-radius: 22px; background: #e8eee5; box-shadow: 0 10px 30px #2b61440b; }
+.mapCanvas iframe { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border: 0; filter: none; opacity: 1; color-scheme: light; }
+.mapMarker { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; min-height: 365px; padding: 52px 28px 38px; background: radial-gradient(ellipse at center, #fafbf4ef, #f8fbf245 45%, transparent 70%); }
+.mapMarker > svg { width: 56px; height: 56px; padding: 15px; border-radius: 50%; color: white; background: #22604e; box-shadow: 0 8px 25px #24563c24; }
+.mapMarker strong { max-width: 280px; font: 400 23px/1.2 Georgia, serif; color: #1a5143; }
+.mapMarker p { color: #42685a; max-width: 280px; font-size: 11px; line-height: 1.6; }
+.mapMarker button { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 6px; padding: 11px 18px; border: 0; border-radius: 30px; background: #215b49; color: white; font-size: 11px; }
+.mapMarker > span { font-size: 11px; color: #4a6b57; }
+.section :is(a, button):focus-visible { outline: 2px solid #6b9873; outline-offset: 4px; }
+@media (max-width: 1100px) {
+  .container { gap: 24px; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); }
+  .introText { margin-top: 42px; }
+}
+@media (max-width: 767px) {
+  .section { padding: 45px 0 35px; }
+  .container { width: calc(100% - 40px); grid-template-columns: 1fr; gap: 10px; }
+  .introText { margin-top: 30px; }
+  .introText h2 { font-size: 35px; }
+  .introText > p { max-width: none; }
+  .handwritten { font-size: 17px; margin-top: 12px; }
+  .companions { width: min(380px, 100%); margin: -5px auto 0; }
+  .mapCanvas, .mapMarker { min-height: 330px; }
+  .mapCanvas iframe { height: 100%; }
+}

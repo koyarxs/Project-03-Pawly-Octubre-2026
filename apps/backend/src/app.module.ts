@@ -7,6 +7,11 @@ import { AuthModule } from "./auth/auth.module";
 import { AuthorizationModule } from "./authorization/authorization.module";
 import { HttpSecurityModule } from "./http/http-security.module";
 import { ClinicalModule } from "./clinical/clinical.module";
+import { AppointmentsModule } from "./appointments/appointments.module";
+import { BookingModule } from "./appointments/booking.module";
+import { ConsultationsModule } from "./consultations/consultations.module";
+import { WebsiteModule } from "./website/website.module";
+import { StaffModule } from "./staff/staff.module";
 
 @Module({
   imports: [
@@ -22,6 +27,13 @@ import { ClinicalModule } from "./clinical/clinical.module";
           .max(604800)
           .default(28800),
         PORT: Joi.number().port().default(3001),
+        WEBSITE_CLINIC_ID: Joi.string().guid({ version: "uuidv4" }).optional(),
+        WEBSITE_PUBLIC_NAME: Joi.string().max(160).optional(),
+        MAIL_MODE: Joi.string().valid("disabled", "local").default("disabled"),
+        MAIL_HOST: Joi.string()
+          .valid("127.0.0.1", "localhost", "::1")
+          .default("127.0.0.1"),
+        MAIL_PORT: Joi.number().port().default(1025),
         CORS_ORIGINS: Joi.string()
           .default("http://localhost:3000,http://127.0.0.1:3000")
           .custom((value: string, helpers) => {
@@ -55,6 +67,11 @@ import { ClinicalModule } from "./clinical/clinical.module";
     AuthModule,
     AuthorizationModule,
     ClinicalModule,
+    AppointmentsModule,
+    BookingModule,
+    ConsultationsModule,
+    WebsiteModule,
+    StaffModule,
   ],
 })
 export class AppModule {}

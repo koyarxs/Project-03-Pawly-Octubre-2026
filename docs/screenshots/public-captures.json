@@ -1,0 +1,48 @@
+{
+  "capturedAt": "2026-10-24T18:53:56.240Z",
+  "source": "Current local public website; read-only browser capture",
+  "captures": [
+    {
+      "file": "landing.webp",
+      "route": "/",
+      "section": "viewport",
+      "width": 1440
+    },
+    {
+      "file": "mascotas.webp",
+      "route": "/",
+      "section": "#companeros",
+      "width": 1440
+    },
+    {
+      "file": "equipo-publico.webp",
+      "route": "/",
+      "section": "#equipo",
+      "width": 1440
+    },
+    {
+      "file": "testimonios.webp",
+      "route": "/",
+      "section": "#testimonios",
+      "width": 1440
+    },
+    {
+      "file": "ubicacion.webp",
+      "route": "/",
+      "section": "#ubicacion",
+      "width": 1440
+    },
+    {
+      "file": "footer.webp",
+      "route": "/",
+      "section": "footer",
+      "width": 1440
+    },
+    {
+      "file": "reserva-servicios.webp",
+      "route": "/agendar-cita",
+      "section": "viewport",
+      "width": 1440
+    }
+  ]
+}

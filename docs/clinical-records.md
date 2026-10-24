@@ -1,4 +1,4 @@
-# Tutores y pacientes — Sprint 07
+# Tutores y pacientes
 
 ## Modelo y aislamiento
 
@@ -18,8 +18,8 @@ Todos los endpoints requieren sesión y membresía activa del usuario en una cl�
 | GET / PATCH | `/tutors/:id` | `tutor:read` / `tutor:write` |
 | GET | `/tutors/:id/patients` | `tutor:read`, `patient:read` |
 | PATCH | `/tutors/:id/archive` | `clinical:archive` |
-| GET / POST | `/patients` | `patient:read` / `patient:write` |
-| GET / PATCH | `/patients/:id` | `patient:read` / `patient:write` |
+| GET / POST | `/patients` | `patient:read` / `patient:create` |
+| GET / PATCH | `/patients/:id` | `patient:read` / `patient:update` |
 | PATCH | `/patients/:id/archive` | `clinical:archive` |
 
 Las listas aceptan `q` (hasta 100 caracteres), `page` (1–10.000), `limit` (1–50; predeterminado 20) y `status`. Devuelven `{items,total,page,limit,totalPages}` con orden determinista. Búsqueda y conteo siempre filtran por clínica. La búsqueda por términos admite nombres completos y, para pacientes, los datos del responsable. Por defecto se omiten los archivados; los pacientes fallecidos siguen disponibles. Las listas no incluyen dirección ni observaciones del tutor. Las fichas autorizadas incluyen los campos necesarios para su consulta y edición.
@@ -30,13 +30,14 @@ Las mutaciones exigen Origin permitido, JSON y `X-Pawly-CSRF: 1`; CORS ahora per
 
 | Rol activo | Consultar | Crear/editar tutores | Crear/editar pacientes | Archivar |
 | --- | --- | --- | --- | --- |
-| OWNER / ADMIN | Sí | Sí | Sí | Sí |
+| OWNER / ADMIN / CLINIC_DIRECTOR | Sí | Sí | Sí | Sí |
 | VETERINARIAN | Sí | Sí | Sí | No |
-| RECEPTIONIST | Sí | Sí | No | No |
+| RECEPTIONIST | Sí | Sí | Sí, administrativos | No |
+| VET_TECHNICIAN / PET_GROOMER | Pacientes asignados | No | No | No |
 
-Esta primera política separa la gestión de contacto de la edición de fichas de pacientes. Los controles visuales reflejan el rol confirmado por el servidor; los permisos se vuelven a exigir en cada endpoint. Una URL o selección del navegador no otorga acceso.
+Estos son valores iniciales, sujetos a permisos efectivos y alcance por clínica. Las notas clínicas requieren `patient:notes` y autorización médica verificada; sin `tutor:read` se ocultan teléfonos y correos de los responsables en la ficha. Los controles visuales utilizan permisos del servidor, que también se exigen en cada endpoint y dentro de la transacción de escritura. Una URL o selección del navegador no otorga acceso. Más detalles en [Personal y Accesos](staff-access.md).
 
-No hay DELETE. El archivado conserva registros y relaciones, los retira del listado predeterminado y bloquea nuevas ediciones. No se puede archivar un tutor con pacientes sin archivar: primero hay que reasignarlos o archivarlos. Los tutores archivados no se pueden asociar a nuevos pacientes. Reemplazar responsables se realiza atómicamente; una asociación inválida conserva la información anterior. Las mutaciones usan aislamiento serializable y convierten conflictos Prisma esperables a HTTP 409 seguro. No se incluyen restauración, historial/auditoría de cambios ni control de versiones para resolver ediciones humanas concurrentes; no hay garantía de detectar un formulario que llevaba tiempo abierto.
+No hay DELETE. El archivado conserva registros y relaciones, los retira del listado predeterminado y bloquea nuevas ediciones. No se puede archivar un tutor con pacientes sin archivar: primero hay que reasignarlos o archivarlos. Los tutores archivados no se pueden asociar a nuevos pacientes. Reemplazar responsables se realiza atómicamente; una asociación inválida conserva la información anterior. Las mutaciones usan READ COMMITTED y advisory lock por clínica, compartido con cambios de acceso, y convierten conflictos Prisma esperables a HTTP 409 seguro. No se incluyen restauración, historial de cambios de tutores/pacientes ni control de versiones para resolver ediciones humanas concurrentes; no hay garantía de detectar un formulario que llevaba tiempo abierto. La auditoría de personal es un módulo separado.
 
 ## Interfaz
 

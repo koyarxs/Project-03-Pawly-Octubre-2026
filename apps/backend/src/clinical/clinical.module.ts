@@ -37,12 +37,12 @@ class TutorsController {
   @Get()
   @RequirePermissions("tutor:read")
   list(@Req() req: ClinicRequest, @Query() query: TutorQueryDto) {
-    return this.clinical.listTutors(req.clinic.id, query);
+    return this.clinical.listTutors(req.clinic.id, query, req.principal.userId);
   }
   @Post()
   @RequirePermissions("tutor:write")
   create(@Req() req: ClinicRequest, @Body() dto: CreateTutorDto) {
-    return this.clinical.createTutor(req.clinic.id, dto);
+    return this.clinical.createTutor(req.clinic.id, dto, req.principal.userId);
   }
   @Get(":id/patients")
   @RequirePermissions("tutor:read", "patient:read")
@@ -51,7 +51,12 @@ class TutorsController {
     @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
     @Query() query: PatientQueryDto,
   ) {
-    return this.clinical.listPatients(req.clinic.id, query, id);
+    return this.clinical.listPatients(
+      req.clinic.id,
+      query,
+      id,
+      req.principal.userId,
+    );
   }
   @Get(":id")
   @RequirePermissions("tutor:read")
@@ -59,7 +64,7 @@ class TutorsController {
     @Req() req: ClinicRequest,
     @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
   ) {
-    return this.clinical.getTutor(req.clinic.id, id);
+    return this.clinical.getTutor(req.clinic.id, id, req.principal.userId);
   }
   @Patch(":id")
   @RequirePermissions("tutor:write")
@@ -68,7 +73,12 @@ class TutorsController {
     @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
     @Body() dto: UpdateTutorDto,
   ) {
-    return this.clinical.updateTutor(req.clinic.id, id, dto);
+    return this.clinical.updateTutor(
+      req.clinic.id,
+      id,
+      dto,
+      req.principal.userId,
+    );
   }
   @Patch(":id/archive")
   @RequirePermissions("clinical:archive")
@@ -78,7 +88,7 @@ class TutorsController {
     @Body() dto: ArchiveDto,
   ) {
     void dto;
-    return this.clinical.archiveTutor(req.clinic.id, id);
+    return this.clinical.archiveTutor(req.clinic.id, id, req.principal.userId);
   }
 }
 
@@ -89,12 +99,21 @@ class PatientsController {
   @Get()
   @RequirePermissions("patient:read")
   list(@Req() req: ClinicRequest, @Query() query: PatientQueryDto) {
-    return this.clinical.listPatients(req.clinic.id, query);
+    return this.clinical.listPatients(
+      req.clinic.id,
+      query,
+      undefined,
+      req.principal.userId,
+    );
   }
   @Post()
   @RequirePermissions("patient:write")
   create(@Req() req: ClinicRequest, @Body() dto: CreatePatientDto) {
-    return this.clinical.createPatient(req.clinic.id, dto);
+    return this.clinical.createPatient(
+      req.clinic.id,
+      dto,
+      req.principal.userId,
+    );
   }
   @Get(":id")
   @RequirePermissions("patient:read")
@@ -102,7 +121,7 @@ class PatientsController {
     @Req() req: ClinicRequest,
     @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
   ) {
-    return this.clinical.getPatient(req.clinic.id, id);
+    return this.clinical.getPatient(req.clinic.id, id, req.principal.userId);
   }
   @Patch(":id")
   @RequirePermissions("patient:write")
@@ -111,7 +130,12 @@ class PatientsController {
     @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
     @Body() dto: UpdatePatientDto,
   ) {
-    return this.clinical.updatePatient(req.clinic.id, id, dto);
+    return this.clinical.updatePatient(
+      req.clinic.id,
+      id,
+      dto,
+      req.principal.userId,
+    );
   }
   @Patch(":id/archive")
   @RequirePermissions("clinical:archive")
@@ -121,7 +145,11 @@ class PatientsController {
     @Body() dto: ArchiveDto,
   ) {
     void dto;
-    return this.clinical.archivePatient(req.clinic.id, id);
+    return this.clinical.archivePatient(
+      req.clinic.id,
+      id,
+      req.principal.userId,
+    );
   }
 }
 @Module({

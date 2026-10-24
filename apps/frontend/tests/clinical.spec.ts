@@ -1,3 +1,4 @@
+import { withAccessFixture } from "./support/access-fixture";
 import { test, expect, type Page } from "@playwright/test";
 import { returnToTab } from "./support/tab-lifecycle";
 const clinic = {
@@ -95,12 +96,17 @@ async function mock(page: Page, handler?: Handler, role = "OWNER") {
     await route.fulfill({
       status: result.status,
       headers,
-      ...(result.body ? { json: result.body } : {}),
+      ...(result.body ? { json: withAccessFixture(result.body) } : {}),
     });
   });
 }
 function defaultResponse(url: URL): Reply {
   const path = url.pathname;
+  if (path.endsWith("/consultations"))
+    return {
+      status: 200,
+      body: { items: [], page: 1, total: 0, totalPages: 0 },
+    };
   if (path.endsWith(`/tutors/${tutor.id}`)) return { status: 200, body: tutor };
   if (path.endsWith(`/patients/${patient.id}`))
     return { status: 200, body: patient };
@@ -128,43 +134,66 @@ async function fillTutor(page: Page) {
     .fill("+56 9 12345678");
 }
 
-test("un cambio de cuenta nunca hereda el borrador anterior", async ({ page }) => {
+test("un cambio de cuenta nunca hereda el borrador anterior", async ({
+  page,
+}) => {
   let changed = false;
   await mock(page);
-  await page.route("**/api/auth/me", route => route.fulfill({
-    status: 200, headers,
-    json: changed ? { ...profile, id: "a84337ac-f937-4de9-96d9-b2acdb73941b", name: "Otra cuenta QA" } : profile,
-  }));
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      status: 200,
+      headers,
+      json: changed
+        ? {
+            ...profile,
+            id: "a84337ac-f937-4de9-96d9-b2acdb73941b",
+            name: "Otra cuenta QA",
+          }
+        : profile,
+    }),
+  );
   await page.goto(`${base}/tutores/nuevo`);
-  await page.getByLabel("Nombre", { exact: true }).fill("Borrador privado anterior");
+  await page
+    .getByLabel("Nombre", { exact: true })
+    .fill("Borrador privado anterior");
   changed = true;
   await returnToTab(page);
   await expect(page.getByText("Otra cuenta QA", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Nombre", { exact: true })).toHaveValue("");
 });
 
-test("búsqueda sin enviar conserva el texto al volver a la pestaña", async ({ page }) => {
+test("búsqueda sin enviar conserva el texto al volver a la pestaña", async ({
+  page,
+}) => {
   let checks = 0;
   await mock(page);
-  page.on("response", response => { if (new URL(response.url()).pathname.endsWith("/access")) checks++; });
+  page.on("response", (response) => {
+    if (new URL(response.url()).pathname.endsWith("/access")) checks++;
+  });
   await page.goto(`${base}/tutores`);
   await expect(page.getByRole("table")).toBeVisible();
-  await page.getByLabel("Buscar tutores", { exact: true }).fill("Texto pendiente");
+  await page
+    .getByLabel("Buscar tutores", { exact: true })
+    .fill("Texto pendiente");
   const before = checks;
   await returnToTab(page);
   await expect.poll(() => checks).toBeGreaterThan(before);
-  await expect(page.getByLabel("Buscar tutores", { exact: true })).toHaveValue("Texto pendiente");
+  await expect(page.getByLabel("Buscar tutores", { exact: true })).toHaveValue(
+    "Texto pendiente",
+  );
 });
 
-test("un fallo temporal al volver a la pestaña conserva la edición y permite recuperar conexión", async ({ page }) => {
+test("un fallo temporal al volver a la pestaña conserva la edición y permite recuperar conexión", async ({
+  page,
+}) => {
   let offline = false;
   let accessChecks = 0;
   await mock(page);
-  await page.route("**/api/auth/me", async route => {
+  await page.route("**/api/auth/me", async (route) => {
     if (offline) await route.abort("failed");
     else await route.fulfill({ status: 200, headers, json: profile });
   });
-  page.on("response", response => {
+  page.on("response", (response) => {
     if (new URL(response.url()).pathname.endsWith("/access")) accessChecks++;
   });
   await page.goto(`${base}/tutores/${tutor.id}/editar`);
@@ -172,25 +201,39 @@ test("un fallo temporal al volver a la pestaña conserva la edición y permite r
   await name.fill("Edición pendiente");
   offline = true;
   await returnToTab(page);
-  await expect(page.getByRole("status")).toContainText("Conservamos lo que estás escribiendo");
+  await expect(page.getByRole("status")).toContainText(
+    "Conservamos lo que estás escribiendo",
+  );
   await expect(name).toHaveValue("Edición pendiente");
   offline = false;
   const before = accessChecks;
   await returnToTab(page);
   await expect.poll(() => accessChecks).toBeGreaterThan(before);
   await expect(name).toHaveValue("Edición pendiente");
-  await expect(page.getByText("Conservamos lo que estás escribiendo", { exact: false })).toHaveCount(0);
+  await expect(
+    page.getByText("Conservamos lo que estás escribiendo", { exact: false }),
+  ).toHaveCount(0);
 });
 
-for (const route of ["tutores/nuevo", `tutores/${tutor.id}/editar`, "pacientes/nuevo", `pacientes/${patient.id}/editar`]) {
-  test(`conserva borrador y foco al volver a la pestaña: ${route}`, async ({ page }) => {
+for (const route of [
+  "tutores/nuevo",
+  `tutores/${tutor.id}/editar`,
+  "pacientes/nuevo",
+  `pacientes/${patient.id}/editar`,
+]) {
+  test(`conserva borrador y foco al volver a la pestaña: ${route}`, async ({
+    page,
+  }) => {
     let accessChecks = 0;
     await mock(page);
-    page.on("response", response => {
+    page.on("response", (response) => {
       if (new URL(response.url()).pathname.endsWith("/access")) accessChecks++;
     });
     await page.goto(`${base}/${route}`);
-    const field = page.getByLabel(route.startsWith("tutores") ? "Nombre" : "Nombre de la mascota", { exact: true });
+    const field = page.getByLabel(
+      route.startsWith("tutores") ? "Nombre" : "Nombre de la mascota",
+      { exact: true },
+    );
     await field.fill("Borrador sin guardar");
     const before = accessChecks;
     await returnToTab(page);
@@ -198,7 +241,11 @@ for (const route of ["tutores/nuevo", `tutores/${tutor.id}/editar`, "pacientes/n
     await expect(field).toHaveValue("Borrador sin guardar");
     await expect(field).toBeFocused();
     const again = accessChecks;
-    await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
+    await page.evaluate(() =>
+      window.dispatchEvent(
+        new PageTransitionEvent("pageshow", { persisted: true }),
+      ),
+    );
     await expect.poll(() => accessChecks).toBeGreaterThan(again);
     await expect(field).toHaveValue("Borrador sin guardar");
   });
@@ -350,31 +397,32 @@ test("edita fichas mediante PATCH con CSRF y conserva los responsables", async (
   ).toBeVisible();
   expect(edits[1].body?.tutorIds).toEqual([tutor.id, otherTutor.id]);
 });
-test("recepción consulta pacientes pero no puede crear, editar ni archivar", async ({
+test("recepción registra datos administrativos sin notas clínicas ni archivo", async ({
   page,
 }) => {
   await mock(page, undefined, "RECEPTIONIST");
   await page.goto(`${base}/pacientes`);
   await expect(page.getByRole("table")).toContainText("Luna");
-  await expect(page.getByRole("link", { name: "Nuevo paciente" })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole("link", { name: "Nuevo paciente" }),
+  ).toBeVisible();
   await page.goto(`${base}/pacientes/nuevo`);
   await expect(
-    page.getByRole("heading", {
-      name: "No tienes permiso para editar pacientes.",
-    }),
+    page.getByLabel("Nombre de la mascota", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Registrar paciente", exact: true }),
-  ).toHaveCount(0);
+  ).toBeVisible();
+  await expect(page.getByLabel("Observaciones", { exact: false })).toHaveCount(
+    0,
+  );
   await page.goto(`${base}/pacientes/${patient.id}`);
   await expect(
     page.getByRole("heading", { name: "Luna", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Editar paciente" })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole("link", { name: "Editar paciente" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Archivar paciente" }),
   ).toHaveCount(0);

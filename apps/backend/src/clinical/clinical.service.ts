@@ -5,6 +5,14 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import {
+  effectivePermissions,
+  lockClinic,
+  patientScope,
+  requireMember,
+  requirePatient,
+  type Permission,
+} from "../authorization/permission-policy";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   CreatePatientDto,
@@ -60,12 +68,40 @@ const tutorSearch = (query: string): Prisma.TutorWhereInput => ({
 @Injectable()
 export class ClinicalService {
   constructor(private readonly prisma: PrismaService) {}
+  private restrictNotes<T extends { notes: string | null; tutors: unknown[] }>(
+    record: T,
+    allowed: boolean,
+    contacts: boolean,
+  ) {
+    return {
+      ...record,
+      notes: allowed ? record.notes : null,
+      notesRestricted: !allowed,
+      tutors: record.tutors.map((tutor) =>
+        !contacts && typeof tutor === "object" && tutor !== null
+          ? { ...tutor, phone: "", email: null }
+          : tutor,
+      ),
+    };
+  }
+  private async authorizeWrite(
+    tx: Prisma.TransactionClient,
+    clinicId: string,
+    userId: string,
+    permission: Permission,
+    patientId?: string,
+  ) {
+    await lockClinic(tx, clinicId);
+    const actor = await requireMember(tx, clinicId, userId, [permission]);
+    if (patientId) await requirePatient(tx, actor, patientId);
+    return actor;
+  }
   private async write<T>(
     operation: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
     try {
       return await this.prisma.$transaction(operation, {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
       });
     } catch (error) {
       if (
@@ -76,9 +112,15 @@ export class ClinicalService {
       throw error;
     }
   }
-  async listTutors(clinicId: string, query: TutorQueryDto) {
+  async listTutors(clinicId: string, query: TutorQueryDto, userId: string) {
+    const access = await requireMember(this.prisma, clinicId, userId, [
+      "tutor:read",
+    ]);
     const where: Prisma.TutorWhereInput = {
       clinicId,
+      ...(access.patientScope === "ASSIGNED"
+        ? { patients: { some: { clinicId, patient: patientScope(access) } } }
+        : {}),
       status: query.status ?? "ACTIVE",
       ...(query.q ? tutorSearch(query.q) : {}),
     };
@@ -103,20 +145,45 @@ export class ClinicalService {
       totalPages: Math.ceil(total / query.limit),
     };
   }
-  async getTutor(clinicId: string, id: string) {
+  async getTutor(clinicId: string, id: string, userId: string) {
+    const access = await requireMember(this.prisma, clinicId, userId, [
+      "tutor:read",
+    ]);
+    if (
+      access.patientScope === "ASSIGNED" &&
+      !(await this.prisma.tutor.findFirst({
+        where: {
+          id,
+          clinicId,
+          patients: { some: { clinicId, patient: patientScope(access) } },
+        },
+        select: { id: true },
+      }))
+    )
+      throw new NotFoundException();
     const record = await this.prisma.tutor.findUnique({
       where: { id_clinicId: { id, clinicId } },
     });
     if (!record) throw new NotFoundException();
     return record;
   }
-  createTutor(clinicId: string, dto: CreateTutorDto) {
-    return this.write((tx) => tx.tutor.create({ data: { ...dto, clinicId } }));
+  createTutor(clinicId: string, dto: CreateTutorDto, userId: string) {
+    return this.write(async (tx) => {
+      await this.authorizeWrite(tx, clinicId, userId, "tutor:write");
+      return tx.tutor.create({ data: { ...dto, clinicId } });
+    });
   }
-  updateTutor(clinicId: string, id: string, dto: UpdateTutorDto) {
+  updateTutor(
+    clinicId: string,
+    id: string,
+    dto: UpdateTutorDto,
+    userId: string,
+  ) {
     const data = dataOnly(dto);
     if (!Object.keys(data).length) throw new BadRequestException();
     return this.write(async (tx) => {
+      await this.authorizeWrite(tx, clinicId, userId, "tutor:write");
+      await this.getTutor(clinicId, id, userId);
       const record = await tx.tutor.findUnique({
         where: { id_clinicId: { id, clinicId } },
       });
@@ -128,8 +195,10 @@ export class ClinicalService {
       });
     });
   }
-  archiveTutor(clinicId: string, id: string) {
+  archiveTutor(clinicId: string, id: string, userId: string) {
     return this.write(async (tx) => {
+      await this.authorizeWrite(tx, clinicId, userId, "clinical:archive");
+      await this.getTutor(clinicId, id, userId);
       const record = await tx.tutor.findUnique({
         where: { id_clinicId: { id, clinicId } },
       });
@@ -151,11 +220,16 @@ export class ClinicalService {
   async listPatients(
     clinicId: string,
     query: PatientQueryDto,
-    tutorId?: string,
+    tutorId: string | undefined,
+    userId: string,
   ) {
-    if (tutorId) await this.getTutor(clinicId, tutorId);
+    const access = await requireMember(this.prisma, clinicId, userId, [
+      "patient:read",
+    ]);
+    if (tutorId) await this.getTutor(clinicId, tutorId, userId);
     const where: Prisma.PatientWhereInput = {
       clinicId,
+      ...patientScope(access),
       status: query.status ?? { not: "ARCHIVED" },
       ...(tutorId ? { tutors: { some: { clinicId, tutorId } } } : {}),
       ...(query.q
@@ -219,13 +293,21 @@ export class ClinicalService {
       tutors: record.tutors.map((link) => link.tutor),
     };
   }
-  async getPatient(clinicId: string, id: string) {
+  async getPatient(clinicId: string, id: string, userId: string) {
+    const access = await requireMember(this.prisma, clinicId, userId, [
+      "patient:read",
+    ]);
+    await requirePatient(this.prisma, access, id);
     const record = await this.prisma.patient.findUnique({
       where: { id_clinicId: { id, clinicId } },
       include: patientDetail,
     });
     if (!record) throw new NotFoundException();
-    return this.serializePatient(record);
+    return this.restrictNotes(
+      this.serializePatient(record),
+      effectivePermissions(access).includes("patient:notes"),
+      effectivePermissions(access).includes("tutor:read"),
+    );
   }
   private async validateTutors(
     tx: Prisma.TransactionClient,
@@ -237,8 +319,19 @@ export class ClinicalService {
     });
     if (count !== ids.length) throw new BadRequestException();
   }
-  createPatient(clinicId: string, dto: CreatePatientDto) {
+  createPatient(clinicId: string, dto: CreatePatientDto, userId: string) {
     return this.write(async (tx) => {
+      const access = await this.authorizeWrite(
+        tx,
+        clinicId,
+        userId,
+        "patient:create",
+      );
+      if (!effectivePermissions(access).includes("patient:notes") && dto.notes)
+        throw new BadRequestException(
+          "No tienes autorización para modificar notas clínicas.",
+        );
+
       await this.validateTutors(tx, clinicId, dto.tutorIds);
       const { tutorIds, birthDate, ...fields } = dto;
       const record = await tx.patient.create({
@@ -249,6 +342,15 @@ export class ClinicalService {
         },
         select: { id: true },
       });
+      if (access.patientScope === "ASSIGNED")
+        await tx.patientAssignment.create({
+          data: {
+            clinicId,
+            membershipId: access.id,
+            patientId: record.id,
+            assignedByMembershipId: access.id,
+          },
+        });
       await tx.patientTutor.createMany({
         data: tutorIds.map((tutorId) => ({
           clinicId,
@@ -256,15 +358,24 @@ export class ClinicalService {
           tutorId,
         })),
       });
-      return this.serializePatient(
-        await tx.patient.findUniqueOrThrow({
-          where: { id_clinicId: { id: record.id, clinicId } },
-          include: patientDetail,
-        }),
+      return this.restrictNotes(
+        this.serializePatient(
+          await tx.patient.findUniqueOrThrow({
+            where: { id_clinicId: { id: record.id, clinicId } },
+            include: patientDetail,
+          }),
+        ),
+        effectivePermissions(access).includes("patient:notes"),
+        effectivePermissions(access).includes("tutor:read"),
       );
     });
   }
-  updatePatient(clinicId: string, id: string, dto: UpdatePatientDto) {
+  updatePatient(
+    clinicId: string,
+    id: string,
+    dto: UpdatePatientDto,
+    userId: string,
+  ) {
     const { tutorIds, birthDate, ...fields } = dto;
     const data = dataOnly(fields) as Prisma.PatientUncheckedUpdateInput;
     if (birthDate !== undefined)
@@ -274,6 +385,18 @@ export class ClinicalService {
     if (!Object.keys(data).length && tutorIds === undefined)
       throw new BadRequestException();
     return this.write(async (tx) => {
+      const access = await this.authorizeWrite(
+        tx,
+        clinicId,
+        userId,
+        "patient:update",
+        id,
+      );
+      if (!effectivePermissions(access).includes("patient:notes") && dto.notes)
+        throw new BadRequestException(
+          "No tienes autorización para modificar notas clínicas.",
+        );
+
       const record = await tx.patient.findUnique({
         where: { id_clinicId: { id, clinicId } },
       });
@@ -292,16 +415,30 @@ export class ClinicalService {
           })),
         });
       }
+      if (!effectivePermissions(access).includes("patient:notes"))
+        delete data.notes;
       const updated = await tx.patient.update({
         where: { id_clinicId: { id, clinicId } },
         data,
         include: patientDetail,
       });
-      return this.serializePatient(updated);
+      return this.restrictNotes(
+        this.serializePatient(updated),
+        effectivePermissions(access).includes("patient:notes"),
+        effectivePermissions(access).includes("tutor:read"),
+      );
     });
   }
-  archivePatient(clinicId: string, id: string) {
+  archivePatient(clinicId: string, id: string, userId: string) {
     return this.write(async (tx) => {
+      const access = await this.authorizeWrite(
+        tx,
+        clinicId,
+        userId,
+        "clinical:archive",
+        id,
+      );
+
       const record = await tx.patient.findUnique({
         where: { id_clinicId: { id, clinicId } },
       });
@@ -311,7 +448,11 @@ export class ClinicalService {
         data: { status: "ARCHIVED" },
         include: patientDetail,
       });
-      return this.serializePatient(updated);
+      return this.restrictNotes(
+        this.serializePatient(updated),
+        effectivePermissions(access).includes("patient:notes"),
+        effectivePermissions(access).includes("tutor:read"),
+      );
     });
   }
 }

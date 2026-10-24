@@ -177,7 +177,7 @@ test("tutores y pacientes reales: fichas, edición, aislamiento, roles y archiva
     await page.reload();
     await expect(
       page.getByRole("link", { name: "Nuevo paciente", exact: true }),
-    ).toHaveCount(0);
+    ).toBeVisible();
     expect(
       (
         await context.request.patch(`${endpoint}/patients/${patientId}`, {
@@ -185,7 +185,7 @@ test("tutores y pacientes reales: fichas, edición, aislamiento, roles y archiva
           data: { name: "Forbidden" },
         })
       ).status(),
-    ).toBe(403);
+    ).toBe(409);
     expect(
       (
         await context.request.patch(`${endpoint}/tutors/${second.id}/archive`, {
@@ -196,10 +196,11 @@ test("tutores y pacientes reales: fichas, edición, aislamiento, roles y archiva
     ).toBe(403);
     await page.goto(`${base}/pacientes/nuevo`);
     await expect(
-      page.getByRole("heading", {
-        name: "No tienes permiso para editar pacientes.",
-      }),
+      page.getByLabel("Nombre de la mascota", { exact: true }),
     ).toBeVisible();
+    await expect(
+      page.getByLabel("Observaciones", { exact: false }),
+    ).toHaveCount(0);
     await fixtures.setRole(owner.userId, owner.clinic.id, "OWNER");
     await page.goto(`${base}/tutores/${tutorId}`);
     await page

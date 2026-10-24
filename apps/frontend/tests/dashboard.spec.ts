@@ -1,3 +1,4 @@
+import { withAccessFixture } from "./support/access-fixture";
 import { test, expect, type Page } from "@playwright/test";
 
 import { returnToTab } from "./support/tab-lifecycle";
@@ -47,56 +48,77 @@ async function routes(
       return;
     }
     const pathname = new URL(route.request().url()).pathname;
-    const result = handler
-      ? await handler(pathname)
-      : pathname.endsWith("/me")
-        ? { status: 200, body: session }
-        : {
-            status: 200,
-            body: {
-              clinic: {
-                ...(pathname.includes(second.id) ? second : first),
-                role: pathname.includes(second.id) ? "VETERINARIAN" : "OWNER",
+    const summaryResource =
+      /\/(appointments|patients|tutors|consultations)$/.test(pathname);
+    const result = summaryResource
+      ? {
+          status: 200,
+          body: { items: [], total: 0, page: 1, limit: 1, totalPages: 0 },
+        }
+      : handler
+        ? await handler(pathname)
+        : pathname.endsWith("/me")
+          ? { status: 200, body: session }
+          : {
+              status: 200,
+              body: {
+                clinic: {
+                  ...(pathname.includes(second.id) ? second : first),
+                  role: pathname.includes(second.id) ? "VETERINARIAN" : "OWNER",
+                },
               },
-            },
-          };
+            };
     await route.fulfill({
       status: result.status,
       headers: cors,
-      ...(result.body ? { json: result.body } : {}),
+      ...(result.body ? { json: withAccessFixture(result.body) } : {}),
     });
   });
 }
 
-test("selector conserva la clínica al volver a la pestaña", async ({ page }) => {
+test("selector conserva la clínica al volver a la pestaña", async ({
+  page,
+}) => {
   let checks = 0;
-  await routes(page, pathname => {
-    if (pathname.endsWith("/me")) { checks++; return { status: 200, body: session }; }
+  await routes(page, (pathname) => {
+    if (pathname.endsWith("/me")) {
+      checks++;
+      return { status: 200, body: session };
+    }
     return { status: 200, body: { clinic: { ...first, role: "OWNER" } } };
   });
   await page.goto("/app");
   await page.getByRole("button", { name: new RegExp(first.name) }).click();
-  await expect(page.getByRole("link", { name: "Entrar al dashboard" })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Entrar al dashboard" }),
+  ).toBeVisible();
   const before = checks;
   await returnToTab(page);
   await expect.poll(() => checks).toBeGreaterThan(before);
-  await expect(page.getByRole("link", { name: "Entrar al dashboard" })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Entrar al dashboard" }),
+  ).toBeVisible();
 });
 
 for (const status of [401, 403]) {
   test(`volver a la pestaña retira acceso ante ${status}`, async ({ page }) => {
     let denied = false;
-    await routes(page, pathname => {
-      if (denied && (status === 401 || !pathname.endsWith("/me"))) return { status };
-      return pathname.endsWith("/me") ? { status: 200, body: session } :
-        { status: 200, body: { clinic: { ...first, role: "OWNER" } } };
+    await routes(page, (pathname) => {
+      if (denied && (status === 401 || !pathname.endsWith("/me")))
+        return { status };
+      return pathname.endsWith("/me")
+        ? { status: 200, body: session }
+        : { status: 200, body: { clinic: { ...first, role: "OWNER" } } };
     });
     await page.goto(path());
     await expect(page.getByRole("heading", { name: first.name })).toBeVisible();
     denied = true;
     await returnToTab(page);
     if (status === 401) await expect(page).toHaveURL(/\/iniciar-sesion$/);
-    else await expect(page.getByRole("heading", { name: "No tienes acceso a esta clínica." })).toBeVisible();
+    else
+      await expect(
+        page.getByRole("heading", { name: "No tienes acceso a esta clínica." }),
+      ).toBeVisible();
     await expect(page.getByText(owner.name)).toHaveCount(0);
   });
 }
@@ -275,6 +297,10 @@ test("dashboard responsive, menú accesible y módulos claramente pendientes", a
   await routes(page);
   await page.goto(path());
   await expect(page.getByRole("heading", { name: first.name })).toBeVisible();
+  const desktopLogo = page.locator(".dashboard-sidebar").getByRole("img", { name: "Clínica Veterinaria Porvenir", exact: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(desktopLogo).toBeVisible();
+  await expect.poll(() => desktopLogo.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     expect(
@@ -291,24 +317,26 @@ test("dashboard responsive, menú accesible y módulos claramente pendientes", a
   await toggle.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByRole("dialog").getByRole("img", { name: "Clínica Veterinaria Porvenir", exact: true })).toBeVisible();
   const nav = page.getByRole("dialog").getByRole("navigation");
-  for (const name of [
-    "Agenda",
-    "Consultas",
-    "Vacunación",
-    "Inventario",
-    "Reportes",
-    "Configuración",
-  ])
+  for (const name of ["Vacunación", "Inventario", "Reportes", "Configuración"])
     await expect(
       nav.getByRole("button", { name: `${name} Próximamente`, exact: true }),
-    ).toBeDisabled();
+    ).toHaveCount(0);
+  await expect(
+    nav.getByRole("link", { name: "Consultas", exact: true }),
+  ).toHaveAttribute("href", /\/consultas$/);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await expect(toggle).toBeFocused();
   await expect(
     page.getByRole("region", { name: "Indicadores operativos" }),
-  ).toContainText("No disponible");
+  ).not.toContainText("No disponible");
+  await expect(
+    page
+      .getByRole("article", { name: "Citas de hoy", exact: true })
+      .locator(".dashboard-metric-value"),
+  ).toHaveText("0");
   await page.setViewportSize(test.info().project.use.viewport!);
   await page.screenshot({
     path: `.next/qa/dashboard-${test.info().project.name}.png`,

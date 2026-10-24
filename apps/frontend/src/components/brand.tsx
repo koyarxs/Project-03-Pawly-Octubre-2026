@@ -1,58 +1,52 @@
+﻿import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import styles from "./brand.module.css";
 
+/** Shared identity for the clinic website and private workspace. */
+export function PorvenirLogo({ className }: { className?: string }) {
+  return (
+    <Image
+      src="/images/brand/porvenir-logo.png"
+      alt="Clínica Veterinaria Porvenir"
+      width={750}
+      height={250}
+      sizes="(max-width: 767px) 220px, 280px"
+      className={cn(styles.logo, className)}
+    />
+  );
+}
+
+/** Separate presentation layers let the wordmark scale without moving the emblem. */
+export function PorvenirHeaderLogo({ className }: { className?: string }) {
+  return (
+    <span className={cn(styles.headerIdentity, className)}>
+      <PawlyMark className={styles.headerEmblem} />
+      <span className={styles.headerWordmark}>
+        <Image
+          src="/images/brand/porvenir-logo.png"
+          alt="Clínica Veterinaria Porvenir"
+          width={750}
+          height={250}
+          sizes="250px"
+          className={styles.wordmarkImage}
+        />
+      </span>
+    </span>
+  );
+}
+
+/** Compact emblem; keeps the existing shared export compatible. */
 export function PawlyMark({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 40 40"
-      fill="none"
+    <Image
+      src="/images/brand/porvenir-emblem.png"
+      alt=""
       aria-hidden="true"
-      className={cn("size-9", className)}
-    >
-      <path
-        d="M10 24c0-5 5-10 10-10s10 5 10 10c0 4-3 7-6 7-2 0-3-1-4-1s-2 1-4 1c-3 0-6-3-6-7Z"
-        fill="currentColor"
-      />
-      <ellipse
-        cx="8"
-        cy="13"
-        rx="3.5"
-        ry="4.8"
-        transform="rotate(-25 8 13)"
-        fill="currentColor"
-      />
-      <ellipse
-        cx="17"
-        cy="8"
-        rx="3.5"
-        ry="4.8"
-        transform="rotate(-8 17 8)"
-        fill="currentColor"
-      />
-      <ellipse
-        cx="26"
-        cy="9"
-        rx="3.5"
-        ry="4.8"
-        transform="rotate(16 26 9)"
-        fill="currentColor"
-      />
-      <ellipse
-        cx="33"
-        cy="16"
-        rx="3"
-        ry="4.3"
-        transform="rotate(30 33 16)"
-        fill="currentColor"
-      />
-      <path
-        d="m16 23 3 3 6-6"
-        stroke="var(--mark-check, #F7F9F7)"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+      width={48}
+      height={48}
+      className={cn("size-9 object-contain", className)}
+    />
   );
 }
 
@@ -60,13 +54,10 @@ export function Brand({ inverse = false }: { inverse?: boolean }) {
   return (
     <Link
       href="/"
-      aria-label="Pawly, inicio"
-      className={cn("brand", inverse && "brand-inverse")}
+      aria-label="Clínica Veterinaria Porvenir, inicio"
+      className={cn("brand", styles.brand, inverse && styles.inverse)}
     >
-      <PawlyMark />
-      <span>
-        pawly<span className="brand-dot">.</span>
-      </span>
+      <PorvenirLogo />
     </Link>
   );
 }

@@ -1,32 +1,63 @@
 import { expect, test } from "@playwright/test";
-
-test("los módulos se exploran por categoría y los accesos rápidos tienen destinos reales", async ({ page }) => {
-  const errors: string[] = [];
-  page.on("pageerror", error => errors.push(error.message));
+import {
+  mockPublicWebsite,
+  publicWebsiteFixture,
+} from "./support/website-fixtures";
+test("el sitio oculta las secciones desactivadas sin inventar servicios", async ({
+  page,
+}) => {
+  await mockPublicWebsite(page, {
+    ...publicWebsiteFixture,
+    showServices: false,
+    showAbout: false,
+    showHours: false,
+    address: "",
+  });
   await page.goto("/");
-  const shortcuts = page.getByRole("navigation", { name: "Accesos rápidos a Pawly" });
-  await expect(shortcuts.getByRole("link")).toHaveCount(4);
-  await shortcuts.getByRole("link", { name: /Ver los módulos/ }).click();
-  await expect(page).toHaveURL(/#funcionalidades$/);
-
-  const modules = page.locator("#funcionalidades");
-  await expect(modules.locator("article:visible")).toHaveCount(6);
-  await modules.getByRole("button", { name: "Atención clínica", exact: true }).click();
-  await expect(modules.locator("article:visible")).toHaveCount(3);
-  await expect(modules.getByRole("heading", { name: /Cada atención/ })).toBeVisible();
-  await expect(modules.getByRole("heading", { name: /El día, en orden/ })).toBeHidden();
-  await expect(modules.getByRole("status")).toContainText("3 módulos planificados");
-
-  const organization = modules.getByRole("button", { name: "Organización", exact: true });
-  await organization.focus();
-  await page.keyboard.press("Enter");
-  await expect(organization).toHaveAttribute("aria-pressed", "true");
-  await expect(modules.locator("article:visible")).toHaveCount(3);
-  await expect(modules.getByRole("heading", { name: /El día, en orden/ })).toBeVisible();
-  await expect(modules.getByRole("heading", { name: /Lo que tu clínica necesita/ })).toBeVisible();
-  await expect(modules.getByRole("heading", { name: /Cada atención/ })).toBeHidden();
-
-  await modules.getByRole("button", { name: "Todos los módulos", exact: true }).click();
-  await expect(modules.locator("article:visible")).toHaveCount(6);
-  expect(errors).toEqual([]);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    publicWebsiteFixture.heroTitle,
+  );
+  await expect(page.locator("#servicios")).toHaveCount(0);
+  await expect(page.locator("#nosotros")).toHaveCount(0);
+  await expect(
+    page.getByText("Horarios de atención", { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.locator('a[href="#servicios"]')).toHaveCount(0);
+  await expect(page.locator("#contacto")).toBeVisible();
+});
+test("un sitio sin publicación muestra portada editorial sin borradores privados", async ({
+  page,
+}) => {
+  await mockPublicWebsite(page, null);
+  await page.goto("/");
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "El sitio público está en preparación" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "Acceso del equipo" }),
+  ).toBeVisible();
+  await expect(page.locator("#servicios")).toHaveCount(0);
+  await expect(page.getByRole("form")).toHaveCount(0);
+  await expect(
+    page.getByText(publicWebsiteFixture.email, { exact: true }),
+  ).toHaveCount(0);
+});
+test("los textos administrados se muestran como texto y no se ejecutan como HTML", async ({
+  page,
+}) => {
+  const marker = '<img src=x onerror="window.__siteInjected=true">';
+  await mockPublicWebsite(page, {
+    ...publicWebsiteFixture,
+    aboutText: marker,
+    services: [{ title: "Texto seguro", description: marker }],
+  });
+  await page.goto("/");
+  await expect(page.locator("#nosotros")).toContainText(marker);
+  await expect(page.locator("#servicios")).toContainText(marker);
+  expect(
+    await page.evaluate(() => Reflect.get(window, "__siteInjected")),
+  ).toBeUndefined();
+  await expect(page.locator('img[src="x"]')).toHaveCount(0);
 });

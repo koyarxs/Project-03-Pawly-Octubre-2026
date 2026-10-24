@@ -1,5 +1,7 @@
 # API de identidad y clínicas
 
+El backend también incluye tutores/pacientes y agenda. Contratos actuales: [gestión clínica](../../docs/clinical-records.md) y [agenda veterinaria](../../docs/appointments.md). Las notas históricas de autenticación de este documento conservan sus fechas de validación.
+
 Base local: `http://localhost:3001/api`. La landing no cambia. Para producción se recomienda publicar frontend y `/api` bajo el mismo origen mediante un reverse proxy HTTPS.
 
 ## Contrato HTTP
@@ -44,7 +46,7 @@ La limpieza elimina exclusivamente tablas y tipos conocidos, calificados con el 
 
 Validación local del 14 de octubre de 2026: Prisma generate/validate aprobados en la validación inicial; TypeScript, lint y build aprobados tras la corrección del parser; 5 suites y 31 pruebas unitarias aprobadas; 26 escenarios HTTP/PostgreSQL aprobados. Incluyen JSON malformado antes de los guards, ausencia de fragmentos de credenciales en respuestas y logs, no-store temprano, validación con nombres de propiedades hostiles, errores de tamaño/charset, nombres largos y especiales, una colisión real de slug con rollback y reintento, registro concurrente, controles de producción, cookies, sesiones, CSRF (también con rutas en mayúsculas), CORS, límites por IP y aislamiento de clínicas. La estructura y las huellas de datos de `public` permanecieron iguales y el esquema temporal se eliminó con `RESTRICT`. El escenario de concurrencia también se ejecutó por separado en la validación inicial, sin necesitar los anteriores.
 
-Pendiente para uso comercial: verificación y recuperación de correo/contraseña, límites distribuidos, revisión operacional de dependencias, auditoría, backups y política de conservación. Las interfaces de login/registro y dashboard todavía no están implementadas.
+Pendiente para uso comercial: verificación y recuperación de correo/contraseña, límites distribuidos, revisión operacional de dependencias, auditoría global, backups y política de conservación. Login, registro, dashboard, tutores, pacientes y agenda tienen interfaces conectadas a la API.
 
 ## Auditoría de dependencias — 14 de octubre de 2026
 
@@ -53,3 +55,7 @@ La auditoría actual `npm audit --omit=dev --json` registra **3 entradas altas**
 En el código instalado, Prisma utiliza `deepmerge-ts` al cargar archivos de configuración mediante `c12`; los endpoints de autenticación no pasan cuerpos HTTP a esa API. Esto limita la exposición observada, sin declarar resuelta la vulnerabilidad. Mantener configuraciones de Prisma confiables y revisar la corrección oficial antes de producción.
 
 La auditoría completa registra **37 entradas: 32 altas y 5 moderadas**, sin críticas. Además de Prisma, incluye la cadena de herramientas de desarrollo Jest/micromatch por [braces: GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) (alta, patrones profundamente anidados) y Jest/js-yaml/argparse por [sprintf-js: GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c) (moderada, formatos con precisión desmedida). Los paquetes afectados ya estaban en el lockfile de la base; no son 37 fallos independientes ni nuevos avisos introducidos por autenticación. npm propone migraciones mayores de Jest y sus tipos; requieren revisión aparte y no garantizan resolver todos los avisos transitivos. No se ejecutó `npm audit fix --force` ni se actualizaron versiones de dependencias durante esta validación.
+
+## Consultas e historia de atenciones
+
+Módulo `consultations` en `/api/clinics/:clinicId/consultations`: listado/detalle, POST de borrador, PATCH con versión/estado, historial y rectificaciones. OWNER/ADMIN/VETERINARIAN; recepción no accede al contenido. Migración aditiva `20261018020000_veterinary_consultations`. Reglas de inmutabilidad, integración con citas, autorización y límites: [consultas](../../docs/consultations.md).
