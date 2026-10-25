@@ -1,5 +1,7 @@
 # Retratos de testimonios de demostración
 
+> Proyecto 03 | [Project-03-Pawly-Octubre-2026](https://github.com/koyarxs/Project-03-Pawly-Octubre-2026)
+
 Seis identidades ficticias generadas con `image_gen` integrada: Catalina Fuentes,
 Rodrigo Mella, Isabel Arancibia, Andrés Salinas, Paula Vergara y Felipe Rojas.
 Los nombres, cargos y estrellas de las tarjetas son ejemplos editoriales. No

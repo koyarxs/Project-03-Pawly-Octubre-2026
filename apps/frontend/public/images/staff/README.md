@@ -1,5 +1,7 @@
 # Retratos de demostración
 
+> Proyecto 03 | [Project-03-Pawly-Octubre-2026](https://github.com/koyarxs/Project-03-Pawly-Octubre-2026)
+
 La sección pública utiliza ahora `director-demo-v2.webp`, `veterinarian-demo-v2.webp`, `technician-demo-v2.webp`, `reception-demo-v2.webp` y `groomer-demo-v2.webp`: cinco nuevos retratos cuadrados de 640 px, WebP calidad 86, preparados para recortes circulares. Los originales anteriores se conservan. Las claves de perfil no cambian y no se modifican usuarios ni registros de la base de datos.
 
 Dirección visual de la revisión: hombre mayor con barba canosa y lentes; mujer afro-latina de pelo rizado corto y bata blanca; mujer joven pelirroja con pecas y uniforme lavanda; hombre de rasgos asiáticos, pelo negro y camisa azul con cárdigan; mujer madura con pelo pixie y delantal terracota. Se solicitaron diferencias claras de edad, rostro, peinado y vestuario, con luz natural y fondos cálidos coherentes. Todas son identidades generadas ficticias.

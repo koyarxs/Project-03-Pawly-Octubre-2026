@@ -1,5 +1,7 @@
 # Banners editoriales de Porvenir
 
+> Proyecto 03 | [Project-03-Pawly-Octubre-2026](https://github.com/koyarxs/Project-03-Pawly-Octubre-2026)
+
 La versión activa usa los archivos `*-v3.webp`: titulares pequeños y subtítulos discretos, nuevamente reducidos respecto de la versión v2 tras la revisión del usuario. La composición móvil de perro y gato muestra completas las patas, con margen inferior. Las imágenes anteriores se conservan como fuentes de la revisión; no se utilizan en el carrusel. Cada revisión usa una ruta distinta para evitar que la caché conserve un diseño anterior.
 
 Seis composiciones originales generadas con la herramienta de imágenes de OpenAI el 22 de octubre de 2026, a partir de las referencias visuales del usuario. No son fotografías descargadas de otras clínicas ni representan instalaciones, personal o pacientes reales.

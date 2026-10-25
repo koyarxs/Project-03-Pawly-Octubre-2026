@@ -1,5 +1,7 @@
 ﻿# Pawly
 
+> Proyecto 03 | [Project-03-Pawly-Octubre-2026](https://github.com/koyarxs/Project-03-Pawly-Octubre-2026)
+
 Pawly es un proyecto personal de sitio veterinario autoadministrable y gestión interna, construido con Next.js, NestJS, Prisma y PostgreSQL. Incluye autenticación, personal, agenda, tutores, pacientes, consultas e historia clínica, con datos y permisos aislados por clínica. El sitio público corresponde a **Clínica Veterinaria Porvenir**. No hay contratación ni administración de suscripciones implementada.
 
 Modalidad actual: **proyecto personal con datos ficticios**. La clínica Porvenir · DEMOSTRACIÓN permite probar reservas y gestión de citas localmente, sin contratar dominio, hosting ni correo. Incluye 12 servicios, tres profesionales ficticios, ocho tutores, ocho mascotas y siete escenarios de citas. La cuenta propietaria puede ensayar los estados con permisos simulados exclusivos del tenant local; no se verifican credenciales ficticias ni se habilita esa autoridad en producción. [Guía de demostración](docs/appointments-demo.md) y [verificaciones](docs/appointments-progress.md).
@@ -563,6 +565,6 @@ Fotografías ilustrativas con fuentes y licencia Pexels registradas en `apps/fro
 
 Git excluye variables locales, dependencias, compilaciones y resultados de pruebas. Los archivos .env.example son plantillas y no deben contener credenciales reales.
 
-La actualización se revisa en [PR #11](https://github.com/koyarxs/Project-04-Pawly-Octubre-2026/pull/11); publicar esta documentación no implica fusionarla con `main`.
+La actualización se revisa en [PR #11](https://github.com/koyarxs/Project-03-Pawly-Octubre-2026/pull/11); publicar esta documentación no implica fusionarla con `main`.
 
 Autor: Yerko Barrera · Desarrollo: **YB Veltrix Solutions** · 2026.

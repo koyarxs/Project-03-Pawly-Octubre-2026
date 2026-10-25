@@ -1,5 +1,7 @@
 # API de identidad y clínicas
 
+> Proyecto 03 | [Project-03-Pawly-Octubre-2026](https://github.com/koyarxs/Project-03-Pawly-Octubre-2026)
+
 El backend también incluye tutores/pacientes y agenda. Contratos actuales: [gestión clínica](../../docs/clinical-records.md) y [agenda veterinaria](../../docs/appointments.md). Las notas históricas de autenticación de este documento conservan sus fechas de validación.
 
 Base local: `http://localhost:3001/api`. La landing no cambia. Para producción se recomienda publicar frontend y `/api` bajo el mismo origen mediante un reverse proxy HTTPS.

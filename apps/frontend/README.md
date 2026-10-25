@@ -1,5 +1,7 @@
 # Pawly — Frontend
 
+> Proyecto 03 | [Project-03-Pawly-Octubre-2026](https://github.com/koyarxs/Project-03-Pawly-Octubre-2026)
+
 Next.js 16.3.5, React 19 y TypeScript. Sitio público autoadministrable de Clínica Veterinaria Porvenir y gestión interna con autenticación, dashboard, agenda, tutores, pacientes e historia clínica. Sin planes ni contratación SaaS.
 
 ## Desarrollo

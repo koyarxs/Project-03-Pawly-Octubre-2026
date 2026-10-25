@@ -1,5 +1,7 @@
 # Galerías de historias del equipo
 
+> Proyecto 03 | [Project-03-Pawly-Octubre-2026](https://github.com/koyarxs/Project-03-Pawly-Octubre-2026)
+
 27 escenas ficticias: tres por cada uno de los nueve perfiles de demostración.
 Generadas con la herramienta integrada `image_gen`, usando el retrato `*-demo-v2.webp`
 correspondiente como referencia de identidad. Son ambientaciones ilustrativas de

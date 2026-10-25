@@ -1,5 +1,7 @@
 # Capturas de Pawly
 
+> Proyecto 03 | [Project-03-Pawly-Octubre-2026](https://github.com/koyarxs/Project-03-Pawly-Octubre-2026)
+
 Generadas el 24 de octubre de 2026: 22 vistas, siete públicas y quince privadas o de acceso.
 
 - Públicas: sitio actual en `localhost:3000`, mediante `apps/frontend/scripts/capture-public-readme.mjs`.

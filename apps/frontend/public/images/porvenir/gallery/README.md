@@ -1,5 +1,7 @@
 # Galería «Cinco formas de querer sin medida»
 
+> Proyecto 03 | [Project-03-Pawly-Octubre-2026](https://github.com/koyarxs/Project-03-Pawly-Octubre-2026)
+
 Siete imágenes originales generadas con la herramienta de imágenes de OpenAI el 22 de octubre de 2026, siguiendo la referencia visual aportada por el usuario:
 
 - `gallery-header.webp`: golden retriever y gato descansando sobre una manta, luz natural, hogar cálido, sin textos ni marcas.

@@ -1,5 +1,7 @@
 # Identidad de Porvenir
 
+> Proyecto 03 | [Project-03-Pawly-Octubre-2026](https://github.com/koyarxs/Project-03-Pawly-Octubre-2026)
+
 Adaptaciones del logo entregado por el usuario el 22 de octubre de 2026, preparadas con la herramienta de imágenes de OpenAI.
 
 - `porvenir-logo.png`: marca horizontal con fondo transparente; cabecera, pie, autenticación y navegación del sistema.
