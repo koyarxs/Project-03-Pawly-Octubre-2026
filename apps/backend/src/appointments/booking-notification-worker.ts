@@ -6,8 +6,12 @@ import {
 import { ConfigService } from "@nestjs/config";
 import nodemailer from "nodemailer";
 import { PrismaService } from "../prisma/prisma.service";
+import { readFileSync } from "node:fs";
+import { BookingDocumentsService } from "./booking-documents.service";
+import { bookingLogo, confirmedReservation, reservationCalendar, reservationEmail, reservationPdf } from "./booking-documents";
+import { bookingMailSettings } from "./booking-mail";
 
-/** Only local Mailpit is supported here. No external or paid sender is enabled. */
+/** Deliver committed reservation events through the configured mail provider. */
 @Injectable()
 export class BookingNotificationWorker
   implements OnModuleInit, OnModuleDestroy
@@ -17,11 +21,12 @@ export class BookingNotificationWorker
   constructor(
     private readonly db: PrismaService,
     private readonly env: ConfigService,
+    private readonly documents: BookingDocumentsService,
   ) {}
   onModuleInit() {
     this.timer = setInterval(() => {
       void this.flush();
-    }, 60000);
+    }, 15000);
     this.timer.unref();
     void this.flush();
   }
@@ -101,25 +106,28 @@ export class BookingNotificationWorker
             !["CONFIRMED", "CONVERTED"].includes(record!.status) ||
             !row.eventKey.endsWith(record!.startsAt.toISOString()) ||
             record!.startsAt <= new Date());
-        if (!email || staleReminder) {
+        const eventVersion = row.eventKey.match(/:(\d+):[^:]+$/)?.[1];
+        const staleUpdate = !["REMINDER", "AVAILABILITY_CHANGED"].includes(row.kind) && eventVersion && Number(eventVersion) !== record?.version;
+        const obsoleteConfirmation = row.kind === "CONFIRMED" && (!record || !confirmedReservation(record.status));
+        if (!email || staleReminder || staleUpdate || obsoleteConfirmation || (closed && !["CANCELLED", "AVAILABILITY_CHANGED"].includes(row.kind))) {
           await tx.bookingNotification.update({
             where: { id },
             data: { state: "SKIPPED" },
           });
           return;
         }
-        const local =
-          this.env.get("MAIL_MODE") === "local" &&
-          this.env.get("NODE_ENV") !== "production";
-        if (!local) {
+        const settings = bookingMailSettings(this.env);
+        if (!settings) {
           await tx.bookingNotification.update({
             where: { id },
             data: { state: "DISABLED" },
           });
           return;
         }
-        const host = this.env.get<string>("MAIL_HOST") || "127.0.0.1";
-        if (!["127.0.0.1", "localhost", "::1"].includes(host)) return;
+        if (row.kind === "RECEIVED" && confirmedReservation(record!.status)) {
+          await tx.bookingNotification.update({ where: { id }, data: { state: "SKIPPED" } });
+          return;
+        }
         const label: Record<string, string> = {
           RECEIVED: "Solicitud de cita recibida",
           CONFIRMED: "Reserva confirmada",
@@ -128,40 +136,38 @@ export class BookingNotificationWorker
           REMINDER: "Recordatorio de cita",
           AVAILABILITY_CHANGED: "Cambio de disponibilidad",
         };
-        const transport = nodemailer.createTransport({
-          host,
-          port: Number(this.env.get("MAIL_PORT") || 1025),
-          secure: false,
-          ignoreTLS: true,
-          logger: false,
-          debug: false,
-          connectionTimeout: 2000,
-          greetingTimeout: 2000,
-          socketTimeout: 3000,
-          disableFileAccess: true,
-          disableUrlAccess: true,
-        });
+        const transport = nodemailer.createTransport(settings.options);
         try {
           const starts = new Intl.DateTimeFormat("es-CL", {
             timeZone: row.clinic.timezone,
             dateStyle: "full",
             timeStyle: "short",
           }).format(record!.startsAt);
+          const data = row.bookingId ? await this.documents.data(row.bookingId) : undefined;
+          const message = data ? reservationEmail(data, row.kind === "RECEIVED" ? undefined : label[row.kind]) : undefined;
+          const logo = bookingLogo();
+          const invitation = data && (confirmedReservation(data.status) || row.kind === "CANCELLED") ? reservationCalendar(data, settings.from, row.kind === "CANCELLED") : undefined;
           const info = await transport.sendMail({
             from: {
-              name: row.clinic.name,
-              address: "agenda@pawly.example.invalid",
+              name: data?.clinicName || row.clinic.name,
+              address: settings.from,
             },
             to: email,
             messageId: `<${row.id}@pawly.example.invalid>`,
-            subject: label[row.kind] || "Actualización de agendamiento",
-            text: `${label[row.kind] || "Actualización de agendamiento"}\n${row.clinic.name}\nFecha: ${starts} (${row.clinic.timezone})\nEstado: ${record!.status}\nReferencia: ${record!.id}\n\n${record!.status === "PENDING" ? "Pendiente de aprobación: todavía no es una cita confirmada.\n" : ""}Prueba local capturada en Mailpit; no se envió a una bandeja real. No se incluyen fichas clínicas ni enlaces con secretos.`,
+            subject: message?.subject || label[row.kind] || "Actualización de agendamiento",
+            text: message?.text || `${label[row.kind] || "Actualización de agendamiento"}\n${row.clinic.name}\nFecha: ${starts} (${row.clinic.timezone})\nEstado: ${record!.status}\nReferencia: ${record!.id}`,
+            ...(message ? { html: message.html } : {}),
+            ...(data ? { attachments: [
+              { filename: `comprobante-porvenir-${data.reference}.pdf`, content: await reservationPdf(data), contentType: "application/pdf" },
+              ...(logo ? [{ filename: "porvenir.png", content: readFileSync(logo), cid: "porvenir-logo" }] : []),
+            ] } : {}),
+            ...(invitation ? { icalEvent: { method: row.kind === "CANCELLED" ? "CANCEL" : "REQUEST", content: invitation } } : {}),
           });
           if (!info.accepted?.length) throw new Error();
           await tx.bookingNotification.update({
             where: { id },
             data: {
-              state: "SENT",
+              state: this.env.get("MAIL_MODE") === "smtp" ? "SENT" : "CAPTURED",
               attempts: { increment: 1 },
               deliveredAt: new Date(),
             },
@@ -179,7 +185,7 @@ export class BookingNotificationWorker
           transport.close();
         }
       },
-      { timeout: 12000, maxWait: 5000 },
+      { timeout: 30000, maxWait: 5000 },
     );
   }
 }

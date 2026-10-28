@@ -1,4 +1,7 @@
 .site {
+  --pv-content-width:1280px;
+  --pv-page-inset:56px;
+  --pv-page-gutter:max(var(--pv-page-inset),calc((100% - var(--pv-content-width))/2));
   --pv-green: #163f35;
   --pv-deep: #10332c;
   --pv-accent: #cc674c;
@@ -204,8 +207,9 @@
   margin-top: 25px;
 }
 @media (min-width: 1201px) and (max-width: 1390px) {
-  .site .headerInner { flex-wrap: wrap; gap: 4px 20px; padding-block: 12px; }
-  .site .desktopNav { order: 1; flex-basis: 100%; justify-content: center; }
+  .site .headerInner { flex-wrap: nowrap; gap: 16px; padding-block: 12px; }
+  .site .desktopNav { display: none; }
+  .site .menu { display: inline-flex; }
   .site .authActions { margin-left: auto; }
 }
 @media (max-width: 1000px) {
@@ -254,7 +258,7 @@
   cursor: pointer;
 }
 .container {
-  width: min(1280px, calc(100% - 112px));
+  width: min(var(--pv-content-width), calc(100% - var(--pv-page-inset) - var(--pv-page-inset)));
   margin-inline: auto;
 }
 .site :is(h1, h2, h3, p, a, span, strong) {
@@ -1448,6 +1452,7 @@
   }
 }
 @media (max-width: 1199px) {
+  .site { --pv-page-inset:40px; }
   .container {
     width: calc(100% - 80px);
   }
@@ -1567,6 +1572,7 @@
   }
 }
 @media (max-width: 767px) {
+  .site { --pv-page-inset:20px; }
   .container {
     width: calc(100% - 40px);
   }
@@ -1883,4 +1889,28 @@
   .footer {
     border: 1px solid CanvasText;
   }
+}
+
+/* A roomier information strip with the complete attention schedule. */
+.site .topline { min-height: 62px; padding-block: 15px; font-size: 12px; }
+.site .contactStrip { gap: 24px; flex-wrap: wrap; }
+.site .topHours { display: flex; line-height: 1.6; }
+.site .topHours svg { flex-shrink: 0; }
+@media (max-width: 1100px) { .site .toplineMessage { display: none; } }
+@media (max-width: 767px) {
+  .site .topline { padding: 14px 20px; min-height: 76px; }
+  .site .contactStrip { gap: 8px; align-items: flex-start; flex-direction: column; }
+  .site .contactStrip .topHours { display: flex; align-items: flex-start; font-size: 11px; }
+  .site .topHours svg { margin-top: 2px; }
+}
+
+/* Keep the masthead text and actions on the logo's visual center line. */
+.site .headerInner { align-items:center; }
+.site .desktopNav, .site .authActions { align-items:center; }
+.site .desktopNav a, .site .authActions a { line-height:1.25; text-align:center; }
+.site .brand { align-self:center; }
+@media(min-width:1201px) {
+ .site .headerInner { gap:18px; }
+ .site .desktopNav { flex:1; justify-content:center; gap:16px; }
+ .site .desktopNav a { white-space:nowrap; }
 }

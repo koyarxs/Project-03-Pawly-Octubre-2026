@@ -18,6 +18,7 @@ import { BookingEngine, activeBookingStates } from "./booking-engine";
 import { appointmentSnapshot } from "./appointment-snapshot";
 import { utcDate } from "./appointments.service";
 import { bookingNotice } from "./booking-notifications";
+import { reservationCredential } from "./booking-documents";
 import { canBook } from "./booking-policy";
 import type {
   BookingListDto,
@@ -67,6 +68,7 @@ export class PublicBookingService {
         : this.env.get<string>("WEBSITE_CLINIC_ID") === clinic.id
           ? this.env.get<string>("WEBSITE_PUBLIC_NAME") || clinic.name
           : clinic.name;
+    const address = typeof published?.address === "string" && published.address.trim() ? published.address.trim() : this.env.get<string>("WEBSITE_CLINIC_ID") === clinic.id ? this.env.get<string>("WEBSITE_PUBLIC_ADDRESS") || "" : "";
     const demo = this.engine.isDemoClinic(clinic.id);
     if (
       !policy.publicEnabled ||
@@ -74,7 +76,7 @@ export class PublicBookingService {
     )
       return {
         available: false,
-        clinic: { name, slug, timezone: clinic.timezone },
+        clinic: { name, slug, timezone: clinic.timezone, address },
         services: [],
         professionals: [],
         policy: {
@@ -97,7 +99,7 @@ export class PublicBookingService {
     return {
       available: true,
       demo,
-      clinic: { name, slug, timezone: clinic.timezone },
+      clinic: { name, slug, timezone: clinic.timezone, address },
       professionals,
       services: services.map((s) => ({
         id: s.id,
@@ -132,6 +134,7 @@ export class PublicBookingService {
       professionalId: row.professionalMembershipId,
       timezone,
       confirmed: ["CONFIRMED", "CONVERTED"].includes(row.status),
+      emailDelivery: this.env.get("MAIL_MODE") === "smtp" && this.env.get("MAIL_PASSWORD") ? "queued" : "unavailable",
       message:
         row.status === "PENDING"
           ? "Solicitud recibida, pendiente de aprobación. Todavía no es una cita confirmada."
@@ -258,6 +261,7 @@ export class PublicBookingService {
             resourceKey: chosen.service.resourceKey,
             status: policy.autoConfirm ? "CONFIRMED" : "PENDING",
             ownerName: dto.ownerName,
+            ownerRut: dto.ownerRut,
             email: dto.email.toLowerCase(),
             phone,
             petName: dto.petName,
@@ -298,18 +302,23 @@ export class PublicBookingService {
       where: {
         clinicId,
         id: dto.reference,
-        tokenHash: bookingTokenHash(dto.managementToken),
       },
     });
-    if (!row) throw new NotFoundException("Reserva no encontrada.");
+    if (!row || !reservationCredential(row, dto.managementToken, this.env.get<string>("BOOKING_LINK_SECRET"))) throw new NotFoundException("Reserva no encontrada.");
     return row;
   }
   async lookup(slug: string, dto: BookingLookupDto) {
     const clinic = await this.clinic(slug),
       row = await this.authorized(this.engine.prisma, clinic.id, dto);
+    const kinds = row.status === "CANCELLED" ? ["CANCELLED"] : ["CONFIRMED", "CONVERTED"].includes(row.status) ? ["CONFIRMED", "RESCHEDULED"] : ["RECEIVED", "RESCHEDULED"];
+    const mail = await this.engine.prisma.bookingNotification.findFirst({ where: { bookingId: row.id, kind: { in: kinds } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], select: { state: true, attempts: true } });
+    const configured = this.env.get("MAIL_MODE") === "smtp" && this.env.get("MAIL_PASSWORD");
     return {
       ...this.view(row, clinic.timezone),
+      emailDelivery: !configured || ["CAPTURED", "DISABLED"].includes(mail?.state || "") ? "unavailable" : mail?.state === "SENT" ? "sent" : mail?.state === "FAILED" && mail.attempts >= 3 ? "failed" : "queued",
+      email: row.email,
       ownerName: row.ownerName,
+      ownerRut: row.ownerRut,
       petName: row.petName,
       reason: row.reason,
     };

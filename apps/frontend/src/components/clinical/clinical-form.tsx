@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, LoaderCircle } from "lucide-react";
 import { AuthError } from "@/lib/auth";
+import { isValidRut, normalizeRut } from "@/lib/rut";
 import {
   clinicalError,
   clinicalPath,
@@ -274,6 +275,10 @@ export function ClinicalForm({
     kind === "tutores"
       ? {
           firstName: tutor?.firstName ?? "",
+          rut: tutor?.rut ?? "",
+          insuranceType: tutor?.insuranceType ?? "UNDISCLOSED",
+          insuranceProvider: tutor?.insuranceProvider ?? "",
+          fonasaGroup: tutor?.fonasaGroup ?? "",
           lastName: tutor?.lastName ?? "",
           phone: tutor?.phone ?? "",
           email: tutor?.email ?? "",
@@ -315,6 +320,7 @@ export function ClinicalForm({
       : ["name"])
       if (!values[key]?.trim()) invalid[key] = "Completa este campo.";
     if (kind === "tutores") {
+      if (!isValidRut(values.rut ?? "")) invalid.rut = "Revisa el RUT y su dígito verificador.";
       if (
         values.phone &&
         !/^(?=(?:\D*\d){7,15}\D*$)\+?[\d\s().-]{7,32}$/.test(
@@ -369,6 +375,10 @@ export function ClinicalForm({
       kind === "tutores"
         ? {
             firstName: values.firstName!.trim(),
+            rut: normalizeRut(values.rut),
+            insuranceType: values.insuranceType || "UNDISCLOSED",
+            insuranceProvider: ["ISAPRE", "OTHER"].includes(values.insuranceType) ? optional(values.insuranceProvider) : null,
+            fonasaGroup: values.insuranceType === "FONASA" ? optional(values.fonasaGroup) : null,
             lastName: values.lastName!.trim(),
             phone: values.phone!.trim(),
             email: optional(values.email),
@@ -568,6 +578,35 @@ export function ClinicalForm({
               </div>
               {kind === "tutores" ? (
                 <>
+                  <InputField
+                    id="rut"
+                    label="RUT del tutor"
+                    values={values}
+                    update={update}
+                    errors={errors}
+                    required
+                    maxLength={12}
+                    hint="Ejemplo de formato: 12.345.678-5. Se valida el dígito verificador."
+                  />
+                  <div className="clinical-field">
+                    <label htmlFor="clinical-insuranceType">Previsión del tutor</label>
+                    <select id="clinical-insuranceType" value={values.insuranceType} onChange={(event) => update("insuranceType", event.target.value)}>
+                      <option value="UNDISCLOSED">Sin informar</option>
+                      <option value="FONASA">Fonasa</option>
+                      <option value="ISAPRE">Isapre</option>
+                      <option value="OTHER">Otra previsión</option>
+                      <option value="NONE">Sin previsión</option>
+                    </select>
+                    <small>Dato opcional del tutor.</small>
+                  </div>
+                  {values.insuranceType === "FONASA" && <div className="clinical-field">
+                    <label htmlFor="clinical-fonasaGroup">Tramo Fonasa</label>
+                    <select id="clinical-fonasaGroup" value={values.fonasaGroup} onChange={(event) => update("fonasaGroup", event.target.value)}>
+                      <option value="">Sin informar</option>
+                      {["A", "B", "C", "D"].map((group) => <option key={group} value={group}>Tramo {group}</option>)}
+                    </select>
+                  </div>}
+                  {["ISAPRE", "OTHER"].includes(values.insuranceType) && <InputField id="insuranceProvider" label="Institución de previsión" values={values} update={update} errors={errors} maxLength={100} />}
                   <InputField
                     id="firstName"
                     label="Nombre"

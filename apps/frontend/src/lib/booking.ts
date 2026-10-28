@@ -31,7 +31,7 @@ export type BookableService = {
 export type BookingCatalog = {
   demo?: boolean;
   available: boolean;
-  clinic: { name: string; slug: string; timezone: string };
+  clinic: { name: string; slug: string; timezone: string; address?: string };
   services: BookableService[];
   professionals: { id: string; name: string }[];
   policy: Partial<BookingPolicy> & { message: string };
@@ -55,6 +55,8 @@ export type BookingReceipt = {
   ownerName?: string;
   petName?: string;
   reason?: string;
+  email?: string;
+  emailDelivery?: "queued" | "sent" | "unavailable" | "failed";
 };
 export type BookingSettings = {
   demo?: boolean;
@@ -77,6 +79,7 @@ export type BookingIntake = {
   endsAt: string;
   status: string;
   ownerName: string;
+  ownerRut?: string | null;
   email: string;
   phone: string;
   petName: string;
@@ -134,6 +137,14 @@ export async function publicBooking<T>(
   });
   if (!response.ok) throw new AuthError(response.status);
   return response.json() as Promise<T>;
+}
+export async function bookingDocument(slug: string, kind: "receipt" | "calendar", identity: { reference: string; managementToken: string }): Promise<Blob> {
+  const base = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api").replace(/\/$/, "");
+  const response = await fetch(`${base}/bookings/${encodeURIComponent(slug)}/${kind}`, { method: "POST", credentials: "omit", cache: "no-store", headers: { "Content-Type": "application/json", "X-Pawly-CSRF": "1" }, body: JSON.stringify(identity), signal: AbortSignal.timeout(20000) });
+  if (!response.ok) throw new AuthError(response.status);
+  const type = response.headers.get("content-type") || "";
+  if (!type.includes(kind === "receipt" ? "application/pdf" : "text/calendar")) throw new AuthError(0);
+  return response.blob();
 }
 export const privateBooking = async <T>(
   clinicId: string,

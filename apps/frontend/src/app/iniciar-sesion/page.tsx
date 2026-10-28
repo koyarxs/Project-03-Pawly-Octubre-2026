@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 };
 export default function LoginPage() {
   return (
-    <AuthShell>
+    <AuthShell variant="login">
       <AuthForm mode="login" />
     </AuthShell>
   );

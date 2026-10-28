@@ -212,6 +212,6 @@ export class WebsiteService {
     userId: string,
   ) {
     await lockClinic(tx, clinicId);
-    return requireMember(tx, clinicId, userId, ["clinic:manage"]);
+    return requireMember(tx, clinicId, userId, ["website:manage"]);
   }
 }

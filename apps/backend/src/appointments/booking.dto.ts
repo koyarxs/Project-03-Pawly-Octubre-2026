@@ -18,8 +18,10 @@ import {
   Min,
   MinLength,
   ValidateIf,
+  ValidateBy,
 } from "class-validator";
 import { Species } from "@prisma/client";
+import { isValidRut, normalizeRut } from "../clinical/rut";
 const trim = ({ value }: { value: unknown }) =>
   typeof value === "string" ? value.trim() : value;
 export class BookingSettingsDto {
@@ -61,6 +63,9 @@ export class BookingSlotsDto {
   @IsOptional() @IsUUID("4") professionalId?: string;
 }
 export class PublicBookingDto {
+  @Transform(({ value }: { value: unknown }) => typeof value === "string" ? normalizeRut(value) : value)
+  @ValidateBy({ name: "rut", validator: { validate: (value: unknown) => typeof value === "string" && isValidRut(value) } })
+  ownerRut!: string;
   @IsUUID("4") requestId!: string;
   @Matches(/^[A-Za-z0-9_-]{43}$/) managementToken!: string;
   @IsUUID("4") serviceId!: string;

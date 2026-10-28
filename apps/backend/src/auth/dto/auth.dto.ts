@@ -1,6 +1,7 @@
 import { Transform } from "class-transformer";
 import {
   IsEmail,
+  IsIn,
   IsString,
   Matches,
   MaxLength,
@@ -48,4 +49,16 @@ export class RegisterClinicDto {
   @Matches(/\S/)
   @MaxLength(160)
   clinicName!: string;
+}
+
+export const registrationRoles = [
+  "VETERINARIAN",
+  "RECEPTIONIST",
+  "VET_TECHNICIAN",
+  "PET_GROOMER",
+] as const;
+export class RegisterUserDto extends LoginDto {
+  @Transform(trim) @IsString() @Matches(/\S/) @MaxLength(120) name!: string;
+  @IsString() @MinLength(15) @MaxLength(128) declare password: string;
+  @IsIn(registrationRoles) role!: (typeof registrationRoles)[number];
 }

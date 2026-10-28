@@ -1,4 +1,5 @@
 "use client";
+import { displayName } from "@/lib/display-name";
 import { useEffect, useState, type FormEvent } from "react";
 import { CalendarDays, Check, History, Link2, X } from "lucide-react";
 import type { WorkspaceContext } from "@/components/workspace/workspace-shell";
@@ -189,16 +190,17 @@ export function BookingRequestsPanel({
                     {bookingStates[row.status] || row.status}
                   </span>
                   <h2>
-                    {row.petName} · {row.service.name}
+                    {displayName(row.petName)} · {displayName(row.service.name)}
                   </h2>
                   <p>
                     {bookingDate(row.startsAt, timezone)} ·{" "}
                     <strong>{bookingTime(row.startsAt, timezone)}</strong>
                     <br />
-                    {row.professional.user.name}
+                    {displayName(row.professional.user.name)}
                   </p>
                   <p>
                     Tutor: {row.ownerName}
+                    {row.ownerRut && <><br />RUT: {row.ownerRut}</>}
                     <br />
                     {row.email} · {row.phone}
                   </p>
@@ -537,7 +539,7 @@ function BookingRequestEditor({
                   <option value="">Selecciona paciente</option>
                   {patients.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name}
+                      {displayName(p.name)}
                     </option>
                   ))}
                 </select>

@@ -27,7 +27,7 @@ export function TeamProfileDetail({ name, job, biography, photoKey, portraitSrc,
     <header className={styles.hero}>
       <div className={styles.portraitWrap}>
         <div className={styles.portrait}>
-          {portraitSrc ? <Image src={portraitSrc} alt={demo ? `Retrato ficticio de ${name}` : "Imagen ilustrativa; no retrato del profesional"} fill sizes="(max-width: 650px) 230px, 270px" /> : <PawPrint size={56} aria-hidden="true" />}
+          {portraitSrc ? <Image src={portraitSrc} alt={`Retrato de ${name}`} fill sizes="(max-width: 650px) 230px, 270px" /> : <PawPrint size={56} aria-hidden="true" />}
         </div>
         {portraitSrc && <span className={styles.imageNote}>Imagen generada · ilustrativa</span>}
       </div>
@@ -37,7 +37,7 @@ export function TeamProfileDetail({ name, job, biography, photoKey, portraitSrc,
         <p className={styles.job}>{job}</p>
         {story && <span className={styles.location}><MapPin size={14} aria-hidden="true" />{story.hometown}</span>}
         {quote && <blockquote className={styles.quote}>“{quote}”</blockquote>}
-        <span className={styles.identity}>{demo ? "Historia y formación ficticias · Demostración" : "Perfil del equipo publicado"}</span>
+        <span className={styles.identity}>Perfil del equipo</span>
       </div>
     </header>
 
@@ -68,7 +68,7 @@ export function TeamProfileDetail({ name, job, biography, photoKey, portraitSrc,
       {story && <section className={styles.gallery} aria-labelledby="team-gallery-title">
         <div className={styles.galleryHeading}><div><span className={styles.kicker}>En primera persona</span><h3 id="team-gallery-title">Momentos de mi día a día.</h3></div><span className={styles.galleryNote}>3 escenas generadas · ambientación chilena</span></div>
         <figure className={styles.featured}>
-          <div className={styles.featuredImage}><Image key={photo} src={`${galleryBase}-${photo + 1}.webp`} alt={`Escena ficticia de ${name}: ${story.gallery[photo].detail}`} fill sizes="(max-width: 650px) 92vw, 870px" /></div>
+          <div className={styles.featuredImage}><Image key={photo} src={`${galleryBase}-${photo + 1}.webp`} alt={`${name}: ${story.gallery[photo].detail}`} fill sizes="(max-width: 650px) 92vw, 870px" /></div>
           <figcaption><div aria-live="polite" aria-atomic="true"><span className={styles.photoCount}>0{photo + 1} / 03</span><h4>{story.gallery[photo].caption}</h4><p>{story.gallery[photo].detail}</p></div><div className={styles.galleryControls}><button type="button" aria-label="Fotografía anterior del perfil" onClick={() => move(-1)}><ArrowLeft size={18} aria-hidden="true" /></button><button type="button" aria-label="Fotografía siguiente del perfil" onClick={() => move(1)}><ArrowRight size={18} aria-hidden="true" /></button></div></figcaption>
         </figure>
         <div className={styles.thumbnails} role="group" aria-label={`Galería de ${name}`}>
@@ -76,7 +76,6 @@ export function TeamProfileDetail({ name, job, biography, photoKey, portraitSrc,
         </div>
       </section>}
 
-      {demo && <p className={styles.notice}>Identidad y presentación ficticias para mostrar el diseño. Historia, formación e imágenes creadas para esta demostración en contexto chileno. Este perfil no representa a un trabajador real ni acredita títulos, experiencia o servicios disponibles.</p>}
     </div>
   </div>;
 }

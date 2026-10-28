@@ -8,6 +8,8 @@ import {
   Eye,
   EyeOff,
   LoaderCircle,
+  Mail,
+  LockKeyhole,
   ShieldCheck,
 } from "lucide-react";
 import { authErrorMessage, login, registerClinic } from "@/lib/auth";
@@ -114,7 +116,8 @@ export function AuthForm({ mode }: { mode: "register" | "login" }) {
     return (
       <div className="auth-field">
         <label htmlFor={key}>{label}</label>
-        <div className="auth-input-wrap">
+        <div className={`auth-input-wrap${!registering ? " auth-input-with-icon" : ""}`}>
+          {!registering && <span className="auth-input-icon" aria-hidden="true">{password ? <LockKeyhole size={19} strokeWidth={1.6} /> : <Mail size={19} strokeWidth={1.6} />}</span>}
           <input
             id={key}
             name={key}
@@ -192,16 +195,16 @@ export function AuthForm({ mode }: { mode: "register" | "login" }) {
     );
   return (
     <>
-      <span className="auth-kicker">PAWLY WORKSPACE</span>
+      <span className="auth-kicker">{registering ? "PAWLY WORKSPACE" : "TU ESPACIO DE TRABAJO"}</span>
       <h1>
         {registering
           ? "El cuidado comienza con tu equipo."
-          : "Qué bueno verte de nuevo."}
+          : "Bienvenido de vuelta."}
       </h1>
       <p className="auth-intro">
         {registering
           ? "Crea tu cuenta y el espacio de tu clínica veterinaria."
-          : "Inicia sesión para acceder a tus clínicas y continuar donde lo dejaste."}
+          : "Tu equipo, la agenda y cada paciente. Todo listo para continuar con su cuidado."}
       </p>
       <form
         onSubmit={submit}
@@ -266,9 +269,9 @@ export function AuthForm({ mode }: { mode: "register" | "login" }) {
       <p className="auth-switch">
         {registering
           ? "¿Ya tienes una cuenta?"
-          : "Acceso privado para el equipo de la veterinaria."}{" "}
-        <Link href={registering ? "/iniciar-sesion" : "/"}>
-          {registering ? "Inicia sesión" : "Volver al sitio"}
+          : "¿Aún no tienes una cuenta?"}{" "}
+        <Link href={registering ? "/iniciar-sesion" : "/registrarse"}>
+          {registering ? "Inicia sesión" : "Crear mi cuenta"}
         </Link>
       </p>
     </>

@@ -1,4 +1,5 @@
 "use client";
+import { displayName } from "@/lib/display-name";
 import Link from "next/link";
 import { canReadClinical, consultationPath } from "@/lib/consultations";
 import {
@@ -444,7 +445,7 @@ function Agenda({
             <option value="">Todos los profesionales</option>
             {result.data?.professionals.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.user.name}
+                {displayName(p.user.name)}
               </option>
             ))}
           </select>
@@ -464,7 +465,7 @@ function Agenda({
             <option value="">Todos los servicios</option>
             {result.data?.settings?.services?.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name}
+                {displayName(s.name)}
               </option>
             ))}
           </select>
@@ -633,9 +634,9 @@ function Agenda({
                                 <span className="agenda-time">
                                   {bookingTime(b.startsAt, timezone)}
                                 </span>
-                                <strong>{b.petName}</strong>
-                                <span>{b.service.name}</span>
-                                <small>{b.professional.user.name}</small>
+                                <strong>{displayName(b.petName)}</strong>
+                                <span>{displayName(b.service.name)}</span>
+                                <small>{displayName(b.professional.user.name)}</small>
                                 <StatusBadge
                                   tone={
                                     b.status === "PENDING" ? "warning" : "info"
@@ -672,7 +673,7 @@ function Agenda({
                                   hourCycle: "h23",
                                 }).format(new Date(a.endsAt))}
                               </span>
-                              <strong>{a.patient.name}</strong>
+                              <strong>{displayName(a.patient.name)}</strong>
                               <span>{a.reason}</span>
                               <small>
                                 {a.professional?.user.name ||
@@ -959,7 +960,7 @@ function AppointmentEditor({
             />
           ) : (
             <p className="agenda-patient">
-              <strong>{appointment.patient.name}</strong>
+              <strong>{displayName(appointment.patient.name)}</strong>
               <br />
               Tutor registrado: {fullName(appointment.tutor)}
             </p>
@@ -1009,7 +1010,7 @@ function AppointmentEditor({
                   .filter((s) => s.enabled || s.id === appointment?.serviceId)
                   .map((s) => (
                     <option value={s.id} key={s.id}>
-                      {s.name} · {s.durationMinutes} min
+                      {displayName(s.name)} · {s.durationMinutes} min
                     </option>
                   ))}
               </select>
@@ -1046,7 +1047,7 @@ function AppointmentEditor({
               <option value="">Sin asignar</option>
               {professionals.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.user.name}
+                  {displayName(p.user.name)}
                 </option>
               ))}
               {appointment?.professional &&
@@ -1054,7 +1055,7 @@ function AppointmentEditor({
                   (p) => p.id === appointment.professional!.id,
                 ) && (
                   <option value={appointment.professional.id}>
-                    {appointment.professional.user.name} (no disponible)
+                    {displayName(appointment.professional.user.name)} (no disponible)
                   </option>
                 )}
             </select>
@@ -1191,7 +1192,7 @@ function AppointmentEditor({
                       ? appointmentStates[e.after.status as AppointmentStatus]
                       : "Cambio registrado"}
                   </strong>{" "}
-                  · {e.actor.user.name}
+                  · {displayName(e.actor.user.name)}
                   <br />
                   <time>
                     {new Intl.DateTimeFormat("es-CL", {
@@ -1257,7 +1258,7 @@ function PatientPicker({
       </label>
       {selected && (
         <p role="status">
-          Paciente seleccionado: <strong>{selected.name}</strong>
+          Paciente seleccionado: <strong>{displayName(selected.name)}</strong>
         </p>
       )}
       {result.error ? (
@@ -1282,12 +1283,12 @@ function PatientPicker({
               {selected &&
                 !result.data.items.some((p) => p.id === selected.id) && (
                   <option value={selected.id}>
-                    {selected.name} (seleccionado)
+                    {displayName(selected.name)} (seleccionado)
                   </option>
                 )}
               {result.data.items.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {(p as PatientSummary).name}
+                  {displayName((p as PatientSummary).name)}
                 </option>
               ))}
             </select>

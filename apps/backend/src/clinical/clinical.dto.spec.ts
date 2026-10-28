@@ -23,6 +23,36 @@ const validPatient = {
 const errors = (value: object) =>
   validate(value, { whitelist: true, forbidNonWhitelisted: true });
 describe("clinical input boundaries", () => {
+  it("validates tutor RUT and insurance values", async () => {
+    const dto = plainToInstance(CreateTutorDto, {
+      ...validTutor,
+      rut: "12.345.678-5",
+      insuranceType: "FONASA",
+      fonasaGroup: "B",
+    });
+    expect(await errors(dto)).toHaveLength(0);
+    expect(dto.rut).toBe("12345678-5");
+    expect(
+      (
+        await errors(
+          plainToInstance(CreateTutorDto, {
+            ...validTutor,
+            rut: "12.345.678-9",
+          }),
+        )
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      (
+        await errors(
+          plainToInstance(UpdateTutorDto, {
+            insuranceType: "BAD",
+            fonasaGroup: "Z",
+          }),
+        )
+      ).length,
+    ).toBeGreaterThan(0);
+  });
   it("trims names and contacts and converts empty optional values to null", async () => {
     const dto = plainToInstance(CreateTutorDto, {
       ...validTutor,

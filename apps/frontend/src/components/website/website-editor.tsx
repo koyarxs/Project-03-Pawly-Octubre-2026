@@ -41,7 +41,7 @@ export function WebsiteEditor({ clinicId }: { clinicId: string }) {
   return (
     <WorkspaceShell clinicId={clinicId} section="sitio-web">
       {(context) =>
-        context.access.permissions.includes("clinic:manage") ? (
+        context.access.permissions.includes("website:manage") ? (
           <EditorContent
             key={`${clinicId}:${context.session.id}:${context.revision}`}
             context={context}
@@ -51,7 +51,7 @@ export function WebsiteEditor({ clinicId }: { clinicId: string }) {
             error
             icon={ShieldCheck}
             title="Administración del sitio restringida"
-            description="El contenido público solo puede ser administrado por el propietario o la administración de la veterinaria."
+            description="El contenido público solo puede ser administrado por la cuenta designada para editar el sitio web."
           />
         )
       }
@@ -363,7 +363,7 @@ function EditorContent({ context }: { context: WorkspaceContext }) {
                 required: true,
               })}
               {field("heroTitle", "Título accesible de la portada", 140, { required: true,
-                hint: "Identifica la portada para lectores de pantalla. Los textos visibles están integrados en los banners.",
+                hint: "Identifica la portada para lectores de pantalla. Cada composición incluye su propio mensaje visual.",
               })}
               {field("heroDescription", "Descripción accesible de la portada", 600, {
                 required: true,
@@ -372,7 +372,7 @@ function EditorContent({ context }: { context: WorkspaceContext }) {
               <fieldset className="website-photo-fieldset">
                 <legend>Banners de la portada</legend>
                 <p>
-                  Selecciona los banners que recorrerá el carrusel. Incluyen su texto y una versión para celular. Son composiciones ilustrativas; no anuncian atención de especies ni servicios específicos.
+                  Selecciona las categorías del carrusel: atención veterinaria (3 imágenes), familias y mascotas (2) y cuidado conectado (2). Las siete composiciones se adaptan a celular y combinan fotografías ilustrativas con dibujos.
                 </p>
                 <div className="website-photo-options">
                   {websitePhotos.map((photo) => (
@@ -648,10 +648,8 @@ function EditorContent({ context }: { context: WorkspaceContext }) {
                 Añadir testimonio
               </button>
               <p className="website-help">
-                Sin opiniones publicadas, se muestran ejemplos claramente
-                rotulados como ficticios. Al publicar testimonios reales, estos
-                reemplazan la demostración. No se generan puntuaciones
-                automáticas.
+                Publica los testimonios que quieras destacar. Las reseñas de
+                Google aparecerán cuando la integración esté configurada.
               </p>
             </section>
             <section

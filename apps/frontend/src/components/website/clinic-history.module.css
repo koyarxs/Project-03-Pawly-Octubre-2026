@@ -1,0 +1,51 @@
+.section { padding: 80px 0; background: #edf2ea; scroll-margin-top: 110px; }
+.inner { width: min(1280px, calc(100% - 80px)); margin-inline: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: hidden; border: 1px solid #dce6dd; border-radius: 24px; background: #fafbf6; }
+.visual { position: relative; min-width: 0; min-height: 620px; background: #dce7df; }
+.photo { object-fit: cover; object-position: center 42%; }
+.content { position: relative; isolation: isolate; display: flex; align-items: center; min-width: 0; overflow: hidden; padding: clamp(28px, 3.5vw, 50px); background: #fefffe; }
+.content::before, .content::after { content: ""; position: absolute; z-index: -1; pointer-events: none; }
+.content::before { width: 270px; height: 400px; right: -170px; top: -120px; border-radius: 40% 0 46% 60%; transform: rotate(-35deg); background: linear-gradient(140deg, #d9eee5, #ecf8f2); box-shadow: -45px 20px 0 #e8f5ef80; }
+.content::after { width: 150px; height: 210px; right: -110px; top: 390px; border-radius: 60% 40% 50% 70%; background: #eaf6f080; transform: rotate(25deg); }
+.story { position: relative; min-width: 0; }
+.eyebrow { display: flex; align-items: center; gap: 12px; color: #547475; font-size: 10px; font-weight: 750; letter-spacing: .2em; }
+.eyebrow::before { content: ""; width: 25px; height: 4px; flex-shrink: 0; border-radius: 9px; background: #73986a; }
+.story h2 { margin: 23px 0 30px; color: #06262c; font-size: clamp(29px, 3.1vw, 43px); font-weight: 800; line-height: 1.13; letter-spacing: -.045em; text-wrap: balance; }
+.story h2 > span { color: #55884b; }
+.underlined { position: relative; display: inline-block; padding-bottom: 12px; color: #3d835b; }
+.underlined::after { content: ""; position: absolute; bottom: 0; right: 2%; width: 65%; height: 9px; border-top: 4px solid #a6cfb2; border-radius: 60% 80% 0 0; transform: rotate(-3deg); }
+.story p { margin: 0 0 23px; color: #626580; font-size: 14px; line-height: 1.85; }
+.story p > strong { color: #125456; font-weight: 750; }
+.story .lead { color: #10263a; font-size: 16px; line-height: 1.85; }
+.lead mark { padding: 4px 9px; border-radius: 18px; background: #e2f3e8; color: #087452; font-weight: 750; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.nextChapter { display: flex; align-items: center; gap: 18px; margin-top: 28px; padding: 23px 20px; border-radius: 22px; background: linear-gradient(120deg, #f0f8f4, #edf8f3); }
+.sprout { display: grid; place-items: center; flex-shrink: 0; width: 64px; height: 64px; border-radius: 50%; color: #2e8854; background: #dbefe4; }
+.sprout svg { width: 38px; height: 38px; }
+.nextChapter > div { padding-left: 18px; border-left: 1px solid #a9cfc5; }
+.nextChapter strong { display: block; color: #092b34; font-size: 19px; font-weight: 800; line-height: 1.25; letter-spacing: -.035em; }
+.nextChapter p { margin: 9px 0 0; font-size: 12px; line-height: 1.75; }
+.decoration { position: absolute; z-index: -1; right: 4px; top: 38px; width: 62px; color: #368d7b; pointer-events: none; }
+.heart { display: block; width: 42px; height: 42px; margin-left: 10px; transform: rotate(-17deg); }
+.trail { display: block; width: 50px; height: 158px; margin-top: -4px; opacity: .75; }
+.paw { width: 43px; height: 43px; fill: #a8cfc1; color: #a8cfc1; transform: rotate(-20deg); }
+@media (max-width: 1100px) and (min-width: 768px) {
+  .content { padding: 30px 24px; }
+  .decoration { opacity: .35; right: -20px; }
+  .nextChapter { gap: 10px; padding: 18px 14px; }
+  .sprout { width: 44px; height: 44px; }
+  .sprout svg { width: 28px; height: 28px; }
+  .nextChapter > div { padding-left: 12px; }
+}
+@media (max-width: 767px) {
+  .section { padding: 48px 0; }
+  .inner { width: calc(100% - 40px); grid-template-columns: 1fr; border-radius: 20px; }
+  .visual { min-height: 0; aspect-ratio: 1; }
+  .photo { object-position: center 38%; }
+  .content { padding: 36px 24px; }
+  .story h2 { font-size: clamp(29px, 6vw, 40px); }
+  .decoration { opacity: .45; right: -18px; }
+  .nextChapter { gap: 12px; padding: 20px 14px; }
+  .sprout { width: 42px; height: 42px; }
+  .sprout svg { width: 28px; height: 28px; }
+  .nextChapter > div { padding-left: 12px; }
+  .nextChapter strong { font-size: 17px; }
+}

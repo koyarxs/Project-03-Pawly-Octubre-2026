@@ -1,4 +1,5 @@
 import { Transform, Type } from "class-transformer";
+import { isValidRut, normalizeRut } from "./rut";
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -52,6 +53,31 @@ const birthDate = ValidateBy({
 });
 
 export class TutorFieldsDto {
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === "string" ? normalizeRut(value) : value,
+  )
+  @IsString()
+  @MaxLength(12)
+  @ValidateBy({
+    name: "rut",
+    validator: {
+      validate: (value: unknown) =>
+        typeof value === "string" && isValidRut(value),
+    },
+  })
+  rut?: string | null;
+  @IsOptional()
+  @IsIn(["FONASA", "ISAPRE", "OTHER", "NONE", "UNDISCLOSED"])
+  insuranceType?: string | null;
+  @IsOptional()
+  @optionalText
+  @IsString()
+  @MaxLength(100)
+  insuranceProvider?: string | null;
+  @IsOptional()
+  @IsIn(["A", "B", "C", "D"])
+  fonasaGroup?: string | null;
   @IsOptional() @optionalText @IsEmail() @MaxLength(254) email?: string | null;
   @IsOptional() @optionalText @IsString() @MaxLength(500) address?:
     string | null;

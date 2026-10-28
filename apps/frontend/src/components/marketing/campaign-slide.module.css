@@ -1,0 +1,46 @@
+.campaign {
+  --paper: #f6f7ef; --accent: #557c52; --soft: #e5eddc;
+  --hero-gutter: max(var(--pv-page-inset, 56px), calc((100vw - var(--pv-content-width, 1280px)) / 2));
+  position: absolute; inset: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  background: var(--paper); overflow: hidden; isolation: isolate;
+}
+.campaign[data-tone="peach"] { --paper: #fbf5ed; --accent: #986b4e; --soft: #f0e2cf; }
+.campaign[data-tone="mint"] { --paper: #f0f7f2; --accent: #387d69; --soft: #dceee4; }
+.copy { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; min-width: 0; padding: 48px clamp(28px, 4vw, 76px) 54px var(--hero-gutter); background: radial-gradient(ellipse at 0 100%, var(--soft), transparent 70%); }
+.copy h2 { margin: 0 0 23px; color: #123d34; font-size: clamp(37px, 3.65vw, 64px); font-weight: 750; line-height: 1.08; letter-spacing: -.055em; text-wrap: balance; }
+.copy h2 em { display: block; margin-top: 8px; color: var(--accent); font-family: Georgia, serif; font-weight: 400; }
+.copy > p { max-width: 390px; margin: 0; color: #5e7268; font-size: 15px; line-height: 1.8; text-wrap: pretty; }
+.action { display: inline-flex; align-items: center; justify-content: space-between; gap: 35px; min-height: 52px; padding: 13px 23px; margin-top: 28px; border-radius: 999px; background: #174e3d; color: #fff; text-decoration: none; font-size: 13px; font-weight: 650; box-shadow: 0 10px 25px #123d3412; transition: background .2s, transform .2s, box-shadow .2s; }
+.action:hover { background: #276b50; transform: translateY(-2px); box-shadow: 0 14px 28px #123d3425; }
+.action:focus-visible { outline: 3px solid var(--accent); outline-offset: 5px; }
+.signature { display: flex; align-items: center; gap: 8px; margin-top: 28px; font-size: 11px; color: #637b6d; }
+.collage { position: relative; min-width: 0; background: var(--soft); overflow: hidden; }
+.photo { position: absolute; inset: 0; }
+.photo img { object-fit: cover; }
+.photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, #133b2b17, transparent 40%, #0a352747); pointer-events: none; }
+.doodle { position: absolute; top: 26px; right: clamp(18px, 3vw, 58px); width: clamp(110px, 12vw, 180px); color: #fffdf0; filter: drop-shadow(0 2px 8px #123d3460); transform: rotate(9deg); }
+.paw { position: absolute; right: clamp(30px, 4vw, 75px); top: 53%; display: grid; place-items: center; width: 58px; height: 58px; border: 1px solid #fff9; border-radius: 50%; background: #fff2; color: #fffef4; backdrop-filter: blur(8px); transform: rotate(17deg); }
+@media (min-width: 1200px) {
+  .campaign { grid-template-columns: minmax(0, 37fr) minmax(0, 63fr); }
+  .copy { padding-right: 32px; }
+  .copy h2 { font-size: clamp(37px, 3.2vw, 56px); }
+}
+@media (min-width: 768px) and (max-width: 1050px) {
+  .copy { padding-right: 28px; padding-block: 32px; }
+  .copy h2 { font-size: 37px; }
+  .copy > p { font-size: 14px; }
+  .signature { font-size: 10px; margin-top: 20px; }
+}
+@media (max-width: 767px) {
+  .campaign { grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr 1fr; }
+  .copy { padding: 28px var(--hero-gutter) 30px; }
+  .copy h2 { max-width: 540px; font-size: clamp(32px, 6.5vw, 43px); margin-bottom: 15px; }
+  .copy h2 em { margin-top: 4px; }
+  .copy > p { max-width: 470px; font-size: 13px; line-height: 1.7; }
+  .action { min-height: 48px; margin-top: 20px; padding: 12px 21px; font-size: 12px; }
+  .signature { display: none; }
+  .doodle { top: 12px; right: 18px; width: 110px; }
+  .paw { top: 49%; right: 32px; width: 44px; height: 44px; }
+  .paw svg { width: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { .action { transition: none; } .action:hover { transform: none; } }

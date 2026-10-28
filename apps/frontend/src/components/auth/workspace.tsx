@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePrivateWorkspace } from "./use-private-workspace";
 import { PrivateWorkspaceGate } from "./private-workspace-gate";
-import { roleNames, dashboardPath } from "@/lib/workspace";
+import { roleNames, dashboardPath, workspacePath } from "@/lib/workspace";
 import {
   ArrowRight,
   Building2,
@@ -214,7 +214,7 @@ export function Workspace() {
             </section>
           )}
           {selected && (
-            <Link className="workspace-enter" href={dashboardPath(selected.id)}>
+            <Link className="workspace-enter" href={selected.permissions.includes("website:manage") && !selected.permissions.includes("patient:read") ? workspacePath(selected.id, "sitio-web") : dashboardPath(selected.id)}>
               Entrar al dashboard <ArrowRight size={18} aria-hidden="true" />
             </Link>
           )}

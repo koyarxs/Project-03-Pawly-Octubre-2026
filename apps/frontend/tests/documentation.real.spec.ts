@@ -4,6 +4,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { test, expect, api } from "./support/real-fixtures";
 import { isolatedClinics } from "./support/isolated-clinics";
+import { displayName } from "../src/lib/display-name";
 
 // Explicitly invoked by the isolated runner. Never signs into a real account.
 test("capturas del README con API real y registros ficticios aislados", async ({ page, context }, info) => {
@@ -14,12 +15,14 @@ test("capturas del README con API real y registros ficticios aislados", async ({
   const manifest: { file: string; route: string; width: number; height: number; fullPage: boolean }[] = [];
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  async function capture(name: string) {
+  async function capture(name: string, selector?: string) {
+    if (selector) await page.locator(selector).scrollIntoViewIfNeeded();
     await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     await page.evaluate(() => document.fonts.ready);
     await page.evaluate(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); });
     const fullPage = ["agenda", "consulta-clinica", "ficha-paciente", "servicios", "reserva-profesionales", "reserva-horarios"].includes(name);
-    const image = await page.screenshot({ animations: "disabled", timeout: 20000, fullPage });
+    await page.locator("img").evaluateAll(images => Promise.all(images.filter(image => image.getBoundingClientRect().top < innerHeight && image.getBoundingClientRect().bottom > 0).map(image => (image as HTMLImageElement).decode().catch(() => {}))));
+    const image = selector ? await page.locator(selector).screenshot({ animations: "disabled", timeout: 20000 }) : await page.screenshot({ animations: "disabled", timeout: 20000, fullPage });
     await sharp(image).webp({ quality: 90 }).toFile(path.join(directory, `${name}.webp`));
     manifest.push({ file: `${name}.webp`, route: new URL(page.url()).pathname.replace(/\b[0-9a-f-]{36}\b/g, ":id"), ...page.viewportSize()!, fullPage });
   }
@@ -31,6 +34,10 @@ test("capturas del README con API real y registros ficticios aislados", async ({
   try {
     const owner = await fixtures.seedOwner({ name: "Administración Porvenir", email, password, clinicId, clinicName: "Clínica Veterinaria Porvenir · DEMOSTRACIÓN", medicalVerified: false });
     const demo = await fixtures.setupPersonalDemo(owner.userId, clinicId);
+    await page.goto("/");
+    await expect(page.locator("#tu-visita")).toBeVisible();
+    await capture("landing");
+    for (const [name, selector] of [["tu-visita", "#tu-visita"], ["historia", "#historia"], ["equipo-publico", "#equipo"], ["testimonios", "#testimonios"], ["preguntas-frecuentes", "#preguntas-frecuentes"], ["footer", "footer"]]) await capture(name, selector);
     await page.goto("/iniciar-sesion");
     await expect(page.getByRole("button", { name: "Iniciar sesión", exact: true })).toBeVisible();
     await capture("inicio-sesion");
@@ -73,14 +80,16 @@ test("capturas del README con API real y registros ficticios aislados", async ({
     await capture("dashboard");
     await page.goto(route + "/agenda");
     await page.getByLabel("Fecha", { exact: true }).fill(date);
-    await expect(page.getByText(patients[0].name, { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(displayName(patients[0].name), { exact: true }).first()).toBeVisible();
     await capture("agenda");
     for (const [tab, name, heading] of [["Servicios", "servicios", "Servicios y duración"], ["Disponibilidad", "disponibilidad", "Disponibilidad profesional"], ["Configuración", "configuracion-reservas", "Configuración de reservas"]]) {
       await page.getByRole("navigation", { name: "Navegación de agendamiento" }).getByRole("button", { name: tab, exact: true }).click();
       await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+      await expect(page.getByText("Cargando configuración...", { exact: true })).toHaveCount(0);
+      if (name === "servicios") await expect(page.getByText("Consulta veterinaria general", { exact: true }).first()).toBeVisible();
       await capture(name);
     }
-    for (const [suffix, name, heading] of [["tutores", "tutores", "Tutores"], ["pacientes", "pacientes", "Pacientes"], ["personal", "personal", "Personal y Accesos"], ["sitio-web", "editor-web", "Tu veterinaria, en la web."]]) {
+    for (const [suffix, name, heading] of [["tutores", "tutores", "Tutores"], ["pacientes", "pacientes", "Pacientes"], ["personal", "personal", "Personal y Accesos"]]) {
       await page.goto(`${route}/${suffix}`);
       await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
       await capture(name);
@@ -92,16 +101,25 @@ test("capturas del README con API real y registros ficticios aislados", async ({
     await expect(page.getByRole("button", { name: "Editar borrador" })).toBeVisible();
     await capture("consulta-clinica");
     await page.goto(`/reservar/${demo.slug}`);
+    await page.getByLabel("RUT del tutor").fill("12345678-5");
+    await page.getByRole("button", { name: "Continuar a servicios" }).click();
+    await capture("reserva-servicios");
     await page.getByRole("button", { name: /Consulta veterinaria general/ }).click();
+    await page.getByRole("button", { name: "Continuar", exact: true }).click();
     await expect(page.getByRole("button", { name: "Dra. Camila Rojas", exact: true })).toBeVisible();
     await capture("reserva-profesionales");
     await page.getByRole("button", { name: "Dra. Camila Rojas", exact: true }).click();
+    await page.getByRole("button", { name: "Buscar horas", exact: true }).click();
     await page.getByLabel("Fecha de la cita").fill(date);
     await expect(page.getByRole("radio").first()).toBeAttached();
     await capture("reserva-horarios");
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/reservar/${demo.slug}`);
+    await page.getByLabel("RUT del tutor").fill("12345678-5");
+    await page.getByRole("button", { name: "Continuar a servicios" }).click();
+    await capture("reserva-servicios-movil");
     await page.getByRole("button", { name: /Consulta veterinaria general/ }).click();
+    await page.getByRole("button", { name: "Continuar", exact: true }).click();
     await expect(page.getByRole("button", { name: "Dra. Camila Rojas", exact: true })).toBeVisible();
     await capture("reserva-movil");
     await writeFile(path.join(directory, "private-captures.json"), JSON.stringify({ capturedAt: new Date().toISOString(), source: "Isolated Nest API + PostgreSQL + Next.js", data: "Exclusively fictional fixtures; not production data", captures: manifest }, null, 2) + "\n");

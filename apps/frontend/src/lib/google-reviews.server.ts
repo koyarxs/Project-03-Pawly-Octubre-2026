@@ -13,7 +13,7 @@ export async function fetchGoogleReviews(
     const response = await fetcher(`https://places.googleapis.com/v1/places/${encodeURIComponent(config.placeId)}?languageCode=es&regionCode=CL`, {
       headers: {
         "X-Goog-Api-Key": config.apiKey,
-        "X-Goog-FieldMask": "displayName,rating,userRatingCount,googleMapsUri,reviews",
+        "X-Goog-FieldMask": "displayName,rating,userRatingCount,googleMapsUri,googleMapsLinks.writeAReviewUri,reviews",
       },
       cache: "no-store",
       signal: AbortSignal.timeout(8000),
@@ -43,6 +43,7 @@ export async function fetchGoogleReviews(
       rating: typeof data.rating === "number" && Number.isFinite(data.rating) && data.rating >= 0 && data.rating <= 5 ? data.rating : undefined,
       total: Number.isSafeInteger(data.userRatingCount) && Number(data.userRatingCount) >= 0 ? Number(data.userRatingCount) : undefined,
       mapsUrl: googleMapsUrl(data.googleMapsUri),
+      writeReviewUrl: record(data.googleMapsLinks) ? googleMapsUrl(data.googleMapsLinks.writeAReviewUri) : undefined,
       reviews,
     };
   } catch {

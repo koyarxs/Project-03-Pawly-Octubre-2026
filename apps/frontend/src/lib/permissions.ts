@@ -8,7 +8,7 @@ export const sectionPermissions = {
   pacientes: "patient:read",
   agenda: "appointment:read",
   consultas: "consultation:read",
-  "sitio-web": "clinic:manage",
+  "sitio-web": "website:manage",
   personal: "staff:read",
   "mi-perfil": "clinic:read",
   dashboard: "clinic:read",

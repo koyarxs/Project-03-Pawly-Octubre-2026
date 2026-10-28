@@ -24,6 +24,32 @@ function member(role: AccessMember["role"], verified = false): AccessMember {
   } as unknown as AccessMember;
 }
 describe("effective clinic permissions", () => {
+  it("limits website editing to the configured active membership", () => {
+    const previousEditor = process.env.WEBSITE_EDITOR_MEMBERSHIP_ID;
+    const previousClinic = process.env.WEBSITE_CLINIC_ID;
+    try {
+      process.env.WEBSITE_EDITOR_MEMBERSHIP_ID = "editor";
+      process.env.WEBSITE_CLINIC_ID = "clinic";
+      const editor = member("RECEPTIONIST");
+      editor.id = "editor";
+      editor.clinic.id = "clinic";
+      expect(effectivePermissions(editor)).toEqual(["clinic:read", "website:manage"]);
+      const owner = member("OWNER");
+      owner.clinic.id = "clinic";
+      expect(effectivePermissions(owner)).not.toContain("website:manage");
+      editor.status = "INACTIVE" as AccessMember["status"];
+      expect(effectivePermissions(editor)).not.toContain("website:manage");
+      editor.status = "ACTIVE";
+      editor.clinic.id = "another-clinic";
+      expect(effectivePermissions(editor)).not.toContain("website:manage");
+    } finally {
+      if (previousEditor === undefined)
+        delete process.env.WEBSITE_EDITOR_MEMBERSHIP_ID;
+      else process.env.WEBSITE_EDITOR_MEMBERSHIP_ID = previousEditor;
+      if (previousClinic === undefined) delete process.env.WEBSITE_CLINIC_ID;
+      else process.env.WEBSITE_CLINIC_ID = previousClinic;
+    }
+  });
   it("scopes simulated medical permissions to local demo, respecting denials", () => {
     const oldMode = process.env.NODE_ENV,
       oldClinic = process.env.BOOKING_DEMO_CLINIC_ID;
