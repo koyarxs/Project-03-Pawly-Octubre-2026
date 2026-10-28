@@ -30,7 +30,7 @@ describe("AuthService edge cases", () => {
       prisma,
       passwords,
       sessions,
-      new ConfigService({ NODE_ENV: env }),
+      new ConfigService({ NODE_ENV: env, WEBSITE_CLINIC_ID: "" }),
     );
   const collision = new Prisma.PrismaClientKnownRequestError("unique", {
     code: "P2002",

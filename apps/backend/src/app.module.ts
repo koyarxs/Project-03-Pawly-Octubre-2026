@@ -29,11 +29,17 @@ import { StaffModule } from "./staff/staff.module";
         PORT: Joi.number().port().default(3001),
         WEBSITE_CLINIC_ID: Joi.string().guid({ version: "uuidv4" }).optional(),
         WEBSITE_PUBLIC_NAME: Joi.string().max(160).optional(),
-        MAIL_MODE: Joi.string().valid("disabled", "local").default("disabled"),
-        MAIL_HOST: Joi.string()
-          .valid("127.0.0.1", "localhost", "::1")
-          .default("127.0.0.1"),
+        WEBSITE_PUBLIC_ADDRESS: Joi.string().max(260).optional(),
+        WEBSITE_PUBLIC_PHONE: Joi.string().max(32).optional(),
+        MAIL_MODE: Joi.string().valid("disabled", "local", "smtp").default("disabled"),
+        MAIL_HOST: Joi.string().hostname().default("127.0.0.1"),
         MAIL_PORT: Joi.number().port().default(1025),
+        MAIL_SECURE: Joi.boolean().default(false),
+        MAIL_USER: Joi.string().email().allow("").optional(),
+        MAIL_PASSWORD: Joi.string().allow("").optional(),
+        MAIL_FROM: Joi.string().email().allow("").optional(),
+        BOOKING_LINK_SECRET: Joi.string().min(32).optional(),
+        PUBLIC_SITE_URL: Joi.string().uri({ scheme: ["http", "https"] }).default("http://localhost:3000"),
         CORS_ORIGINS: Joi.string()
           .default("http://localhost:3000,http://127.0.0.1:3000")
           .custom((value: string, helpers) => {

@@ -137,6 +137,7 @@ model VeterinaryClinic {
 }
 
 model ClinicMembership {
+  uploadedDocuments PatientDocument[]
   bookingServices BookingServiceProfessional[]
   bookingRequests BookingRequest[]
   bookingEvents BookingEvent[]
@@ -238,6 +239,10 @@ enum PatientSex {
 }
 
 model Tutor {
+  rut          String?          @db.VarChar(12)
+  insuranceType String?         @db.VarChar(20)
+  insuranceProvider String?     @db.VarChar(100)
+  fonasaGroup  String?          @db.VarChar(1)
   id           String           @id @default(uuid()) @db.Uuid
   clinicId     String           @db.Uuid
   firstName    String           @db.VarChar(100)
@@ -258,6 +263,7 @@ model Tutor {
 }
 
 model Patient {
+  documents PatientDocument[]
   id            String              @id @default(uuid()) @db.Uuid
   clinicId      String              @db.Uuid
   name          String              @db.VarChar(100)
@@ -559,6 +565,7 @@ model BookingServiceProfessional {
 }
 
 model BookingRequest {
+  ownerRut String? @db.VarChar(12)
   id String @id @default(uuid()) @db.Uuid
   clinicId String @db.Uuid
   requestId String @db.Uuid
@@ -749,4 +756,19 @@ model ConciergeUsage {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   clinic VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Restrict)
   @@index([clinicId, createdAt])
+}
+
+model PatientDocument {
+  id String @id @default(uuid()) @db.Uuid
+  clinicId String @db.Uuid
+  patientId String @db.Uuid
+  uploadedById String @db.Uuid
+  name String @db.VarChar(180)
+  mimeType String @db.VarChar(50)
+  size Int
+  content Bytes
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  patient Patient @relation(fields:[patientId, clinicId], references:[id, clinicId], onDelete:Restrict)
+  uploadedBy ClinicMembership @relation(fields:[uploadedById, clinicId], references:[id, clinicId], onDelete:Restrict)
+  @@index([clinicId,patientId,createdAt])
 }

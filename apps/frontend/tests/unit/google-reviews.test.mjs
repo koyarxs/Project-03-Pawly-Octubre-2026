@@ -26,13 +26,15 @@ test("Google attribution and all ratings are preserved without exposing credenti
     assert.equal(new URL(url).searchParams.get("languageCode"), "es");
     assert.equal(options.cache, "no-store");
     assert.equal(options.headers["X-Goog-Api-Key"], config.apiKey);
+    assert.ok(options.headers["X-Goog-FieldMask"].includes("googleMapsLinks.writeAReviewUri"));
     assert.ok(options.signal);
-    return Response.json({ displayName: { text: "Clínica QA" }, rating: 3.5, userRatingCount: 22, googleMapsUri: "https://www.google.com/maps?cid=123", reviews: [
+    return Response.json({ displayName: { text: "Clínica QA" }, rating: 3.5, userRatingCount: 22, googleMapsUri: "https://www.google.com/maps?cid=123", googleMapsLinks:{writeAReviewUri:"https://www.google.com/maps/place/qa/review"}, reviews: [
       { authorAttribution: { displayName: "Autora QA", uri: "https://www.google.com/maps/contrib/123", photoUri: "https://lh3.googleusercontent.com/portrait" }, rating: 2, text: { text: "Comentario completo", languageCode: "es" }, originalText: { text: "Full comment", languageCode: "en" }, googleMapsUri: "https://www.google.com/maps/reviews/123", relativePublishTimeDescription: "Hace una semana" },
       { authorAttribution: { displayName: "Autor sin texto" }, rating: 4 },
     ] });
   });
   assert.equal(result.status, "ready");
+  assert.equal(result.writeReviewUrl,"https://www.google.com/maps/place/qa/review");
   assert.equal(result.reviews.length, 2);
   assert.equal(result.reviews[0].rating, 2);
   assert.equal(result.reviews[0].authorUrl, "https://www.google.com/maps/contrib/123");
@@ -52,6 +54,12 @@ test("unsafe author links and avatars are omitted and malformed ratings are reje
   assert.equal(result.reviews[0].photoUrl, undefined);
   assert.equal(result.reviews[0].reviewUrl, undefined);
   assert.equal(googleMapsUrl("https://user:password@www.google.com/maps"), undefined);
+});
+
+test("review writing URLs must point to Google Maps", async()=>{
+  const result=await fetchGoogleReviews(config,async()=>Response.json({displayName:{text:"QA"},googleMapsLinks:{writeAReviewUri:"https://evil.invalid/login"}}));
+  assert.equal(result.writeReviewUrl,undefined);
+  assert.equal(isGoogleReviewsResult({status:"ready",reviews:[],writeReviewUrl:"javascript:alert(1)"}),false);
 });
 
 test("provider failures and malformed payloads return a generic safe state", async () => {

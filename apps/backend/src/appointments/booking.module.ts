@@ -11,6 +11,8 @@ import {
   Query,
   Req,
   UseGuards,
+  StreamableFile,
+  ConflictException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Throttle } from "@nestjs/throttler";
@@ -39,12 +41,15 @@ import {
   PublicRescheduleBookingDto,
 } from "./booking.dto";
 import { BookingNotificationWorker } from "./booking-notification-worker";
+import { BookingDocumentsService } from "./booking-documents.service";
+import { reservationPdf, reservationCalendar, confirmedReservation } from "./booking-documents";
 
 @Controller("bookings")
 class PublicBookingController {
   constructor(
     private readonly bookings: PublicBookingService,
     private readonly env: ConfigService,
+    private readonly documents: BookingDocumentsService,
   ) {}
   @Get("site")
   @Header("Cache-Control", "no-store")
@@ -82,6 +87,21 @@ class PublicBookingController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   lookup(@Param("slug") slug: string, @Body() dto: BookingLookupDto) {
     return this.bookings.lookup(slug, dto);
+  }
+  @Post(":slug/receipt")
+  @Header("Cache-Control", "no-store")
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async receipt(@Param("slug") slug: string, @Body() dto: BookingLookupDto) {
+    const data = await this.documents.download(slug, dto);
+    return new StreamableFile(await reservationPdf(data), { type: "application/pdf", disposition: `attachment; filename="comprobante-porvenir-${data.reference}.pdf"` });
+  }
+  @Post(":slug/calendar")
+  @Header("Cache-Control", "no-store")
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async calendar(@Param("slug") slug: string, @Body() dto: BookingLookupDto) {
+    const data = await this.documents.download(slug, dto);
+    if (!confirmedReservation(data.status)) throw new ConflictException("La cita todavía no está confirmada.");
+    return new StreamableFile(Buffer.from(reservationCalendar(data)), { type: "text/calendar; charset=utf-8", disposition: `attachment; filename="cita-porvenir-${data.reference}.ics"` });
   }
   @Post(":slug/cancel")
   @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -171,6 +191,6 @@ class BookingAdminController {
 @Module({
   imports: [AppointmentsModule, SessionsModule, AuthorizationModule],
   controllers: [PublicBookingController, BookingAdminController],
-  providers: [PublicBookingService, BookingNotificationWorker],
+  providers: [PublicBookingService, BookingNotificationWorker, BookingDocumentsService],
 })
 export class BookingModule {}

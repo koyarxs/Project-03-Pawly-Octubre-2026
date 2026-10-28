@@ -396,3 +396,17 @@
     background: Highlight;
   }
 }
+
+/* Automatic campaigns share a full-bleed photographic half. */
+.banner .frame { aspect-ratio: auto; height: clamp(540px, 36vw, 660px); min-height: 0; }
+.banner .toolbar { bottom: 12px; right: auto; left: clamp(28px, 5vw, 90px); gap: 8px; padding: 4px 8px; border: 1px solid #ffffffc0; border-radius: 999px; background: #ffffffd9; backdrop-filter: blur(8px); }
+.banner .toolbar button { background: transparent; }
+.banner .indicator { min-width: 22px; min-height: 32px; padding: 5px; }
+.banner .indicator span { background: #b0c4a5; }
+.banner .indicator[aria-pressed="true"] span { background: #2c6952; }
+@media (max-width: 767px) {
+  .banner .frame { aspect-ratio: auto; height: 780px; min-height: 0; }
+  .banner .toolbar { bottom: 8px; left: auto; right: 50%; transform: translateX(50%); gap: 2px; padding: 2px 6px; }
+  .banner .toolbar button { width: 32px; height: 32px; min-width: 24px; }
+  .banner .indicator { width: 22px !important; min-width: 22px !important; padding: 3px; }
+}

@@ -74,6 +74,7 @@ describe("authentication with isolated PostgreSQL", () => {
     NODE_ENV: process.env.NODE_ENV,
     CORS_ORIGINS: process.env.CORS_ORIGINS,
     WEBSITE_CLINIC_ID: process.env.WEBSITE_CLINIC_ID,
+    WEBSITE_EDITOR_MEMBERSHIP_ID: process.env.WEBSITE_EDITOR_MEMBERSHIP_ID,
     WEBSITE_PUBLIC_NAME: process.env.WEBSITE_PUBLIC_NAME,
     MAIL_MODE: process.env.MAIL_MODE,
   };
@@ -172,7 +173,7 @@ describe("authentication with isolated PostgreSQL", () => {
         // RESTRICT blocks external dependencies; never cascade into another schema.
         await assertTestConnection();
         await control.$executeRawUnsafe(
-          `DROP TABLE IF EXISTS "${schema}"."BookingNotification","${schema}"."BookingEvent","${schema}"."BookingRequest","${schema}"."BookingServiceProfessional","${schema}"."BookingService","${schema}"."BookingSettings","${schema}"."ConciergeMessage","${schema}"."ConciergeBookingProposal","${schema}"."ConciergeConversation","${schema}"."ConciergePresence","${schema}"."ConciergeUsage","${schema}"."ConciergeSettings","${schema}"."NewsletterSubscriber","${schema}"."PatientAssignment", "${schema}"."StaffInvitation", "${schema}"."AccessAuditLog", "${schema}"."StaffProfile", "${schema}"."VeterinaryWebsite", "${schema}"."ConsultationEvent", "${schema}"."ConsultationAmendment", "${schema}"."Consultation", "${schema}"."AppointmentEvent", "${schema}"."Appointment", "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership",
+          `DROP TABLE IF EXISTS "${schema}"."PatientDocument","${schema}"."BookingNotification","${schema}"."BookingEvent","${schema}"."BookingRequest","${schema}"."BookingServiceProfessional","${schema}"."BookingService","${schema}"."BookingSettings","${schema}"."ConciergeMessage","${schema}"."ConciergeBookingProposal","${schema}"."ConciergeConversation","${schema}"."ConciergePresence","${schema}"."ConciergeUsage","${schema}"."ConciergeSettings","${schema}"."NewsletterSubscriber","${schema}"."PatientAssignment", "${schema}"."StaffInvitation", "${schema}"."AccessAuditLog", "${schema}"."StaffProfile", "${schema}"."VeterinaryWebsite", "${schema}"."ConsultationEvent", "${schema}"."ConsultationAmendment", "${schema}"."Consultation", "${schema}"."AppointmentEvent", "${schema}"."Appointment", "${schema}"."PatientTutor", "${schema}"."Patient", "${schema}"."Tutor", "${schema}"."Session", "${schema}"."ClinicMembership",
            "${schema}"."User", "${schema}"."VeterinaryClinic",
            "${schema}"."_prisma_migrations" RESTRICT`,
         );
@@ -222,7 +223,7 @@ describe("authentication with isolated PostgreSQL", () => {
   beforeEach(async () => {
     await assertTestConnection();
     await prisma.$executeRawUnsafe(
-      `TRUNCATE TABLE "${schema}"."BookingNotification","${schema}"."BookingEvent","${schema}"."BookingRequest","${schema}"."BookingServiceProfessional","${schema}"."BookingService","${schema}"."BookingSettings","${schema}"."ConciergeMessage","${schema}"."ConciergeBookingProposal","${schema}"."ConciergeConversation","${schema}"."ConciergePresence","${schema}"."ConciergeUsage","${schema}"."ConciergeSettings","${schema}"."NewsletterSubscriber","${schema}"."PatientAssignment","${schema}"."StaffInvitation","${schema}"."AccessAuditLog","${schema}"."StaffProfile","${schema}"."VeterinaryWebsite","${schema}"."ConsultationEvent","${schema}"."ConsultationAmendment","${schema}"."Consultation","${schema}"."AppointmentEvent","${schema}"."Appointment","${schema}"."PatientTutor","${schema}"."Patient","${schema}"."Tutor","${schema}"."Session","${schema}"."ClinicMembership","${schema}"."User","${schema}"."VeterinaryClinic" RESTRICT`,
+      `TRUNCATE TABLE "${schema}"."PatientDocument","${schema}"."BookingNotification","${schema}"."BookingEvent","${schema}"."BookingRequest","${schema}"."BookingServiceProfessional","${schema}"."BookingService","${schema}"."BookingSettings","${schema}"."ConciergeMessage","${schema}"."ConciergeBookingProposal","${schema}"."ConciergeConversation","${schema}"."ConciergePresence","${schema}"."ConciergeUsage","${schema}"."ConciergeSettings","${schema}"."NewsletterSubscriber","${schema}"."PatientAssignment","${schema}"."StaffInvitation","${schema}"."AccessAuditLog","${schema}"."StaffProfile","${schema}"."VeterinaryWebsite","${schema}"."ConsultationEvent","${schema}"."ConsultationAmendment","${schema}"."Consultation","${schema}"."AppointmentEvent","${schema}"."Appointment","${schema}"."PatientTutor","${schema}"."Patient","${schema}"."Tutor","${schema}"."Session","${schema}"."ClinicMembership","${schema}"."User","${schema}"."VeterinaryClinic" RESTRICT`,
     );
     const owner = await prisma.user.create({
       data: {
@@ -246,7 +247,9 @@ describe("authentication with isolated PostgreSQL", () => {
     });
     userId = owner.id;
     clinicId = owner.memberships[0]!.clinicId;
-    app.get(ConfigService).set("WEBSITE_CLINIC_ID", clinicId);
+    app.get(ConfigService).set("WEBSITE_CLINIC_ID", "");
+    delete process.env.WEBSITE_CLINIC_ID;
+    delete process.env.WEBSITE_EDITOR_MEMBERSHIP_ID;
     const other = await prisma.user.create({
       data: {
         name: "Other owner",
@@ -550,6 +553,7 @@ describe("authentication with isolated PostgreSQL", () => {
       expect((await list()).body.total).toBe(0);
     });
     it("publishes only a consented snapshot and never exposes private identity fields", async () => {
+      app.get(ConfigService).set("WEBSITE_CLINIC_ID", clinicId);
       const worker = await activate();
       const dto = {
         displayName: "Public QA name",
@@ -852,6 +856,14 @@ describe("authentication with isolated PostgreSQL", () => {
   });
 
   describe("single-clinic public website administration", () => {
+    beforeEach(async () => {
+      const editor = await prisma.clinicMembership.findUniqueOrThrow({
+        where: { userId_clinicId: { userId, clinicId } },
+      });
+      process.env.WEBSITE_CLINIC_ID = clinicId;
+      process.env.WEBSITE_EDITOR_MEMBERSHIP_ID = editor.id;
+      app.get(ConfigService).set("WEBSITE_CLINIC_ID", clinicId);
+    });
     const content = () => ({
       ...initialWebsiteContent("Clínica Veterinaria Porvenir"),
       heroDescription: "Contenido ficticio para verificar el editor.",
@@ -1029,9 +1041,11 @@ describe("authentication with isolated PostgreSQL", () => {
       expect(row.version).toBe(2);
       expect(row.published).toBeNull();
     });
-    it("allows only owner and administration to edit or publish", async () => {
+    it("allows only the designated editor to edit or publish regardless of role", async () => {
       await save().expect(200);
-      for (const role of ["VETERINARIAN", "RECEPTIONIST"] as const) {
+      const editorId = process.env.WEBSITE_EDITOR_MEMBERSHIP_ID;
+      delete process.env.WEBSITE_EDITOR_MEMBERSHIP_ID;
+      for (const role of ["OWNER", "ADMIN", "VETERINARIAN", "RECEPTIONIST"] as const) {
         await prisma.clinicMembership.update({
           where: { userId_clinicId: { userId, clinicId } },
           data: { role },
@@ -1047,6 +1061,7 @@ describe("authentication with isolated PostgreSQL", () => {
         where: { userId_clinicId: { userId, clinicId } },
         data: { role: "ADMIN" },
       });
+      process.env.WEBSITE_EDITOR_MEMBERSHIP_ID = editorId;
       await save(1).expect(200);
       await publish(2).expect(201);
     });
@@ -1640,6 +1655,7 @@ describe("authentication with isolated PostgreSQL", () => {
         .set("X-Pawly-CSRF", "1")
         .set("Cookie", cookie);
     const tutorInput = {
+      rut: "12345678-5",
       firstName: "Ana",
       lastName: "Pérez",
       phone: "+56 9 12345678",

@@ -28,7 +28,9 @@ export const permissionCatalog = {
   CONSULTATION_WRITE: "consultation:write",
 } as const satisfies Partial<Record<PermissionKey, string>>;
 export type Permission =
-  (typeof permissionCatalog)[keyof typeof permissionCatalog] | "patient:write";
+  | (typeof permissionCatalog)[keyof typeof permissionCatalog]
+  | "patient:write"
+  | "website:manage";
 export const implementedKeys = Object.keys(
   permissionCatalog,
 ) as (keyof typeof permissionCatalog)[];
@@ -109,6 +111,10 @@ export function effectivePermissions(
     member.clinic.status !== "ACTIVE"
   )
     return [];
+  if (
+    process.env.WEBSITE_EDITOR_MEMBERSHIP_ID === member.id &&
+    process.env.WEBSITE_CLINIC_ID === member.clinic.id
+  ) return ["clinic:read", "website:manage"];
   const keys = new Set([
     ...roleDefaults[member.role],
     ...member.permissionGrants,

@@ -27,6 +27,7 @@ import {
   type WorkspaceSection,
 } from "@/lib/workspace";
 import type { Session, ClinicAccess } from "@/lib/auth";
+import { displayName } from "@/lib/display-name";
 import { hasPermission, sectionPermissions } from "@/lib/permissions";
 import type { WorkspaceState } from "@/components/auth/use-private-workspace";
 export type WorkspaceContext = {
@@ -62,7 +63,8 @@ function Navigation({
   return (
     <nav aria-label="Navegación de la clínica">
       {modules
-        .filter(([key]) => hasPermission(access, sectionPermissions[key]))
+        .filter(([key]) => hasPermission(access, sectionPermissions[key]) &&
+          (!access.permissions.includes("website:manage") || access.permissions.includes("patient:read") || key === "sitio-web"))
         .map(([key, label, Icon]) => (
           <Link
             key={key}
@@ -215,7 +217,7 @@ export function WorkspaceShell({
               >
                 {session.memberships.map(({ clinic }) => (
                   <option key={clinic.id} value={clinic.id}>
-                    {clinic.name.replace(/\s*·?\s*DEMOSTRACIÓN.*$/u, "").trim()}
+                    {displayName(clinic.name)}
                   </option>
                 ))}
               </select>
@@ -223,11 +225,11 @@ export function WorkspaceShell({
           </div>
           <div className="dashboard-user">
             <span className="dashboard-avatar" aria-hidden="true">
-              {session.name.slice(0, 1).toUpperCase()}
+              {displayName(session.name).slice(0, 1).toUpperCase()}
             </span>
             <div>
-              <strong>{session.name}</strong>
-              <span>{roleNames[access.role]}</span>
+              <strong>{displayName(session.name)}</strong>
+              <span>{access.permissions.includes("website:manage") ? "Editor del sitio web" : roleNames[access.role]}</span>
             </div>
           </div>
           <button
@@ -260,13 +262,6 @@ export function WorkspaceShell({
           )}
           {sectionAllowed ? (
             <>
-              {session.memberships
-                .find((m) => m.clinic.id === clinicId)
-                ?.clinic.name.includes("DEMOSTRACIÓN") && (
-                <p role="note" style={{ fontSize: 11, color: "#637b70", margin: "0 0 18px", lineHeight: 1.6 }}>
-                  Proyecto personal · Personas, pacientes y atenciones ficticios.
-                </p>
-              )}
               {children({
                 clinicId,
                 access,

@@ -24,6 +24,10 @@ export const statusNames = {
   ARCHIVED: "Archivado",
 } as const;
 export interface TutorSummary {
+  rut?: string | null;
+  insuranceType?: string | null;
+  insuranceProvider?: string | null;
+  fonasaGroup?: string | null;
   id: string;
   clinicId: string;
   firstName: string;
@@ -45,7 +49,7 @@ export interface PatientSummary {
   species: keyof typeof speciesNames;
   sex: keyof typeof sexNames;
   status: keyof typeof statusNames;
-  tutors: { id: string; firstName: string; lastName: string }[];
+  tutors: Pick<TutorSummary, "id" | "firstName" | "lastName" | "rut" | "insuranceType" | "insuranceProvider" | "fonasaGroup">[];
 }
 export interface Patient extends PatientSummary {
   breed: string | null;
@@ -65,6 +69,10 @@ export interface PageResult<T> {
   totalPages: number;
 }
 export type TutorInput = {
+  rut: string;
+  insuranceType: string | null;
+  insuranceProvider: string | null;
+  fonasaGroup: string | null;
   firstName: string;
   lastName: string;
   phone: string;

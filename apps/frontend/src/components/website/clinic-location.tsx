@@ -1,36 +1,48 @@
-import Image from "next/image";
-import { ArrowUpRight, Heart, MapPin, Navigation } from "lucide-react";
+import { ArrowUpRight, MapPin, Navigation } from "lucide-react";
 import styles from "./clinic-location.module.css";
+
 export function ClinicLocation({ address }: { address: string }) {
-  const inValparaiso = /valpara[ií]so/i.test(address);
-  const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
-  const directions = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+  const confirmedAddress = address.trim();
+  const inValparaiso = /valpara[ií]so/i.test(confirmedAddress);
+  const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(confirmedAddress)}`;
+  const directions = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(confirmedAddress)}`;
+
   return (
     <section id="ubicacion" className={styles.section} aria-labelledby="titulo-ubicacion">
-    <div className={styles.container}>
-      <div className={styles.introduction}>
-        <span className={styles.eyebrow}>NUESTRA UBICACIÓN</span>
-        <div className={styles.introText}>
-          <span className={styles.kicker}>{inValparaiso ? "TE ESPERAMOS EN VALPARAÍSO" : "UN ESPACIO PARA ENCONTRARNOS"}</span>
-          <h2 id="titulo-ubicacion">Un lugar pensado<br />para <em>su bienestar.</em></h2>
-          <p>{address ? "Encuentra nuestra dirección, revisa cómo llegar y coordina tu próxima visita con el equipo de la veterinaria." : "Estamos preparando la información de ubicación. Publicaremos la dirección cuando esté confirmada."}</p>
-          {address && <div className={styles.actions}><a className={styles.mapsButton} href={maps} target="_blank" rel="noopener noreferrer">Ver en Google Maps<ArrowUpRight size={16} aria-hidden="true" /></a><a className={styles.directionButton} href={directions} target="_blank" rel="noopener noreferrer" aria-label="Cómo llegar a la veterinaria"><Navigation size={20} aria-hidden="true" /></a></div>}
-          <span className={styles.handwritten}>Cerca de<br />quienes amas. <Heart size={21} strokeWidth={1.3} aria-hidden="true" /></span>
+      <div className={styles.container}>
+        <div className={styles.heading}>
+          <div>
+            <span className={styles.eyebrow}>NUESTRA UBICACIÓN</span>
+            <h2 id="titulo-ubicacion">El cuidado tiene<br /><em>un lugar.</em></h2>
+          </div>
+          <p>{confirmedAddress ? "Un espacio para escucharte y acompañar a tu compañero. Encuentra la clínica y prepara tu próxima visita." : "Pronto compartiremos nuestra dirección para que puedas preparar tu próxima visita."}</p>
         </div>
-        <div className={styles.companions}><Image src="/images/porvenir/location-companions.webp" alt="Imagen ilustrativa generada de un perro y un gato descansando juntos." width={900} height={600} sizes="(max-width:767px) 90vw, 400px" /></div>
+
+        <div className={styles.location}>
+          <div className={styles.details}>
+            <span className={styles.marker} aria-hidden="true"><MapPin size={27} strokeWidth={1.3} /></span>
+            <div className={styles.addressBlock}>
+              <span className={styles.city}>{inValparaiso ? "VALPARAÍSO, CHILE" : "ENCUÉNTRANOS"}</span>
+              <h3>Clínica Veterinaria<br />Porvenir</h3>
+              {confirmedAddress ? <address>{confirmedAddress}</address> : <p className={styles.pending}>Ubicación por confirmar</p>}
+            </div>
+            {confirmedAddress && (
+              <div className={styles.actions}>
+                <a className={styles.directions} href={directions} target="_blank" rel="noopener noreferrer" aria-label="Cómo llegar a la veterinaria"><Navigation size={18} aria-hidden="true" /> Cómo llegar <ArrowUpRight size={18} aria-hidden="true" /></a>
+                <a className={styles.mapsLink} href={maps} target="_blank" rel="noopener noreferrer">Ver en Google Maps <ArrowUpRight size={16} aria-hidden="true" /></a>
+              </div>
+            )}
+            <p className={styles.note}>{confirmedAddress ? "Revisa el recorrido antes de salir y llega con tiempo para su atención." : "Publicaremos la dirección cuando esté confirmada."}</p>
+          </div>
+          <div className={styles.mapCanvas}>
+            {confirmedAddress ? (
+              <iframe title="Mapa de ubicación de la veterinaria" src={`https://maps.google.com/maps?q=${encodeURIComponent(confirmedAddress)}&hl=es&t=m&z=15&output=embed`} referrerPolicy="no-referrer" loading="lazy" allowFullScreen />
+            ) : (
+              <div className={styles.mapPending}><MapPin size={32} strokeWidth={1.3} aria-hidden="true" /><strong>Ubicación por confirmar</strong><p>La dirección de la veterinaria estará disponible aquí.</p></div>
+            )}
+          </div>
+        </div>
       </div>
-      <div className={styles.locationContent}>
-      <div className={styles.mapCanvas}>
-      {address ? <iframe
-        title="Mapa de ubicación de la veterinaria"
-        src={`https://maps.google.com/maps?q=${encodeURIComponent(address)}&hl=es&t=m&z=15&output=embed`}
-        referrerPolicy="no-referrer"
-        loading="lazy"
-        allowFullScreen
-      /> : <div className={styles.mapMarker}><MapPin size={30} aria-hidden="true" /><strong>Ubicación por confirmar</strong><p>La dirección de la veterinaria está por confirmar.</p></div>}
-      </div>
-      </div>
-    </div>
     </section>
   );
 }

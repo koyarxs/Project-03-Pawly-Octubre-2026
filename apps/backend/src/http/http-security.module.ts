@@ -34,10 +34,16 @@ export class BrowserRequestGuard implements CanActivate {
       .map((origin) => origin.trim());
     // A non-simple custom header plus exact Origin validation also protects login CSRF.
     // Missing/opaque origins fail closed. CORS never allows arbitrary origins.
+    const documentUpload =
+      request.method === "POST" &&
+      /^\/api\/clinics\/[0-9a-f-]{36}\/patients\/[0-9a-f-]{36}\/documents\/?$/.test(
+        pathname,
+      ) &&
+      request.is("multipart/form-data");
     if (
       !allowed.includes(request.get("origin") ?? "") ||
       request.get("x-pawly-csrf") !== "1" ||
-      !request.is("application/json")
+      (!request.is("application/json") && !documentUpload)
     ) {
       throw new ForbiddenException("Solicitud no permitida.");
     }

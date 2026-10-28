@@ -19,6 +19,7 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { BookingEngine } from "./booking-engine";
+import { emailManagementKey } from "./booking-documents";
 
 describe("Professional booking migration on an owned isolated schema", () => {
   let control: PrismaClient,
@@ -70,6 +71,7 @@ describe("Professional booking migration on an owned isolated schema", () => {
     professionalId: doctorId,
     startsAt: at(),
     ownerName: "Tutor de prueba aislada",
+    ownerRut: "12345678-5",
     email: `${randomUUID()}@example.invalid`,
     phone: "+56912345678",
     petName: "Paciente QA",
@@ -152,6 +154,8 @@ describe("Professional booking migration on an owned isolated schema", () => {
     app = module.createNestApplication({ logger: false });
     configureHttp(app);
     await app.init();
+    // Drive delivery explicitly so the interval cannot race per-test mail settings.
+    app.get(BookingNotificationWorker).onModuleDestroy();
     const c = await db.veterinaryClinic.create({
       data: {
         name: "Isolated booking clinic",
@@ -312,6 +316,30 @@ describe("Professional booking migration on an owned isolated schema", () => {
     }
     if (control) await control.$disconnect();
   });
+  it("stores tutor identity and protects private clinical documents across roles and clinics", async () => {
+    const newTutor = {firstName:"QA identity",lastName:"Tutor",phone:"+56912345678"};
+    await post(`/api/clinics/${clinicId}/tutors`, receptionCookie).send(newTutor).expect(400);
+    await post(`/api/clinics/${clinicId}/tutors`, receptionCookie).send({...newTutor,rut:"12345678-5"}).expect(201);
+    const tutorPath = `/api/clinics/${clinicId}/tutors/${tutorId}`;
+    await request(app.getHttpServer()).patch(tutorPath).set("Origin", origin).set("X-Pawly-CSRF", "1").set("Cookie", receptionCookie).send({rut:"12.345.678-5",insuranceType:"FONASA",fonasaGroup:"B"}).expect(200);
+    const tutor = await request(app.getHttpServer()).get(tutorPath).set("Cookie", receptionCookie).expect(200);
+    expect(tutor.body).toMatchObject({rut:"12345678-5",insuranceType:"FONASA",fonasaGroup:"B"});
+    const endpoint = `/api/clinics/${clinicId}/patients/${patientId}/documents`;
+    const pdf = Buffer.from("%PDF-1.4\nQA isolated fixture\n%%EOF");
+    await post(endpoint, receptionCookie).attach("file",pdf,"exam.pdf").expect(403);
+    await post(endpoint, doctorCookie).attach("file",Buffer.from("<script>bad()</script>"),"fake.pdf").expect(400);
+    const uploaded = await post(endpoint, doctorCookie).attach("file",pdf,"exam.pdf").expect(201);
+    const listing = await request(app.getHttpServer()).get(endpoint).set("Cookie",doctorCookie).expect(200);
+    expect(listing.body).toEqual(expect.arrayContaining([expect.objectContaining({id:uploaded.body.id,name:"exam.pdf"})]));
+    expect(listing.body[0]).not.toHaveProperty("content");
+    const downloaded = await request(app.getHttpServer()).get(`${endpoint}/${uploaded.body.id}`).set("Cookie",doctorCookie).expect(200);
+    expect(downloaded.headers["content-disposition"]).toContain("attachment");
+    expect(downloaded.headers["cache-control"]).toContain("no-store");
+    await request(app.getHttpServer()).get(`${endpoint}/${uploaded.body.id}`).set("Cookie",foreignCookie).expect(403);
+    await request(app.getHttpServer()).get(`${endpoint}/${uploaded.body.id}`).expect(401);
+    await db.patientDocument.delete({where:{id:uploaded.body.id}});
+  });
+
   it("creates the booking tables, optional appointment links and arrival/no-show states", async () => {
     const tables = await db.$queryRaw<
       { table_name: string }[]
@@ -362,6 +390,7 @@ describe("Professional booking migration on an owned isolated schema", () => {
       .expect(401);
   });
   it("creates a pending reservation without manufacturing clinical identities or leaking contacts", async () => {
+    const tutorCount = await db.tutor.count({ where: { clinicId } });
     const input = booking();
     const response = await post(publicPath()).send(input).expect(201);
     expect(response.body).toMatchObject({
@@ -372,7 +401,7 @@ describe("Professional booking migration on an owned isolated schema", () => {
     expect(response.body).not.toHaveProperty("tokenHash");
     expect(await db.appointment.count()).toBe(0);
     expect(await db.bookingEvent.count()).toBe(1);
-    expect(await db.tutor.count({ where: { clinicId } })).toBe(1);
+    expect(await db.tutor.count({ where: { clinicId } })).toBe(tutorCount);
     expect(await db.patient.count({ where: { clinicId } })).toBe(1);
   });
   it("exposes only published enabled professionals and actual availability", async () => {
@@ -832,16 +861,72 @@ describe("Professional booking migration on an owned isolated schema", () => {
       });
     }
   });
+  it("protects reservation PDF and calendar downloads with tenant-scoped credentials", async () => {
+    const input = booking();
+    const created = await post(publicPath()).send(input).expect(201);
+    const access = { reference: created.body.reference, managementToken: input.managementToken };
+    await post(`${publicPath()}/receipt`).send({ ...access, managementToken: randomBytes(32).toString("base64url") }).expect(404);
+    await post(`/api/bookings/${otherSlug}/receipt`).send(access).expect(404);
+    const pdf = await post(`${publicPath()}/receipt`).send(access).expect(201);
+    expect(pdf.headers["content-type"]).toContain("application/pdf");
+    expect(pdf.headers["cache-control"]).toContain("no-store");
+    expect(pdf.body.subarray(0, 4).toString()).toBe("%PDF");
+    await post(`${publicPath()}/calendar`).send(access).expect(409);
+    await patch(`${privatePath()}/requests/${access.reference}`, ownerCookie).send({ action: "CONFIRM", version: 1 }).expect(200);
+    const calendar = await post(`${publicPath()}/calendar`).send(access).expect(201);
+    expect(calendar.text).toContain("METHOD:PUBLISH");
+    expect(calendar.text).toContain("STATUS:CONFIRMED");
+  });
+  it("allows signed email management links but rejects a different clinic or forged key", async () => {
+    const input = booking();
+    const created = await post(publicPath()).send(input).expect(201);
+    const config = app.get(ConfigService);
+    const previous = config.get<string>("BOOKING_LINK_SECRET");
+    config.set("BOOKING_LINK_SECRET", "integration-secret-for-email-links-123456");
+    try {
+      const row = await db.bookingRequest.findUniqueOrThrow({ where: { id: created.body.reference } });
+      const key = emailManagementKey(row, config.get<string>("BOOKING_LINK_SECRET"))!;
+      await post(`${publicPath()}/lookup`).send({ reference: row.id, managementToken: key }).expect(201);
+      await post(`/api/bookings/${otherSlug}/lookup`).send({ reference: row.id, managementToken: key }).expect(404);
+      await post(`${publicPath()}/lookup`).send({ reference: row.id, managementToken: randomBytes(32).toString("base64url") }).expect(404);
+    } finally { config.set("BOOKING_LINK_SECRET", previous); }
+  });
+  it("reports retryable mail as queued and recovers delivery status after retry", async () => {
+    const input = booking();
+    const created = await post(publicPath()).send(input).expect(201);
+    const access = { reference: created.body.reference, managementToken: input.managementToken };
+    const config = app.get(ConfigService);
+    const previousMode = config.get("MAIL_MODE"), previousPassword = config.get("MAIL_PASSWORD");
+    await db.bookingNotification.updateMany({ where: { bookingId: access.reference }, data: { state: "FAILED", attempts: 1, deliverAt: new Date(Date.now() + 86400000) } });
+    config.set("MAIL_MODE", "smtp"); config.set("MAIL_PASSWORD", "isolated-status-fixture");
+    try {
+      const queued = await post(`${publicPath()}/lookup`).send(access).expect(201);
+      expect(queued.body.emailDelivery).toBe("queued");
+      await db.bookingNotification.updateMany({ where: { bookingId: access.reference }, data: { attempts: 3 } });
+      const failed = await post(`${publicPath()}/lookup`).send(access).expect(201);
+      expect(failed.body.emailDelivery).toBe("failed");
+      await db.bookingNotification.updateMany({ where: { bookingId: access.reference }, data: { state: "SENT", deliveredAt: new Date() } });
+      const sent = await post(`${publicPath()}/lookup`).send(access).expect(201);
+      expect(sent.body.emailDelivery).toBe("sent");
+      await db.bookingRequest.update({ where: { id: access.reference }, data: { status: "CONFIRMED" } });
+      await db.bookingNotification.updateMany({ where: { bookingId: access.reference }, data: { state: "SKIPPED", createdAt: new Date(Date.now() + 1000) } });
+      await db.bookingNotification.create({ data: { clinicId, bookingId: access.reference, eventKey: `booking:${access.reference}:confirmed-status-check`, kind: "CONFIRMED", state: "SENT", deliveredAt: new Date(), deliverAt: new Date() } });
+      const confirmed = await post(`${publicPath()}/lookup`).send(access).expect(201);
+      expect(confirmed.body.emailDelivery).toBe("sent");
+    } finally { config.set("MAIL_MODE", previousMode); config.set("MAIL_PASSWORD", previousPassword); }
+  });
   it("captures a notification in local Mailpit once and never enables external delivery", async () => {
     await post(publicPath()).send(booking()).expect(201);
     const config = app.get(ConfigService);
     config.set("MAIL_MODE", "local");
+    config.set("MAIL_HOST", "127.0.0.1");
+    config.set("MAIL_PORT", 1025);
     try {
       await app.get(BookingNotificationWorker).flush();
       await app.get(BookingNotificationWorker).flush();
       const notices = await db.bookingNotification.findMany();
       expect(notices).toHaveLength(1);
-      expect(notices[0]).toMatchObject({ state: "SENT", attempts: 1 });
+      expect(notices[0]).toMatchObject({ state: "CAPTURED", attempts: 1 });
     } finally {
       config.set("MAIL_MODE", "disabled");
     }

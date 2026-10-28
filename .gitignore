@@ -39,3 +39,7 @@ Thumbs.db
 tmp/
 temp/
 .cache/
+
+# Local design proposals and generated receipt previews
+work/
+output/

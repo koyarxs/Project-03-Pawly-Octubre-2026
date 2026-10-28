@@ -10,6 +10,7 @@ import {
   StatusBadge,
 } from "@/components/ui/workspace-ui";
 import { AuthError } from "@/lib/auth";
+import { tutorInsurance } from "@/lib/tutor-insurance";
 import {
   archiveRecord,
   calendarDate,
@@ -31,6 +32,7 @@ import {
   type WorkspaceContext,
 } from "@/components/workspace/workspace-shell";
 import { ClinicalForm } from "./clinical-form";
+import { PatientDocuments } from "./patient-documents";
 import { ClinicalList } from "./clinical-list";
 import { useClinicalLoad } from "./use-clinical-load";
 import "./clinical.css";
@@ -201,6 +203,8 @@ function ClinicalDetail({
     kind === "tutores"
       ? [
           ["Nombre", (record as Tutor).firstName],
+          ["RUT", (record as Tutor).rut ?? null],
+          ["Previsión del tutor", tutorInsurance(record as Tutor)],
           ["Apellidos", (record as Tutor).lastName],
           ["Teléfono", (record as Tutor).phone],
           ["Correo", (record as Tutor).email],
@@ -312,7 +316,7 @@ function ClinicalDetail({
                     href={clinicalPath(context.clinicId, "tutores", tutor.id)}
                   >
                     <RecordIdentity name={fullName(tutor)} kind="person" />
-                    <span>Ver ficha</span>
+                    <span>RUT: {tutor.rut || "Sin registrar"}<br />Previsión del tutor: {tutorInsurance(tutor)}<br />Ver ficha</span>
                   </Link>
                 ) : (
                   <RecordIdentity
@@ -333,6 +337,7 @@ function ClinicalDetail({
           active={record.status === "ACTIVE"}
         />
       )}
+      {kind === "pacientes" && context.access.permissions.includes("consultation:read") && <PatientDocuments context={context} patientId={record.id} active={record.status !== "ARCHIVED"} />}
       {kind === "tutores" && (
         <ClinicalList context={context} kind="pacientes" tutorId={record.id} />
       )}

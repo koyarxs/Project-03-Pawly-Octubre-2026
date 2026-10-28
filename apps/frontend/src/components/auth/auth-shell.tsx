@@ -2,8 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { Brand } from "@/components/brand";
+import { LoginShell } from "./login-shell";
 import "./auth.css";
-export function AuthShell({ children }: { children: React.ReactNode }) {
+export function AuthShell({ children, variant = "default" }: { children: React.ReactNode; variant?: "default" | "login" }) {
+  if (variant === "login") return <LoginShell>{children}</LoginShell>;
   return (
     <div className="pawly-auth">
       <a className="skip-link" href="#contenido">

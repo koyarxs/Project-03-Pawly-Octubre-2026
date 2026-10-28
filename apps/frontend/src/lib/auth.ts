@@ -39,6 +39,12 @@ export interface Registration {
   password: string;
   clinicName: string;
 }
+export interface UserRegistration {
+  name: string;
+  email: string;
+  password: string;
+  role: "RECEPTIONIST" | "VETERINARIAN" | "VET_TECHNICIAN" | "PET_GROOMER";
+}
 export class AuthError extends Error {
   constructor(public readonly status: number) {
     super("Pawly request failed");
@@ -119,6 +125,11 @@ export async function registerClinic(
 export async function login(email: string, password: string): Promise<void> {
   const value = await request("/auth/login", { email, password });
   if (!record(value) || !user(value.user)) throw new AuthError(502);
+}
+export async function registerUser(input: UserRegistration): Promise<{user:PublicUser;clinic:Clinic}> {
+  const value=await request("/auth/register-user",input);
+  if(!record(value)||!user(value.user)||!clinic(value.clinic)) throw new AuthError(502);
+  return {user:value.user,clinic:value.clinic};
 }
 export async function getSession(signal?: AbortSignal): Promise<Session> {
   const value = await request("/auth/me", undefined, signal);

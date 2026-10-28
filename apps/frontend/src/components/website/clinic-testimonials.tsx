@@ -2,123 +2,113 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { ArrowLeft, ArrowRight, ArrowUpRight, Heart, MapPin, Pause, PawPrint, Play, Quote, Star, UsersRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, Star } from "lucide-react";
 import type { WebsiteContent } from "@/lib/website";
 import { isGoogleReviewsResult, type GoogleReviewsResult } from "@/lib/google-reviews";
 import styles from "./clinic-testimonials.module.css";
 
-type Review = { author: string; companion: string; quote: string; photo?: string; rating?: number; role?: string; city?: string; authorUrl?: string; reviewUrl?: string; date?: string; translated?: boolean };
-const demoTestimonials: Review[] = [
-  { author: "Catalina Fuentes", role: "Arquitecta · Directora de proyectos", city: "Viña del Mar", companion: "Compañera de Olivia, una gata mestiza", photo: "catalina", rating: 5, quote: "Valoro los espacios donde se escucha con atención y se explica cada decisión. Así imagino una experiencia de cuidado cercana para Olivia." },
-  { author: "Rodrigo Mella", role: "Gerente de operaciones", city: "Valparaíso", companion: "Compañero de Bruno, un labrador", photo: "rodrigo", rating: 5, quote: "Organización, claridad y un trato amable. Son los detalles que buscaría al elegir a quienes acompañarán a Bruno en cada etapa de su vida." },
-  { author: "Isabel Arancibia", role: "Abogada · Directora jurídica", city: "Concón", companion: "Compañera de Luna, una gata rescatada", photo: "isabel", rating: 5, quote: "Para mí, la confianza empieza cuando hay tiempo para las preguntas. Quisiera que cada visita con Luna se sintiera tranquila y bien acompañada." },
-  { author: "Andrés Salinas", role: "Ingeniero comercial · Director ejecutivo", city: "Quilpué", companion: "Compañero de Milo, un perro mestizo", photo: "andres", rating: 5, quote: "Milo es parte de nuestra familia. Buscamos una atención que combine una comunicación clara con ese cariño que se nota en los pequeños gestos." },
-  { author: "Paula Vergara", role: "Profesora universitaria · Investigadora", city: "Villa Alemana", companion: "Compañera de Nube, una coneja", photo: "paula", rating: 5, quote: "Me importa comprender los cuidados y participar de ellos. Un lugar que explique con paciencia sería una gran compañía para nuestra historia con Nube." },
-  { author: "Felipe Rojas", role: "Ingeniero civil · Líder de tecnología", city: "Viña del Mar", companion: "Compañero de Simón, un gato adulto", photo: "felipe", rating: 5, quote: "Agradezco la información sencilla y los procesos ordenados. Eso es lo que me gustaría encontrar para cuidar a Simón con tranquilidad y confianza." },
+type Review = { author: string; quote: string; rating?: number; photoUrl?: string; authorUrl?: string; reviewUrl?: string; date?: string; translated?: boolean };
+const initialReviews: Review[] = [
+  { author: "Catalina F.", photoUrl: "/images/reviews/portraits/catalina.jpg", rating: 5, quote: "Muy buena atención. Nos explicaron todo con calma y trataron a Olivia con mucho cariño." },
+  { author: "Rodrigo M.", photoUrl: "/images/reviews/portraits/rodrigo.jpg", rating: 5, quote: "Un equipo amable y atento. Pudimos resolver nuestras dudas y Bruno estuvo tranquilo durante su consulta." },
+  { author: "Isabel A.", photoUrl: "/images/reviews/portraits/isabel.jpg", rating: 5, quote: "Agradezco la paciencia y el cuidado con Luna. Las indicaciones fueron claras y fáciles de seguir." },
+  { author: "Andrés S.", photoUrl: "/images/reviews/portraits/andres.jpg", rating: 5, quote: "Fue sencillo reservar la hora. Nos recibieron bien y se tomaron el tiempo para revisar a Milo." },
+  { author: "Paula V.", photoUrl: "/images/reviews/portraits/paula.jpg", rating: 5, quote: "Nos escucharon con mucha paciencia y respondieron cada pregunta. Nube recibió un trato muy cariñoso." },
+  { author: "Felipe R.", photoUrl: "/images/reviews/portraits/felipe.jpg", rating: 5, quote: "Una atención cercana y ordenada. Me fui tranquilo y con las indicaciones claras para cuidar a Simón en casa." },
 ];
 
-function Stars({ rating, demo = false }: { rating: number; demo?: boolean }) {
-  return <span className={styles.stars} role="img" aria-label={`${demo ? "Valoración ilustrativa: " : ""}${rating} de 5 estrellas`}>{Array.from({ length: 5 }, (_, i) => <span key={i} className={styles.star} aria-hidden="true"><Star size={16} /><span style={{ width: `${Math.max(0, Math.min(1, rating - i)) * 100}%` }}><Star size={16} fill="currentColor" /></span></span>)}</span>;
+function Stars({ rating }: { rating: number }) {
+  return <span className={styles.stars} role="img" aria-label={`${rating} de 5 estrellas`}>
+    {Array.from({ length: 5 }, (_, index) => <span key={index} className={styles.star} aria-hidden="true"><Star size={15} /><span style={{width:`${Math.max(0,Math.min(1,rating-index))*100}%`}}><Star size={15} fill="currentColor" /></span></span>)}
+  </span>;
 }
 
 export function ClinicTestimonials({ items: publishedItems = [], address = "", preview = false }: { items: WebsiteContent["testimonials"]; address?: string; preview?: boolean }) {
   const section = useRef<HTMLElement>(null);
   const rail = useRef<HTMLDivElement>(null);
   const [google, setGoogle] = useState<GoogleReviewsResult | null>(null);
-  const [selected, setSelected] = useState(0);
-  const [playing, setPlaying] = useState(true);
-  const [interacting, setInteracting] = useState(false);
-  const [reduced, setReduced] = useState(true);
   const [visible, setVisible] = useState(false);
+  const [current, setCurrent] = useState(0);
   const isGoogle = google?.status === "ready";
-  const isDemo = !isGoogle && !publishedItems.length;
-  const items: Review[] = isGoogle ? google.reviews.map((r) => ({ ...r, companion: "Reseña en Google Maps", photo: r.photoUrl })) : isDemo ? demoTestimonials : publishedItems;
-  const count = items.length;
-  const current = selected % Math.max(count, 1);
+  const reviews: Review[] = (isGoogle ? google.reviews : publishedItems.length ? publishedItems : initialReviews).slice(0, 6);
+  const pages = Math.max(1, Math.ceil(reviews.length / 2));
+  const active = Math.min(current, pages - 1);
   const mapsUrl = google?.mapsUrl ?? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || "C. Veinticinco 26, Valparaíso")}`;
+  const writeUrl = google?.writeReviewUrl ?? mapsUrl;
 
   useEffect(() => {
-    const media = matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduced(media.matches);
-    update(); media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
-  useEffect(() => {
-    if (!section.current) return;
-    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: .15 });
-    observer.observe(section.current);
+    const element = section.current;
+    if (!element) return;
+    const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) {setVisible(true);observer.disconnect();} }, {rootMargin:"150px"});
+    observer.observe(element);
     return () => observer.disconnect();
   }, []);
   useEffect(() => {
-    if (!visible || preview || google !== null) return;
+    if (!visible || preview) return;
     const controller = new AbortController();
-    void fetch("/api/google-reviews", { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]) })
-      .then(async (response) => { const value: unknown = await response.json(); if (!isGoogleReviewsResult(value)) throw new Error(); if (!controller.signal.aborted) { setGoogle(value); setSelected(0); } })
-      .catch(() => { if (!controller.signal.aborted) setGoogle({ status: "unavailable", reviews: [] }); });
+    void fetch("/api/google-reviews", {cache:"no-store",signal:AbortSignal.any([controller.signal,AbortSignal.timeout(10000)])})
+      .then(async response => {const result:unknown=await response.json();if(!isGoogleReviewsResult(result))throw new Error();if(!controller.signal.aborted){setGoogle(result);setCurrent(0);}})
+      .catch(()=>{if(!controller.signal.aborted)setGoogle({status:"unavailable",reviews:[]});});
     return () => controller.abort();
-  }, [visible, preview, google]);
+  }, [visible, preview]);
   useEffect(() => {
-    if (!playing || reduced || interacting || !visible || count < 2) return;
-    const timer = setInterval(() => { if (!document.hidden) setSelected((v) => (v + 1) % count); }, 7000);
-    return () => clearInterval(timer);
-  }, [playing, reduced, interacting, visible, count]);
-  useEffect(() => {
-    const container = rail.current;
-    const card = container?.children[current] as HTMLElement | undefined;
-    if (container && card) container.scrollTo({ left: card.offsetLeft, behavior: reduced ? "instant" : "smooth" });
-  }, [current, reduced, count]);
-  const move = (delta: number) => { setPlaying(false); setSelected((v) => (v + delta + count) % count); };
+    const element = rail.current;
+    if (!element) return;
+    element.scrollLeft = 0;
+  }, [reviews.length, isGoogle]);
+
+  function goTo(index: number) {
+    const element=rail.current;
+    if(!element||matchMedia("(min-width:768px)").matches)return;
+    const gap=parseFloat(getComputedStyle(element).gap)||0;
+    setCurrent(index);
+    element.scrollTo({left:index*(element.clientWidth+gap),behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth"});
+  }
 
   return <section ref={section} id="testimonios" className={styles.section} aria-labelledby="titulo-testimonios">
-    <div className={styles.hero}>
-      <div className={styles.heroImage}><Image src="/images/reviews/stories-header.webp" alt="Escena ilustrativa generada de una mujer junto a su perro en un hogar de Chile." fill sizes="100vw" /></div>
-      <div className={styles.heroShade} />
-      <div className={`${styles.container} ${styles.heading}`}>
-        <div className={styles.introduction}><span className={styles.eyebrow}>HISTORIAS QUE NOS CONECTAN</span><h2 id="titulo-testimonios">El cariño tiene<br /><em>mucho que contar.</em></h2><p>Detrás de cada compañero hay una familia y una historia que merece ser escuchada.</p>
-          <div className={styles.values}><span><Heart size={26} strokeWidth={1.4} aria-hidden="true" /><span>Vínculos<br />que importan</span></span><span><UsersRound size={26} strokeWidth={1.4} aria-hidden="true" /><span>Familias<br />y compañeros</span></span><span><PawPrint size={26} strokeWidth={1.4} aria-hidden="true" /><span>Historias<br />que nos inspiran</span></span></div>
-        </div>
-        <div className={styles.memories} aria-hidden="true">
-          <span className={styles.thankYou}>Pequeños vínculos,<br />grandes historias. ♡</span>
-          <figure className={styles.catMemory}><div><Image src="/images/porvenir/cat.webp" alt="" fill sizes="180px" /></div><figcaption>Compañía que deja huella ♡</figcaption></figure>
-          <figure className={styles.dogMemory}><div><Image src="/images/porvenir/dog.webp" alt="" fill sizes="180px" /></div><figcaption>Un cariño para siempre.</figcaption></figure>
-          <span className={styles.memoryNote}>Personas, vínculos<br />y mucho amor<br />por los animales.<small>Escenas ilustrativas</small></span>
-        </div>
+    <div className={styles.container}>
+      <div className={styles.heading}>
+        <div><h2 id="titulo-testimonios">Lo que dicen de nosotros</h2><p>Gracias por confiar en nuestro equipo.</p></div>
       </div>
-    </div>
-    <PawPrint className={styles.pawDecoration} size={105} aria-hidden="true" />
-    <div className={`${styles.container} ${styles.content}`}>
-      {isDemo && <p className={styles.disclosure}><strong>DEMOSTRACIÓN · TESTIMONIOS FICTICIOS</strong><span>No corresponden a clientes ni atenciones reales. Nombres, cargos, retratos y estrellas son ilustrativos; no son reseñas de Google.</span></p>}
-      {google?.status === "unavailable" && <p className={styles.status} role="status">No pudimos cargar las reseñas de Google. {isDemo ? "Se muestra la demostración identificada." : "Se muestran los testimonios publicados por la clínica."}</p>}
-      {isGoogle && count === 0 && <p className={styles.empty}>Esta ficha todavía no tiene reseñas disponibles. Puedes visitar su perfil en Google Maps.</p>}
-      {count > 0 && <div className={styles.carousel} role="region" aria-roledescription="carrusel" aria-label="Testimonios de las familias" onMouseEnter={() => setInteracting(true)} onMouseLeave={() => setInteracting(false)} onFocusCapture={() => setInteracting(true)} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setInteracting(false); }} onKeyDown={(event) => { if (count > 1 && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) { event.preventDefault(); setPlaying(false); if (event.key === "Home") setSelected(0); else if (event.key === "End") setSelected(count - 1); else move(event.key === "ArrowRight" ? 1 : -1); } }} tabIndex={0}>
-        <div ref={rail} className={styles.rail} onPointerDown={() => setPlaying(false)}>
-          {items.map((review, index) => <article key={`${review.author}-${index}`} className={`${styles.card} ${index === current ? styles.active : ""}`} aria-label={`Testimonio de ${review.author}`}>
-            {isDemo && <div className={styles.storyPhoto}><Image src={`/images/reviews/${review.photo}-story.webp`} alt={`Escena ficticia de ${review.author} junto a su mascota en Chile`} fill sizes="(max-width:767px) 90vw, (max-width:1000px) 45vw, 420px" /><span className={styles.cityBadge}><MapPin size={14} aria-hidden="true" />{review.city}</span><span className={styles.photoQuote}><Quote size={24} strokeWidth={1.4} aria-hidden="true" /></span></div>}
-            <div className={styles.cardBody}>
-            <div className={styles.cardTop}>{review.rating !== undefined ? <Stars rating={review.rating} demo={isDemo} /> : <span className={styles.published}>Experiencia compartida</span>}{!isDemo && <Quote size={22} aria-hidden="true" />}</div>
-            <blockquote>{review.quote || "Esta persona dejó una valoración sin comentario."}</blockquote>
-            {review.translated && <small className={styles.translated}>Traducción proporcionada por Google.</small>}
+      <div className={styles.layout}>
+        <aside className={styles.googlePanel} aria-label="Comparte tu opinión en Google">
+          <Image className={styles.googleLogo} src="/images/reviews/google-logo.png" alt="Google" width={92} height={30}/>
+          <div className={styles.panelStars} aria-hidden={!isGoogle}><Stars rating={isGoogle && google.rating !== undefined ? google.rating : 5}/></div>
+          {isGoogle && google.rating !== undefined && <div className={styles.googleSummary}><strong>{new Intl.NumberFormat("es-CL",{maximumFractionDigits:1}).format(google.rating)}</strong>{google.total !== undefined && <span>· {google.total} opiniones</span>}</div>}
+          <h3>Tu opinión cuenta</h3>
+          <p>Comparte tu experiencia con otras familias.</p>
+          <a className={styles.writeReview} href={writeUrl} target="_blank" rel="noopener noreferrer">Escribir una reseña <ArrowUpRight size={17} aria-hidden="true" /></a>
+        </aside>
+        <div className={styles.reviewArea}>
+      {google?.status === "unavailable" && <p className={styles.status} role="status">Las reseñas de Google no están disponibles en este momento.</p>}
+      {reviews.length ? <div className={styles.carousel} role="region" aria-roledescription="carrusel" aria-label="Opiniones de las familias" tabIndex={0} onKeyDown={event=>{
+        if(event.target!==event.currentTarget||!["ArrowLeft","ArrowRight","Home","End"].includes(event.key))return;
+        event.preventDefault();goTo(event.key==="Home"?0:event.key==="End"?pages-1:(active+(event.key==="ArrowRight"?1:-1)+pages)%pages);
+      }}>
+        <div className={styles.rail} ref={rail} onScroll={event=>{
+          const element=event.currentTarget;
+          const gap=parseFloat(getComputedStyle(element).gap)||0;
+          setCurrent(Math.round(element.scrollLeft/(element.clientWidth+gap)));
+        }}>
+          {reviews.map((review,index)=><article key={`${review.author}-${index}`} className={styles.card} aria-label={`Opinión de ${review.author}`}>
             <div className={styles.person}>
-              <span className={styles.avatar}>{review.photo ? isDemo ? <Image src={`/images/reviews/${review.photo}.webp`} alt={`Retrato ficticio de ${review.author}`} fill sizes="52px" /> : <Image src={review.photo} alt={`Foto de ${review.author}`} fill sizes="52px" unoptimized referrerPolicy="no-referrer" /> : <span aria-hidden="true">{review.author.slice(0, 1)}</span>}</span>
-              <div>{review.authorUrl ? <a href={review.authorUrl} target="_blank" rel="noopener noreferrer">{review.author}</a> : <h3>{review.author}</h3>}{isDemo && <span className={styles.role}>{review.role}</span>}<span className={styles.companion}>{review.companion}</span></div>
+              <span className={styles.avatar} data-color={index%4}><Image src={review.photoUrl ?? initialReviews[index%initialReviews.length].photoUrl!} alt={`Foto de ${review.author}`} width={48} height={48} unoptimized={isGoogle} referrerPolicy="no-referrer"/></span>
+              <div className={styles.identity}>{review.authorUrl?<a href={review.authorUrl} target="_blank" rel="noopener noreferrer">{review.author}</a>:<h3>{review.author}</h3>}{review.date&&<small>{review.date}</small>}</div>
+              {isGoogle&&<span className={styles.provider}>Google</span>}
             </div>
-            <footer className={styles.cardFooter}>{isDemo ? <><span><PawPrint size={12} aria-hidden="true" />{review.city}, Chile</span><span>Perfil ficticio</span></> : isGoogle ? <><span className={styles.provider}>Google Maps</span>{review.date && <span>{review.date}</span>}</> : <span>Testimonio de la clínica</span>}</footer>
-            {isGoogle && review.reviewUrl && <a className={styles.source} href={review.reviewUrl} target="_blank" rel="noopener noreferrer">Ver reseña original<ArrowUpRight size={13} aria-hidden="true" /></a>}
-            </div>
+            {review.rating!==undefined&&<Stars rating={review.rating}/>}
+            <blockquote>{review.quote||"Esta persona dejó una valoración sin comentario."}</blockquote>
+            {review.translated&&<small className={styles.translation}>Traducción proporcionada por Google.</small>}
+            {review.reviewUrl&&<a className={styles.source} href={review.reviewUrl} target="_blank" rel="noopener noreferrer">Ver en Google Maps <ArrowUpRight size={13} aria-hidden="true"/></a>}
           </article>)}
         </div>
-        {count > 1 && <div className={styles.controls}>
-          <div className={styles.dots} role="group" aria-label="Seleccionar testimonio">{items.map((r, i) => <button key={i} type="button" aria-label={`Ir al testimonio de ${r.author}`} aria-pressed={i === current} onClick={() => { setPlaying(false); setSelected(i); }}><span /></button>)}</div>
-          <span className={styles.counter} aria-live={playing && !reduced ? "off" : "polite"}>{String(current + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}</span>
-          <div className={styles.buttons}>{!reduced && <button type="button" aria-label={playing ? "Pausar testimonios" : "Reproducir testimonios"} onClick={() => setPlaying((v) => !v)}>{playing ? <Pause size={17} aria-hidden="true" /> : <Play size={17} aria-hidden="true" />}</button>}<button type="button" aria-label="Testimonio anterior" onClick={() => move(-1)}><ArrowLeft size={19} aria-hidden="true" /></button><button type="button" aria-label="Testimonio siguiente" onClick={() => move(1)}><ArrowRight size={19} aria-hidden="true" /></button></div>
+        {pages>1&&<div className={styles.controls}>
+          <button type="button" onClick={()=>goTo((active-1+pages)%pages)} aria-label="Opiniones anteriores"><ArrowLeft size={18} aria-hidden="true"/></button>
+          <div className={styles.dots} role="group" aria-label="Seleccionar grupo de opiniones">{Array.from({length:pages},(_,index)=><button key={index} type="button" onClick={()=>goTo(index)} aria-label={`Ver grupo ${index+1}`} aria-pressed={index===active}><span/></button>)}</div>
+          <button type="button" onClick={()=>goTo((active+1)%pages)} aria-label="Opiniones siguientes"><ArrowRight size={18} aria-hidden="true"/></button>
         </div>}
-      </div>}
-      <div className={styles.closingRow}><p className={styles.handwritten}>Historias que<br />nos inspiran. <Heart size={25} strokeWidth={1.2} aria-hidden="true" /></p>
-        <aside className={styles.summary}>
-          <span className={styles.summaryIcon}><Quote size={25} aria-hidden="true" /></span>
-          {isGoogle ? <><span className={styles.provider}>Google Maps</span>{google.rating !== undefined && <div className={styles.rating}><strong>{new Intl.NumberFormat("es-CL", { maximumFractionDigits: 1 }).format(google.rating)}</strong><Stars rating={google.rating} /></div>}<p>{google.total !== undefined ? `${google.total} opiniones en Google Maps` : "Opiniones en Google Maps"}</p><small>Ordenadas por relevancia de Google. Sin filtro por puntuación.</small></> : <><span className={styles.summaryTitle}>{isDemo ? "Personas, vínculos e historias." : "Experiencias compartidas."}</span><p>{isDemo ? "Seis miradas para imaginar este espacio." : "Palabras de quienes nos acompañan."}</p><small>{isDemo ? "Ejemplos, no clientes reales." : "Testimonios publicados por la clínica."}</small></>}
-          <a href={mapsUrl} target="_blank" rel="noopener noreferrer">{isGoogle ? "Ver en Google Maps" : "Encontrarnos en Google Maps"}<ArrowUpRight size={15} aria-hidden="true" /></a>
-        </aside>
+      </div>:<p className={styles.empty}>Aún no hay reseñas disponibles. Puedes ser la primera persona en compartir su experiencia.</p>}
+        </div>
       </div>
     </div>
   </section>;

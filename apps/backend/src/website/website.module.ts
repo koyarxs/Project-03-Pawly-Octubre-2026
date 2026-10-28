@@ -46,7 +46,7 @@ class PublicWebsiteController {
 
 @Controller("clinics/:clinicId/website")
 @UseGuards(SessionGuard, ClinicGuard)
-@RequirePermissions("clinic:manage")
+@RequirePermissions("website:manage")
 class WebsiteAdminController {
   constructor(private readonly website: WebsiteService) {}
   @Get()

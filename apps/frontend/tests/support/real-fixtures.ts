@@ -5,7 +5,7 @@ if (api !== "http://localhost:4001/api")
   throw new Error("Real QA requires the isolated API runner on port 4001.");
 
 export const test = base.extend({
-  context: async ({ context }, runWithContext) => {
+  context: async ({ context }, runWithContext, info) => {
     const unexpectedOrigins: string[] = [];
     await context.route("**/*", async (route) => {
       const url = new URL(route.request().url());
@@ -13,7 +13,10 @@ export const test = base.extend({
         ["http:", "https:"].includes(url.protocol) &&
         !["http://localhost:3100", "http://localhost:4001"].includes(url.origin)
       ) {
-        unexpectedOrigins.push(url.origin);
+        // Documentation scrolls past the lazy map. Block it without using an external service.
+        if (!(info.file.endsWith("documentation.real.spec.ts") && url.hostname === "maps.google.com")) {
+          unexpectedOrigins.push(url.origin);
+        }
         await route.abort("blockedbyclient");
         return;
       }

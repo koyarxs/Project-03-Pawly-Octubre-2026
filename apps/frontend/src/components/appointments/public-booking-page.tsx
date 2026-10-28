@@ -2,7 +2,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { PorvenirLogo } from "@/components/brand";
-import { ServiceVisual, serviceCaption } from "./service-visual";
+import { serviceCaption, ServiceVisual } from "./service-visual";
+import { BookingDateStrip } from "./booking-date-strip";
+import { BookingCancellation } from "./booking-cancellation";
+import { isValidRut, normalizeRut } from "@/lib/rut";
+import { readBookingIntent, type BookingIntent } from "@/lib/booking-intent";
 import { AuthError } from "@/lib/auth";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
@@ -17,8 +21,9 @@ import {
   ShieldCheck,
   Stethoscope,
   Heart,
-  Syringe,
-  HeartPulse,
+  MapPin,
+  Mail,
+  Search,
 } from "lucide-react";
 import {
   publicBooking,
@@ -27,6 +32,7 @@ import {
   bookingDate,
   managementToken,
   bookingStates,
+  bookingDocument,
   type BookingCatalog,
   type BookingReceipt,
   type BookingSlot,
@@ -34,6 +40,7 @@ import {
 import { localStamp, shiftDate } from "@/lib/appointment-time";
 import styles from "./public-booking.module.css";
 const steps = [
+  "Tutor",
   "Servicio",
   "Profesional",
   "Fecha y hora",
@@ -70,7 +77,7 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
   const [catalog, setCatalog] = useState<BookingCatalog | null>(null),
     [error, setError] = useState(""),
     [reload, setReload] = useState(0);
-  const [step, setStep] = useState(0),
+  const [step, setStep] = useState(-1),
     [serviceId, setServiceId] = useState(""),
     [professionalId, setProfessionalId] = useState(""),
     [date, setDate] = useState(""),
@@ -80,7 +87,11 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
     slots?: BookingSlot[];
     error?: string;
   }>({ key: "" });
+  const [searchMode, setSearchMode] = useState<"service" | "professional">("service");
+  const [professionalQuery, setProfessionalQuery] = useState("");
+  const [downloading, setDownloading] = useState(false);
   const [details, setDetails] = useState({
+    ownerRut: "",
     ownerName: "",
     email: "",
     phone: "",
@@ -94,7 +105,7 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
     [receipt, setReceipt] = useState<BookingReceipt | null>(null),
     [identity, setIdentity] = useState<Identity | null>(null),
     [manage, setManage] = useState(false),
-    [cancelReason, setCancelReason] = useState("");
+    [cancellationOpen, setCancellationOpen] = useState(false);
   const [lookup, setLookup] = useState<Identity>({
       reference: "",
       managementToken: "",
@@ -107,6 +118,9 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
     } | null>(null),
     inFlight = useRef(false);
   const header = useRef<HTMLHeadingElement>(null);
+  const incomingSelection = useRef<BookingIntent | null>(null);
+  const selectionRead = useRef(false);
+  const emailLinkRead = useRef(false);
   useEffect(() => {
     const abort = new AbortController();
     void (async () => {
@@ -127,6 +141,11 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
           abort.signal,
         );
         if (!abort.signal.aborted) {
+          if(!selectionRead.current){
+            selectionRead.current=true;
+            const intent=readBookingIntent(window.location.search,data);
+            if(intent){incomingSelection.current=intent;setServiceId(intent.serviceId);setProfessionalId(intent.professionalId);setDate(intent.date);}
+          }
           setCatalog(
             data.demo
               ? {
@@ -168,9 +187,41 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
     service?.professionalIds.includes(p.id),
   ) || [];
   const selectedProfessional = catalog?.professionals.find((p) => p.id === professionalId);
+  const visibleProfessionals = eligibleProfessionals.filter(person => searchMode !== "professional" || person.name.toLocaleLowerCase("es").includes(professionalQuery.trim().toLocaleLowerCase("es")));
+  useEffect(() => {
+    if (!catalog || emailLinkRead.current) return;
+    emailLinkRead.current = true;
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    const reference = fragment.get("reference"), managementToken = fragment.get("key");
+    if (!reference || !managementToken || !/^[0-9a-f-]{36}$/i.test(reference) || !/^[A-Za-z0-9_-]{43}$/.test(managementToken)) return;
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    const abort = new AbortController();
+    const access = { reference, managementToken };
+    void publicBooking<BookingReceipt>(`/${encodeURIComponent(catalog.clinic.slug)}/lookup`, access, abort.signal).then(row => { if (!abort.signal.aborted) { saveReceipt(row, access); setManage(false); } }).catch(e => { if (!abort.signal.aborted) { setLookup(access); setManage(true); setError(bookingError(e)); } });
+    return () => abort.abort();
+    // This capability is read once when the public catalog is ready.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalog?.clinic.slug]);
   const selectedPortrait = catalog?.demo && selectedProfessional
     ? projectProfessionals[selectedProfessional.name]?.photo
     : undefined;
+  useEffect(() => {
+    if (!receipt || !identity || !["queued", "failed"].includes(receipt.emailDelivery || "") || !slug) return;
+    const abort = new AbortController();
+    let attempts = 0;
+    let checking = false;
+    const timer = window.setInterval(() => {
+      if (checking) return;
+      if (++attempts >= 64) window.clearInterval(timer);
+      checking = true;
+      void publicBooking<BookingReceipt>(`/${encodeURIComponent(slug)}/lookup`, identity, abort.signal).then(row => {
+        if (!abort.signal.aborted) setReceipt(current => current?.reference === row.reference && row.version >= current.version ? row : current);
+      }).catch(() => { /* Download remains available even if mail status cannot be refreshed. */ }).finally(() => { checking = false; });
+    }, 10000);
+    return () => { window.clearInterval(timer); abort.abort(); };
+    // Poll only while this receipt is awaiting a delivery result.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [receipt?.reference, receipt?.emailDelivery, identity?.managementToken, slug]);
   const effectiveService = receipt?.serviceId || serviceId;
   const effectiveProfessional = reschedule
     ? receipt?.professionalId || professionalId
@@ -198,13 +249,21 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
       abort.signal,
     )
       .then((data) => {
-        if (!abort.signal.aborted)
+        if (!abort.signal.aborted) {
           setSlotState({
             key: slotKey,
             slots: [
-              ...new Map(data.slots.map((s) => [s.startsAt, s])).values(),
+              ...new Map(data.slots.map((s) => [`${s.professionalId}:${s.startsAt}`, s])).values(),
             ],
           });
+          const intent=incomingSelection.current;
+          if(intent && intent.serviceId===effectiveService && intent.professionalId===effectiveProfessional && intent.date===date){
+            const match=data.slots.find(slot=>slot.startsAt===intent.startsAt && slot.professionalId===intent.professionalId);
+            incomingSelection.current=null;
+            setSelected(match ?? null);
+            if(!match)setError("El horario elegido ya no está disponible. Selecciona otro horario para continuar.");
+          }
+        }
       })
       .catch((e) => {
         if (!abort.signal.aborted)
@@ -225,7 +284,7 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
     requestAnimationFrame(() => header.current?.focus());
   }
   function saveReceipt(row: BookingReceipt, key: Identity) {
-    setReceipt(row);
+    setReceipt(previous => previous?.reference === row.reference ? { ...previous, ...row } : row);
     setIdentity(key);
     setError("");
     try {
@@ -298,7 +357,7 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
       inFlight.current = false;
     }
   }
-  async function changeBooking(event: FormEvent, cancel: boolean) {
+  async function changeBooking(event: FormEvent, cancel: boolean, reason = "") {
     event.preventDefault();
     if (!identity || !receipt || inFlight.current || (!cancel && !selected))
       return;
@@ -309,7 +368,7 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
       const row = await publicBooking<BookingReceipt>(
         `/${encodeURIComponent(slug)}/${cancel ? "cancel" : "reschedule"}`,
         cancel
-          ? { ...identity, reason: cancelReason }
+          ? { ...identity, reason }
           : {
               ...identity,
               version: receipt.version,
@@ -321,28 +380,28 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
       setSelected(null);
       setReload((n) => n + 1);
     } catch (e) {
-      setError(bookingError(e));
+      setError(cancel && e instanceof AuthError && e.status === 409 ? "No pudimos anular la reserva. El estado o el plazo de modificación cambió. Contacta al equipo de la clínica para revisarla." : bookingError(e));
     } finally {
       setBusy(false);
       inFlight.current = false;
     }
   }
-  function download() {
+  async function download(kind: "receipt" | "calendar" = "receipt") {
     if (!receipt || !identity) return;
-    const blob = new Blob(
-      [
-        `Comprobante de reserva\nClínica: ${catalog?.clinic.name}\nReferencia: ${receipt.reference}\nEstado: ${bookingStates[receipt.status]}\nFecha: ${bookingDate(receipt.startsAt, timezone)} ${bookingTime(receipt.startsAt, timezone)}\nClave privada de gestión: ${identity.managementToken}\nGestionar desde: ${window.location.origin}/reservar/${slug}\nGuarda este comprobante para consultar o modificar tu reserva. No compartas la clave de gestión.`,
-      ],
-      { type: "text/plain;charset=utf-8" },
-    );
+    if (downloading) return;
+    setDownloading(true);
+    try {
+    const blob = await bookingDocument(slug, kind, identity);
     const url = URL.createObjectURL(blob),
       a = document.createElement("a");
     a.href = url;
-    a.download = `reserva-${receipt.reference}.txt`;
+    a.download = `${kind === "receipt" ? "comprobante" : "cita"}-porvenir-${receipt.reference}.${kind === "receipt" ? "pdf" : "ics"}`;
     a.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) { setError(bookingError(e)); } finally { setDownloading(false); }
   }
   function manageExisting() {
+    setCancellationOpen(false);
     try {
       const saved = sessionStorage.getItem(`pawly-booking:${slug}`);
       if (saved) setLookup(JSON.parse(saved));
@@ -351,21 +410,28 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
     setReceipt(null);
     setError("");
   }
+  function bookAnother() {
+    setDetails(previous => ({ ...previous, petName: "", reason: "", additionalInfo: "", website: "" }));
+    setReceipt(null); setIdentity(null); setCancellationOpen(false); setReschedule(false); setManage(false);
+    setSelected(null); setServiceId(""); setProfessionalId(""); setDate(""); submission.current = null;
+    navigate(isValidRut(details.ownerRut) ? 0 : -1);
+  }
   const currentSlots: { slots?: BookingSlot[]; error?: string } =
     slotState.key === slotKey ? slotState : {};
+  const firstDay = localStamp(new Date(), timezone).slice(0, 10);
+  const lastDay = shiftDate(firstDay, catalog?.policy.maxAdvanceDays || 60);
   const slotsPanel = (
     <div className={styles.slotsPanel}>
+      <BookingDateStrip value={date} min={firstDay} max={lastDay} onChange={value => { setDate(value); setSelected(null); }} />
+      <div className={styles.dateInputRow}>
       <label>
         Fecha de la cita
         <input
           type="date"
           required
           value={date}
-          min={localStamp(new Date(), timezone).slice(0, 10)}
-          max={shiftDate(
-            localStamp(new Date(), timezone).slice(0, 10),
-            catalog?.policy.maxAdvanceDays || 60,
-          )}
+          min={firstDay}
+          max={lastDay}
           onChange={(e) => {
             setDate(e.target.value);
             setSelected(null);
@@ -373,9 +439,9 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
         />
       </label>
       <p className={styles.help}>
-        Horario local de la clínica · {timezone}. Los horarios se vuelven a
-        validar al reservar.
+        Horario local de la clínica · {timezone}.
       </p>
+      </div>
       {date &&
         (currentSlots.error ? (
           <p role="alert">{currentSlots.error}</p>
@@ -388,14 +454,15 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
             <p>Prueba otro día o profesional.</p>
           </div>
         ) : (
-          <fieldset>
+          <fieldset className={styles.availabilityResult}>
+            <div className={styles.availableProfessional}><span className={styles.avatar}><Stethoscope size={23} aria-hidden="true" /></span><div><strong>{catalog?.professionals.find(person => person.id === effectiveProfessional)?.name || "Equipo de la clínica"}</strong><span>{service?.name || "Atención veterinaria"}</span></div><small>{currentSlots.slots.length} horas</small></div>
             <legend>Horas disponibles</legend>
             <div className={styles.slots}>
               {currentSlots.slots.map((slot) => (
                 <label
-                  key={slot.startsAt}
+                  key={`${slot.professionalId}:${slot.startsAt}`}
                   className={
-                    selected?.startsAt === slot.startsAt
+                    selected?.startsAt === slot.startsAt && selected.professionalId === slot.professionalId
                       ? styles.selectedSlot
                       : ""
                   }
@@ -403,10 +470,10 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
                   <input
                     type="radio"
                     name="slot"
-                    checked={selected?.startsAt === slot.startsAt}
+                    checked={selected?.startsAt === slot.startsAt && selected.professionalId === slot.professionalId}
                     onChange={() => setSelected(slot)}
                   />
-                  <span>{bookingTime(slot.startsAt, timezone)}</span>
+                  <span>{bookingTime(slot.startsAt, timezone).split(" GMT")[0]}</span>
                 </label>
               ))}
             </div>
@@ -428,39 +495,15 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
         <aside className={styles.sidebar}>
           <Image src="/images/booking/veterinary-dog.jpg" alt="Un veterinario revisa a un perro con su estetoscopio" fill sizes="(max-width: 900px) 100vw, 1400px" className={styles.featurePhoto} priority />
           <div className={styles.photoLabel}><Heart size={16} aria-hidden="true" /> CERCA EN CADA ETAPA</div>
-          <div className={styles.photoDoodles} aria-hidden="true">
-            <PawPrint size={38} /><Heart size={30} />
-          </div>
           <div className={styles.photoCaption}>
             <span>PEQUEÑAS PATAS. GRANDES HISTORIAS.</span>
             <h2>Su próxima aventura<br />empieza <em>con bienestar.</em></h2>
-            <div className={styles.welcomeCard}>
-              <Image src="/images/booking/veterinary-cat.jpg" alt="Atención veterinaria de un gato" width={60} height={60} sizes="100px" className={styles.catThumbnail} />
-              <div><strong>Nos encanta acompañarlos.</strong><p>Elige su atención y encuentra un momento para cuidarlo.</p></div>
-            </div>
+            <p>Una atención a su medida. Un equipo para acompañarte.</p>
           </div>
         </aside>
         <div className={styles.workspace}>
-          {catalog?.available && !receipt && !manage && (
-            <nav className={styles.quickServices} aria-label="Atenciones frecuentes">
-              {[
-                { match: "general", label: "Consulta general", Icon: Stethoscope },
-                { match: "vacun", label: "Vacunas al día", Icon: Syringe },
-                { match: "control médico", label: "Control y bienestar", Icon: HeartPulse },
-              ].map(({ match, label, Icon }) => {
-                const attention = catalog.services.find((s) => s.name.toLocaleLowerCase("es").includes(match) && s.professionalIds.length);
-                return attention ? <button key={match} type="button" disabled={busy} onClick={() => {
-                  setServiceId(attention.id);
-                  setProfessionalId("");
-                  setSelected(null);
-                  navigate(1);
-                }}><span className={styles.quickIcon}><Icon size={23} aria-hidden="true" /></span><span>{label}</span><CalendarDays size={17} aria-hidden="true" /></button> : null;
-              })}
-            </nav>
-          )}
           <header className={styles.bookingHeading}>
-            <div><span className={styles.eyebrow}>PORVENIR · AGENDA VETERINARIA</span><h1>Agendar cita</h1><p>Un momento para ti. Toda una vida para ellos.</p></div>
-            <Image src="/images/booking/pawly-companions.webp" alt="" width={132} height={104} className={styles.mascot} sizes="132px" />
+            <div><span className={styles.eyebrow}>CLÍNICA VETERINARIA PORVENIR</span><h1>{cancellationOpen || receipt?.status === "CANCELLED" ? "Anular hora" : "Reserva de hora"}</h1><p>{cancellationOpen || receipt?.status === "CANCELLED" ? "Tu reserva, con toda la información a mano." : receipt ? "Los detalles de su próxima visita." : manage ? "Consulta o modifica una reserva existente." : `Paso ${step + 2} de ${steps.length} · ${steps[step + 1]}`}</p></div>
           </header>
           {catalog && <button type="button" className={`${styles.textButton} ${styles.manageLink}`} onClick={manageExisting}>Tengo una reserva <ArrowRight size={14} aria-hidden="true" /></button>}
           {service && !receipt && !manage && (
@@ -553,6 +596,8 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
                 </button>
               </div>
             </form>
+          ) : receipt && (cancellationOpen || receipt.status === "CANCELLED") ? (
+            <BookingCancellation receipt={receipt} clinicName={catalog.clinic.name} address={catalog.clinic.address || ""} serviceName={catalog.services.find(item => item.id === receipt.serviceId)?.name || "Atención veterinaria"} professionalName={catalog.professionals.find(person => person.id === receipt.professionalId)?.name || "Equipo de la clínica"} petName={receipt.petName || details.petName} ownerName={receipt.ownerName || details.ownerName} deadline={new Date(Date.parse(receipt.startsAt) - (catalog.policy.cancellationNoticeMinutes || 0) * 60000).toISOString()} busy={busy} downloading={downloading} onConfirm={(event, reason) => void changeBooking(event, true, reason)} onKeep={() => { setCancellationOpen(false); setError(""); }} onBookAnother={bookAnother} onDownload={() => void download()} />
           ) : receipt ? (
             <div className={styles.receipt}>
               <CheckCircle2 size={44} />
@@ -567,6 +612,9 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
                     : "Reserva actualizada."}
               </h2>
               <p role="status">{receipt.message}</p>
+              <div className={styles.receiptHero}><CalendarDays size={30} strokeWidth={1.5} aria-hidden="true" /><div><span>{catalog.services.find(item => item.id === receipt.serviceId)?.name || "Atención veterinaria"}</span><strong>{bookingDate(receipt.startsAt, timezone)}</strong><span>{bookingTime(receipt.startsAt, timezone)} · {catalog.professionals.find(person => person.id === receipt.professionalId)?.name}</span></div></div>
+              {(receipt.petName || details.petName) && <p><strong>Paciente:</strong> {receipt.petName || details.petName}{(receipt.ownerName || details.ownerName) ? ` · Tutor: ${receipt.ownerName || details.ownerName}` : ""}</p>}
+              {catalog.clinic.address && <p className={styles.clinicAddress}><MapPin size={17} aria-hidden="true" />{catalog.clinic.address}</p>}
               <dl>
                 <div>
                   <dt>Referencia</dt>
@@ -588,14 +636,16 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
                   </dd>
                 </div>
               </dl>
-              <button type="button" onClick={download}>
+              <div className={styles.receiptDownloads}>
+              <button type="button" className={styles.primary} disabled={downloading} onClick={() => void download()}>
                 <Download size={16} />
-                Guardar comprobante y clave de gestión
+                {downloading ? "Preparando documento…" : "Descargar comprobante PDF"}
               </button>
+              {receipt.confirmed && <button type="button" disabled={downloading} onClick={() => void download("calendar")}><CalendarDays size={16} aria-hidden="true" /> Añadir al calendario</button>}
+              </div>
+              <p className={styles.deliveryNote}><Mail size={16} aria-hidden="true" />{receipt.emailDelivery === "sent" ? `Comprobante enviado a ${receipt.email || details.email}.` : receipt.emailDelivery === "queued" ? `Enviaremos el comprobante a ${receipt.email || details.email}.` : receipt.emailDelivery === "failed" ? "No pudimos entregar el correo. Puedes descargar tu comprobante aquí." : "Tu comprobante está disponible para descargar. El envío por correo todavía no está activado."}</p>
               <p className={styles.help}>
-                Guarda el comprobante para volver a gestionar tu reserva. No se
-                ha verificado la identidad del tutor ni se han modificado fichas
-                clínicas.
+                Conserva el documento y su clave privada para consultar o gestionar tu reserva.
               </p>
               {["PENDING", "CONFIRMED"].includes(receipt.status) && (
                 <>
@@ -605,6 +655,7 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
                       disabled={!catalog.available}
                       onClick={() => {
                         setReschedule(!reschedule);
+                        setCancellationOpen(false);
                         setDate(
                           localStamp(receipt.startsAt, timezone).slice(0, 10),
                         );
@@ -613,6 +664,7 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
                     >
                       Reprogramar
                     </button>
+                    <button type="button" onClick={() => { setCancellationOpen(true); setReschedule(false); setError(""); }}>Anular hora</button>
                   </div>
                   {reschedule && (
                     <form onSubmit={(e) => void changeBooking(e, false)}>
@@ -625,21 +677,6 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
                       </button>
                     </form>
                   )}
-                  <form
-                    className={styles.cancel}
-                    onSubmit={(e) => void changeBooking(e, true)}
-                  >
-                    <label>
-                      Motivo de cancelación
-                      <input
-                        value={cancelReason}
-                        onChange={(e) => setCancelReason(e.target.value)}
-                        required
-                        maxLength={500}
-                      />
-                    </label>
-                    <button disabled={busy}>Cancelar reserva</button>
-                  </form>
                 </>
               )}
               {receipt.status === "CONVERTED" && (
@@ -662,9 +699,10 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
                 {steps.map((label, i) => (
                   <li
                     key={label}
-                    aria-current={step === i ? "step" : undefined}
+                    aria-current={step === i - 1 ? "step" : undefined}
+                    data-complete={step > i - 1}
                   >
-                    <span>{step > i ? <Check size={14} /> : i + 1}</span>
+                    <span>{step > i - 1 ? <Check size={14} /> : i + 1}</span>
                     <small>{label}</small>
                   </li>
                 ))}
@@ -672,14 +710,27 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
               <h2 ref={header} tabIndex={-1}>
                 {
                   [
+                    "Comencemos con el tutor.",
                     "¿Qué atención necesita?",
                     "¿Con quién te gustaría atenderte?",
                     "Elige un momento para su cuidado.",
                     "Cuéntanos sobre ustedes.",
                     "Todo listo para revisar.",
-                  ][step]
+                  ][step + 1]
                 }
               </h2>
+              {step === -1 && <form className={styles.identityForm} onSubmit={(event) => {
+                event.preventDefault();
+                if (!isValidRut(details.ownerRut)) { setError("Revisa el RUT y su dígito verificador."); return; }
+                setDetails((previous) => ({ ...previous, ownerRut: normalizeRut(previous.ownerRut) }));
+                setError(""); navigate(incomingSelection.current ? 2 : 0);
+              }}>
+                <p>Ingresa el RUT de la persona responsable de la mascota.</p>
+                <label htmlFor="booking-owner-rut">RUT del tutor</label>
+                <input id="booking-owner-rut" value={details.ownerRut} maxLength={12} placeholder="12.345.678-5" autoComplete="off" required onChange={(event) => { setDetails((previous) => ({ ...previous, ownerRut: event.target.value })); setError(""); }} />
+                <small>Validamos el formato y el dígito verificador. Tus datos se completan al final de la reserva.</small>
+                <button type="submit">Continuar a servicios <ArrowRight size={18} /></button>
+              </form>}
               {step === 0 && (
                 <>
                   <p>
@@ -691,25 +742,22 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
                         key={s.id}
                         type="button"
                         disabled={!s.professionalIds.length}
-                        className={serviceId === s.id ? styles.chosen : ""}
                         aria-pressed={serviceId === s.id}
                         onClick={() => {
                           setServiceId(s.id);
                           setProfessionalId("");
                           setSelected(null);
-                          navigate(1);
                         }}
                       >
-                        <ServiceVisual name={s.name} className={styles.serviceIcon} />
+                        <span className={styles.serviceArtwork}><ServiceVisual name={s.name} className={styles.serviceIcon} /><span className={styles.choiceCheck} aria-hidden="true">{serviceId === s.id && <Check size={13} />}</span></span>
                         <span className={styles.serviceInfo}>
                           <strong>{s.name}</strong>
                           <small>
-                            {s.description || "Atención veterinaria"}
+                            {s.description || serviceCaption(s.name)}
                           </small>
                         </span>
                         <span className={styles.serviceMeta}>
                           <Clock3 size={13} aria-hidden="true" /> {s.durationMinutes} min
-                          <ArrowRight size={17} />
                         </span>
                         {!s.professionalIds.length && (
                           <small>Sin profesional público habilitado</small>
@@ -717,6 +765,7 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
                       </button>
                     ))}
                   </div>
+                  <div className={styles.actions}><button type="button" onClick={() => navigate(-1)}><ArrowLeft size={17} aria-hidden="true" /> Atrás</button><button className={styles.primary} type="button" disabled={!serviceId} onClick={() => navigate(1)}>Continuar <ArrowRight size={18} /></button></div>
                   {!catalog.services.length && (
                     <p className={styles.empty}>
                       La clínica todavía no ha habilitado servicios reservables.
@@ -726,13 +775,15 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
               )}
               {step === 1 && (
                 <>
-                  <p>
-                    {eligibleProfessionals.length === 1
-                      ? "Este es el profesional encargado del servicio. Selecciónalo para consultar sus horarios."
-                      : "Conoce al equipo de esta atención y elige con quién agendar."}
-                  </p>
+                  <p>Busca por la atención que necesita tu mascota o por el nombre del profesional.</p>
+                  <div className={styles.searchTabs} role="group" aria-label="Cómo quieres buscar"><button type="button" aria-pressed={searchMode === "service"} onClick={() => setSearchMode("service")}>Por atención</button><button type="button" aria-pressed={searchMode === "professional"} onClick={() => setSearchMode("professional")}>Por profesional</button></div>
+                  <div className={styles.searchFields}>
+                    <label>Atención veterinaria<select value={serviceId} onChange={event => { setServiceId(event.target.value); setProfessionalId(""); setSelected(null); }}>{catalog.services.filter(item => item.professionalIds.length).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                    {searchMode === "professional" && <label>Buscar profesional<input type="search" placeholder="Nombre del profesional" value={professionalQuery} onChange={event => setProfessionalQuery(event.target.value)} /></label>}
+                  </div>
+                  <div className={styles.clinicPlace}><MapPin size={20} aria-hidden="true" /><div><strong>{catalog.clinic.name}</strong>{catalog.clinic.address && <span>{catalog.clinic.address}</span>}</div></div>
                   <div className={`${styles.choices} ${styles.professionalGrid}`}>
-                    {eligibleProfessionals.map((p) => {
+                    {visibleProfessionals.map((p) => {
                       const appearance = catalog.demo ? projectProfessionals[p.name] : undefined;
                       return (
                         <button
@@ -743,7 +794,6 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
                           onClick={() => {
                             setProfessionalId(p.id);
                             setSelected(null);
-                            navigate(2);
                           }}
                         >
                           {appearance ? (
@@ -755,12 +805,14 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
                             <small>EQUIPO VETERINARIO</small>
                             <strong>{p.name}</strong>
                             <span>{appearance?.specialty || "Atención veterinaria"}</span>
-                            <span className={styles.professionalAction}>Ver horarios <ArrowRight size={15} aria-hidden="true" /></span>
+                            <span className={styles.professionalAction}>{professionalId === p.id ? "Profesional seleccionado" : "Seleccionar profesional"}{professionalId === p.id && <Check size={15} aria-hidden="true" />}</span>
                           </span>
                         </button>
                       );
                     })}
                   </div>
+                  {!visibleProfessionals.length && <p className={styles.empty}>No encontramos profesionales con ese nombre para esta atención.</p>}
+                  <div className={styles.actions}><button type="button" onClick={() => navigate(0)}><ArrowLeft size={17} aria-hidden="true" /> Atrás</button><button type="button" className={styles.primary} disabled={!professionalId} onClick={() => navigate(2)}><Search size={17} aria-hidden="true" /> Buscar horas</button></div>
                 </>
               )}
               {step === 2 && (
@@ -923,6 +975,7 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
                         <dt>Tutor y mascota</dt>
                         <dd>
                           {details.ownerName} · {details.petName}
+                          <br />RUT del tutor: {details.ownerRut}
                         </dd>
                       </div>
                       <div>
@@ -966,15 +1019,7 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
                   </fieldset>
                 </form>
               )}
-              {step < 2 && step > 0 && (
-                <button
-                  type="button"
-                  className={styles.textButton}
-                  onClick={() => navigate(step - 1)}
-                >
-                  Atrás
-                </button>
-              )}
+
             </>
           )}
         </section>
@@ -984,7 +1029,6 @@ export function PublicBookingPage({ clinicSlug }: { clinicSlug?: string }) {
       <footer className={styles.footer}>
         <span><PawPrint size={14} aria-hidden="true" /> {catalog?.clinic.name || "Clínica Veterinaria Porvenir"} · Agendamiento</span>
         <span>Ante una urgencia, busca atención veterinaria inmediata.</span>
-        {catalog?.demo && <small role="note">Proyecto personal · Perfiles y reservas ficticios. Utiliza datos de prueba.</small>}
       </footer>
     </main>
   );

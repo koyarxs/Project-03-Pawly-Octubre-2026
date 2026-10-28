@@ -14,6 +14,7 @@ import {
   type Permission,
 } from "../authorization/permission-policy";
 import { PrismaService } from "../prisma/prisma.service";
+import { isValidRut } from "./rut";
 import {
   CreatePatientDto,
   CreateTutorDto,
@@ -29,6 +30,10 @@ const tutorSummary = {
   firstName: true,
   lastName: true,
   phone: true,
+  rut: true,
+  insuranceType: true,
+  insuranceProvider: true,
+  fonasaGroup: true,
   email: true,
   status: true,
 } satisfies Prisma.TutorSelect;
@@ -79,7 +84,7 @@ export class ClinicalService {
       notesRestricted: !allowed,
       tutors: record.tutors.map((tutor) =>
         !contacts && typeof tutor === "object" && tutor !== null
-          ? { ...tutor, phone: "", email: null }
+          ? { ...tutor, phone: "", email: null, rut: null, insuranceType: null, insuranceProvider: null, fonasaGroup: null }
           : tutor,
       ),
     };
@@ -170,6 +175,7 @@ export class ClinicalService {
   createTutor(clinicId: string, dto: CreateTutorDto, userId: string) {
     return this.write(async (tx) => {
       await this.authorizeWrite(tx, clinicId, userId, "tutor:write");
+      if (!isValidRut(dto.rut ?? "")) throw new BadRequestException("Ingresa un RUT válido para el tutor.");
       return tx.tutor.create({ data: { ...dto, clinicId } });
     });
   }

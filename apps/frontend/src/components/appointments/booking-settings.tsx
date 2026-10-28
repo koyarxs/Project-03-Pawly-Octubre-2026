@@ -1,4 +1,5 @@
 "use client";
+import { displayName } from "@/lib/display-name";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { CalendarDays, Clock3, Plus, Save, Trash2 } from "lucide-react";
@@ -441,11 +442,6 @@ export function BookingSettingsPanel({
           {notice}
         </p>
       )}
-      {data?.demo && (
-        <p className={styles.projectNote}>
-          Proyecto personal · Personal y reservas ficticios. Las credenciales de estos perfiles no están verificadas.
-        </p>
-      )}
       {!data || !draft ? (
         !error && <p role="status">Cargando configuración…</p>
       ) : (
@@ -488,9 +484,9 @@ export function BookingSettingsPanel({
                       })
                     }
                   >
-                    <ServiceVisual name={s.name} className={styles.serviceIcon} />
+                    <ServiceVisual name={displayName(s.name)} className={styles.serviceIcon} />
                     <span>
-                      <strong>{s.name}</strong>
+                      <strong>{displayName(s.name)}</strong>
                       <small>
                         {s.durationMinutes} min · preparación {s.bufferMinutes}{" "}
                         min · {s.professionals.length} profesionales
@@ -593,7 +589,7 @@ export function BookingSettingsPanel({
                             })
                           }
                         />
-                        {p.name}
+                        {displayName(p.name)}
                       </label>
                     ))}
                   </fieldset>
@@ -764,7 +760,7 @@ export function BookingSettingsPanel({
                         .filter((s) => s.enabled)
                         .map((s) => (
                           <option key={s.id} value={s.id}>
-                            {s.name}
+                            {displayName(s.name)}
                           </option>
                         ))}
                     </select>
@@ -788,7 +784,7 @@ export function BookingSettingsPanel({
                         )
                         .map((p) => (
                           <option key={p.id} value={p.id}>
-                            {p.name}
+                            {displayName(p.name)}
                           </option>
                         ))}
                     </select>
@@ -858,7 +854,7 @@ export function BookingSettingsPanel({
                     {data.professionals.map((p) => (
                       <OpeningEditor
                         key={p.id}
-                        label={`Horario de ${p.name}`}
+                        label={`Horario de ${displayName(p.name)}`}
                         value={
                           draft.professionals.find(
                             (r) => r.membershipId === p.id,
@@ -992,7 +988,7 @@ export function BookingSettingsPanel({
                           <option value="">Toda la clínica o recurso</option>
                           {data.professionals.map((p) => (
                             <option value={p.id} key={p.id}>
-                              {p.name}
+                              {displayName(p.name)}
                             </option>
                           ))}
                         </select>

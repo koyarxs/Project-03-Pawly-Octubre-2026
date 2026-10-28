@@ -10,7 +10,12 @@ import type { Response } from "express";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../prisma/prisma.service";
 import { SessionsService } from "../sessions/sessions.service";
-import { LoginDto, normalizeEmail, RegisterClinicDto } from "./dto/auth.dto";
+import {
+  LoginDto,
+  normalizeEmail,
+  RegisterClinicDto,
+  RegisterUserDto,
+} from "./dto/auth.dto";
 import { PasswordService } from "./password.service";
 
 const publicUser = {
@@ -31,7 +36,10 @@ export class AuthService {
 
   async register(dto: RegisterClinicDto) {
     // No provider exists yet: public registration is explicitly development-only.
-    if (this.config.get<string>("NODE_ENV") === "production")
+    if (
+      this.config.get<string>("NODE_ENV") === "production" ||
+      this.config.get<string>("WEBSITE_CLINIC_ID")
+    )
       throw new ServiceUnavailableException("Registro no disponible.");
     const passwordHash = await this.passwords.hash(dto.password);
     const base =
@@ -107,6 +115,54 @@ export class AuthService {
         emailVerifiedAt: user.emailVerifiedAt,
       },
     };
+  }
+
+  async registerUser(dto: RegisterUserDto, response: Response) {
+    const clinicId = this.config.get<string>("WEBSITE_CLINIC_ID");
+    if (!clinicId || this.config.get<string>("NODE_ENV") === "production")
+      throw new ServiceUnavailableException("Registro no disponible.");
+    const passwordHash = await this.passwords.hash(dto.password);
+    let result;
+    try {
+      result = await this.prisma.$transaction(async (tx) => {
+        const clinic = await tx.veterinaryClinic.findFirst({
+          where: { id: clinicId, status: "ACTIVE" },
+          select: { id: true, name: true, slug: true, timezone: true },
+        });
+        if (!clinic)
+          throw new ServiceUnavailableException("Registro no disponible.");
+        const user = await tx.user.create({
+          data: {
+            name: dto.name.trim(),
+            email: dto.email.trim(),
+            normalizedEmail: normalizeEmail(dto.email),
+            passwordHash,
+          },
+          select: publicUser,
+        });
+        const member = await tx.clinicMembership.create({
+          data: { userId: user.id, clinicId, role: dto.role },
+        });
+        await tx.staffProfile.create({
+          data: {
+            clinicId,
+            membershipId: member.id,
+            displayName: user.name,
+            job: dto.role,
+          },
+        });
+        return { user, clinic, role: dto.role };
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      )
+        throw new ConflictException("No se pudo completar el registro.");
+      throw error;
+    }
+    await this.sessions.create(result.user.id, response);
+    return result;
   }
 
   async me(userId: string) {

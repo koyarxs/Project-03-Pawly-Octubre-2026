@@ -1,4 +1,5 @@
 "use client";
+import { displayName } from "@/lib/display-name";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   WorkspaceShell,
@@ -103,7 +104,7 @@ function ProfileConsent({ context }: { context: WorkspaceContext }) {
             <StatusBadge tone={p.publishedAt ? "positive" : "neutral"}>
               {p.publishedAt ? "Existe una versión publicada" : "No publicado"}
             </StatusBadge>
-            <h2>{p.displayName}</h2>
+            <h2>{displayName(p.displayName)}</h2>
             <strong>{jobNames[p.job]}</strong>
             <p>{p.specialty}</p>
             <p>{p.biography || "Sin descripción."}</p>
@@ -111,7 +112,7 @@ function ProfileConsent({ context }: { context: WorkspaceContext }) {
               Fotografía:{" "}
               {p.photoKey === "initials"
                 ? "Avatar con iniciales"
-                : "Imagen ilustrativa de demostración"}
+                : "Imagen del perfil"}
               .
             </p>
             <p className="staff-hint">

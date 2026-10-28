@@ -2,6 +2,8 @@
 
 import Image, { getImageProps } from "next/image";
 import { websiteBanners } from "@/lib/website-banners";
+import { websiteCampaigns } from "@/lib/website-campaigns";
+import { CampaignSlide } from "./campaign-slide";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import {
   useEffect,
@@ -100,10 +102,14 @@ export function PhotoCarousel({
     .filter((photo): photo is (typeof availablePhotographs)[number] =>
       Boolean(photo),
     );
-  const photographs = (chosen?.length ? chosen : availablePhotographs).map((photo) => {
+  const regularPhotographs = (chosen?.length ? chosen : availablePhotographs).map((photo) => {
     const banner = variant === "banner" ? websiteBanners.find((item) => item.id === photo.id) : undefined;
     return { ...photo, ...banner, mobileImage: banner?.mobileImage };
   });
+  const campaignGroups = (chosen?.length ? chosen : availablePhotographs).map((photo) => photo.id);
+  const photographs = variant === "banner"
+    ? websiteCampaigns.filter((campaign) => campaignGroups.includes(campaign.group)).map((campaign) => ({ ...campaign, mobileImage: undefined, campaign }))
+    : regularPhotographs.map((photo) => ({ ...photo, campaign: undefined }));
   const [selected, setSelected] = useState(0);
   const [paused, setPaused] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -213,25 +219,28 @@ export function PhotoCarousel({
       aria-roledescription="carrusel"
       aria-label="Carrusel de cuidado veterinario"
       aria-describedby={`${id}-instructions`}
-      tabIndex={0}
-      onKeyDown={handleKeyboard}
+      tabIndex={variant === "banner" ? undefined : 0}
+      onKeyDown={variant === "banner" ? undefined : handleKeyboard}
       onFocusCapture={() => setPaused(true)}
+      onBlurCapture={(event) => {
+        if (variant === "banner" && !event.currentTarget.contains(event.relatedTarget)) setPaused(false);
+      }}
       onPointerEnter={(event) => {
         if (event.pointerType === "mouse") setHovered(true);
       }}
       onPointerLeave={() => setHovered(false)}
     >
       <p id={`${id}-instructions`} className={styles.visuallyHidden}>
-        {photographs.length} fotografías de cuidado veterinario. Usa las flechas
+        {variant === "banner" ? `${photographs.length} imágenes de cuidado veterinario. Presentación automática cada seis segundos; se pausa al enfocar un enlace y respeta la preferencia de movimiento reducido.` : <>{photographs.length} fotografías de cuidado veterinario. Usa las flechas
         del teclado o los controles para cambiar de imagen. Al interactuar, la
-        reproducción se detiene hasta que decidas reanudarla.
+        reproducción se detiene hasta que decidas reanudarla.</>}
       </p>
       <div
         id={frameId}
         className={styles.frame}
         aria-live="off"
-        onTouchStart={beginTouch}
-        onTouchEnd={endTouch}
+        onTouchStart={variant === "banner" ? undefined : beginTouch}
+        onTouchEnd={variant === "banner" ? undefined : endTouch}
         onTouchCancel={() => {
           touchStart.current = null;
         }}
@@ -245,7 +254,7 @@ export function PhotoCarousel({
             aria-label={`${index + 1} de ${photographs.length}`}
             hidden={selected !== index}
           >
-            <div className={styles.photoCanvas}>
+            {photograph.campaign ? <CampaignSlide campaign={photograph.campaign} first={index === 0} /> : <><div className={styles.photoCanvas}>
               {photograph.mobileImage ? <BannerPicture desktop={photograph.image} mobile={photograph.mobileImage} alt={photograph.alt} first={index === 0} /> : <Image
                 src={photograph.image}
                 alt={photograph.alt}
@@ -263,11 +272,11 @@ export function PhotoCarousel({
               <span className={styles.description}>
                 {photograph.description}
               </span>
-            </figcaption>
+            </figcaption></>}
           </figure>
         ))}
       </div>
-      <div
+      {variant !== "banner" && <div
         className={styles.toolbar}
         role="group"
         aria-label="Controles del carrusel"
@@ -306,7 +315,7 @@ export function PhotoCarousel({
             <Pause size={17} aria-hidden="true" />
           )}
         </button>
-        {variant !== "banner" && <div
+        <div
           className={styles.indicators}
           role="group"
           aria-label="Elegir fotografía"
@@ -324,8 +333,8 @@ export function PhotoCarousel({
               <span aria-hidden="true" />
             </button>
           ))}
-        </div>}
-        {variant !== "banner" && <div className={styles.navigation}>
+        </div>
+        <div className={styles.navigation}>
           <button
             type="button"
             aria-label="Fotografía anterior"
@@ -342,8 +351,8 @@ export function PhotoCarousel({
           >
             <ChevronRight size={20} aria-hidden="true" />
           </button>
-        </div>}
-      </div>
+        </div>
+      </div>}
       <p
         className={styles.visuallyHidden}
         role="status"

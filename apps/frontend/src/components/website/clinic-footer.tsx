@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUp, ArrowUpRight, Clock3, Mail, MapPin, PawPrint, Phone } from "lucide-react";
+import { ArrowRight, ArrowUp, ArrowUpRight, Clock3, MapPin, PawPrint } from "lucide-react";
 import { PorvenirLogo } from "@/components/brand";
 import type { WebsiteContent } from "@/lib/website";
+import { clinicHours } from "@/lib/clinic-hours";
 import styles from "./clinic-footer.module.css";
 import { NewsletterForm } from "./newsletter-form";
+import { clinicWhatsAppNumber, clinicWhatsAppUrl, WhatsAppIcon } from "./clinic-whatsapp";
 
 function SocialIcon({ name }: { name: string }) {
   return (
@@ -47,14 +49,14 @@ export function ClinicFooter({ content, preview }: { content: WebsiteContent; pr
             <h3>Conoce Porvenir</h3>
             <a href="#inicio">Inicio</a>
             {content.showServices && content.services.length > 0 && <a href="#servicios">Nuestros servicios</a>}
-            <a href="#companeros">Nuestros compañeros</a>
+            <a href="#tu-visita">Prepara tu visita</a>
             <a href="#equipo">El equipo</a>
           </nav>
           <nav className={styles.navigation} aria-label="Información de la veterinaria">
             <h3>Información útil</h3>
             <a href="#ubicacion">Ubicación y cómo llegar</a>
             <a href="#horario-atencion">Horario de atención</a>
-            <a href="#contacto">Contacto{content.showHours && content.hours ? " y horarios" : ""}</a>
+            <a href="#preguntas-frecuentes">Preguntas frecuentes</a>
             {content.showAbout && content.aboutText && <a href="#nosotros">Nuestra veterinaria</a>}
             <a href="#testimonios">Historias que nos conectan</a>
           </nav>
@@ -62,10 +64,8 @@ export function ClinicFooter({ content, preview }: { content: WebsiteContent; pr
           <div id="contacto" className={styles.details}>
             <h3>Estamos en Valparaíso</h3>
             {content.address && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(content.address)}`} target="_blank" rel="noopener noreferrer"><MapPin size={17} aria-hidden="true" /><span>{content.address}<small>Ver en Google Maps <ArrowUpRight size={12} aria-hidden="true" /><span className="sr-only"> (abre otra pestaña)</span></small></span></a>}
-            {content.phone && <a href={`tel:${content.phone.replace(/[^\d+]/g, "")}`}><Phone size={16} aria-hidden="true" /><span>{content.phone}</span></a>}
-            {content.email && <a href={`mailto:${encodeURIComponent(content.email)}`}><Mail size={16} aria-hidden="true" /><span>{content.email}</span></a>}
-            {content.whatsapp && <a href={`https://wa.me/${content.whatsapp}`} target="_blank" rel="noopener noreferrer">Escribir por WhatsApp <ArrowUpRight size={15} aria-hidden="true" /><span className="sr-only"> (abre otra pestaña)</span></a>}
-          <div id="horario-atencion" className={styles.opening}><Clock3 size={25} aria-hidden="true" /><div><h3>Horario de atención</h3><p>{content.showHours && content.hours ? content.hours : "Horarios por confirmar."}</p>{!(content.showHours && content.hours) && <small>Publicaremos aquí nuestros horarios de atención.</small>}</div><PawPrint className={styles.hoursPaw} size={27} aria-hidden="true" /></div>
+            <a href={clinicWhatsAppUrl} target="_blank" rel="noopener noreferrer"><WhatsAppIcon size={22} /><span>WhatsApp<small>{clinicWhatsAppNumber} <ArrowUpRight size={15} aria-hidden="true" /><span className="sr-only"> (abre otra pestaña)</span></small></span></a>
+          <div id="horario-atencion" className={styles.opening}><Clock3 size={25} aria-hidden="true" /><div><h3>Horario de atención</h3><p>{clinicHours(content)}</p></div><PawPrint className={styles.hoursPaw} size={27} aria-hidden="true" /></div>
             <a className={styles.allContact} href="#ubicacion">Ver ubicación <ArrowRight size={15} aria-hidden="true" /></a>
           </div>
 

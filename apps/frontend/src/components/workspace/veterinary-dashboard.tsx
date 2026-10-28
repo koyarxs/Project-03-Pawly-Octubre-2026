@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { AuthError } from "@/lib/auth";
+import { displayName } from "@/lib/display-name";
 import { localStamp } from "@/lib/appointment-time";
 import { appointmentStates } from "@/lib/appointments";
 import { canReadClinical } from "@/lib/consultations";
@@ -179,7 +180,7 @@ function DashboardOverviewContent({ context }: { context: WorkspaceContext }) {
       <div className="dashboard-welcome">
         <div>
           <span className="dashboard-eyebrow">VISTA GENERAL</span>
-          <h1>Hola, {session.name.split(" ")[0]}.</h1>
+          <h1>Hola, {displayName(session.name).split(" ")[0]}.</h1>
           <p>Todo lo esencial para acompañar tu jornada.</p>
         </div>
         <div className="dashboard-date">
@@ -196,7 +197,7 @@ function DashboardOverviewContent({ context }: { context: WorkspaceContext }) {
         </div>
         <div>
           <span>TU CLÍNICA ACTIVA</span>
-          <h2 id="active-clinic">{access.name}</h2>
+          <h2 id="active-clinic">{displayName(access.name)}</h2>
           <p>
             {jobNames[access.job ?? access.role] ?? roleNames[access.role]} ·{" "}
             {timezone}
@@ -331,11 +332,11 @@ function DashboardOverviewContent({ context }: { context: WorkspaceContext }) {
                       <Link
                         href={`${workspacePath(clinicId, "pacientes")}/${encodeURIComponent(appointment.patientId)}`}
                       >
-                        {appointment.patient.name}
+                        {displayName(appointment.patient.name)}
                       </Link>
-                      <p>{appointment.reason}</p>
+                      <p>{displayName(appointment.reason)}</p>
                       <span>
-                        {appointment.professional?.user.name ||
+                        {displayName(appointment.professional?.user.name ?? "") ||
                           "Sin profesional asignado"}
                       </span>
                     </div>
@@ -434,7 +435,7 @@ function DashboardOverviewContent({ context }: { context: WorkspaceContext }) {
           <div className="dashboard-access-note">
             <ShieldCheck size={18} aria-hidden="true" />
             <p>
-              Estás trabajando en <strong>{access.name}</strong>. Tu acceso y
+              Estás trabajando en <strong>{displayName(access.name)}</strong>. Tu acceso y
               las acciones disponibles dependen de tu rol.
             </p>
           </div>

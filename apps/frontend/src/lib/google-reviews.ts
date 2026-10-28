@@ -15,6 +15,7 @@ export type GoogleReviewsResult = {
   rating?: number;
   total?: number;
   mapsUrl?: string;
+  writeReviewUrl?: string;
   reviews: GoogleReview[];
 };
 
@@ -44,6 +45,7 @@ export function isGoogleReviewsResult(value: unknown): value is GoogleReviewsRes
     (data.rating === undefined || (Number.isFinite(data.rating) && data.rating >= 0 && data.rating <= 5)) &&
     (data.total === undefined || (Number.isSafeInteger(data.total) && data.total >= 0)) &&
     (data.mapsUrl === undefined || !!googleMapsUrl(data.mapsUrl)) &&
+    (data.writeReviewUrl === undefined || !!googleMapsUrl(data.writeReviewUrl)) &&
     Array.isArray(data.reviews) && data.reviews.every((review) => review &&
       typeof review.author === "string" && typeof review.quote === "string" &&
       Number.isFinite(review.rating) && review.rating >= 1 && review.rating <= 5 &&

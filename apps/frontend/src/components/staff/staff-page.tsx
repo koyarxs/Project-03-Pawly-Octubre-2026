@@ -1,4 +1,5 @@
 "use client";
+import { displayName } from "@/lib/display-name";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Users, ShieldCheck, UserPlus, ArrowRight, X } from "lucide-react";
@@ -244,7 +245,7 @@ function StaffDirectory({ context }: { context: WorkspaceContext }) {
                             )}
                           </span>
                           <span>
-                            {m.staffProfile?.displayName ?? m.user.name}
+                            {displayName(m.staffProfile?.displayName ?? m.user.name)}
                             <small>{m.user.email}</small>
                           </span>
                         </th>
@@ -288,7 +289,7 @@ function StaffDirectory({ context }: { context: WorkspaceContext }) {
                           <button
                             className="staff-secondary"
                             onClick={(e) => open(m, e.currentTarget)}
-                            aria-label={`Administrar a ${m.staffProfile?.displayName ?? m.user.name}`}
+                            aria-label={`Administrar a ${displayName(m.staffProfile?.displayName ?? m.user.name)}`}
                           >
                             Administrar
                           </button>
@@ -319,7 +320,7 @@ function StaffDirectory({ context }: { context: WorkspaceContext }) {
                             {auditNames[entry.action] ?? entry.action}
                           </strong>
                           <span>
-                            {entry.actor.user.name} ·{" "}
+                            {displayName(entry.actor.user.name)} ·{" "}
                             {new Date(entry.createdAt).toLocaleString("es-CL")}
                           </span>
                           <p>{entry.reason}</p>
@@ -663,7 +664,7 @@ function WorkerEditor({
   return (
     <div className="staff-form">
       <p>
-        <strong>{p?.displayName ?? m.user.name}</strong> · {roleNames[m.role]}
+        <strong>{displayName(p?.displayName ?? m.user.name)}</strong> · {roleNames[m.role]}
       </p>
       <div
         className="staff-tabs"
@@ -697,7 +698,7 @@ function WorkerEditor({
               required
               minLength={2}
               maxLength={120}
-              defaultValue={p?.displayName ?? m.user.name}
+              defaultValue={displayName(p?.displayName ?? m.user.name)}
             />
           </label>
           <label>
@@ -739,7 +740,7 @@ function WorkerEditor({
                 "groomer",
               ].map((key, index) => (
                 <option value={`${key}-demo`} key={key}>
-                  Fotografía ilustrativa {index + 1} (demostración)
+                  Fotografía del perfil {index + 1}
                 </option>
               ))}
             </select>
@@ -1087,7 +1088,7 @@ function AssignmentForm({
           <option value="">Selecciona un paciente</option>
           {patients.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.name}
+              {displayName(p.name)}
             </option>
           ))}
         </select>

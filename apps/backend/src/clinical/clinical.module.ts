@@ -20,6 +20,7 @@ import {
 import { SessionGuard } from "../sessions/session.guard";
 import { SessionsModule } from "../sessions/sessions.module";
 import { ClinicalService } from "./clinical.service";
+import { PatientDocumentsModule } from "./patient-documents";
 import {
   CreatePatientDto,
   CreateTutorDto,
@@ -153,7 +154,7 @@ class PatientsController {
   }
 }
 @Module({
-  imports: [SessionsModule, AuthorizationModule],
+  imports: [SessionsModule, AuthorizationModule, PatientDocumentsModule],
   controllers: [TutorsController, PatientsController],
   providers: [ClinicalService],
 })

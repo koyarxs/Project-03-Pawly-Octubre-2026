@@ -1,8 +1,57 @@
 {
-  "capturedAt": "2026-10-24T18:51:12.418Z",
+  "capturedAt": "2026-10-28T15:32:55.190Z",
   "source": "Isolated Nest API + PostgreSQL + Next.js",
   "data": "Exclusively fictional fixtures; not production data",
   "captures": [
+    {
+      "file": "landing.webp",
+      "route": "/",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
+    {
+      "file": "tu-visita.webp",
+      "route": "/",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
+    {
+      "file": "historia.webp",
+      "route": "/",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
+    {
+      "file": "equipo-publico.webp",
+      "route": "/",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
+    {
+      "file": "testimonios.webp",
+      "route": "/",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
+    {
+      "file": "preguntas-frecuentes.webp",
+      "route": "/",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
+    {
+      "file": "footer.webp",
+      "route": "/",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
     {
       "file": "inicio-sesion.webp",
       "route": "/iniciar-sesion",
@@ -67,13 +116,6 @@
       "fullPage": false
     },
     {
-      "file": "editor-web.webp",
-      "route": "/app/clinicas/:id/sitio-web",
-      "width": 1440,
-      "height": 1000,
-      "fullPage": false
-    },
-    {
       "file": "ficha-paciente.webp",
       "route": "/app/clinicas/:id/pacientes/:id",
       "width": 1440,
@@ -88,6 +130,13 @@
       "fullPage": true
     },
     {
+      "file": "reserva-servicios.webp",
+      "route": "/reservar/qa-:id",
+      "width": 1440,
+      "height": 1000,
+      "fullPage": false
+    },
+    {
       "file": "reserva-profesionales.webp",
       "route": "/reservar/qa-:id",
       "width": 1440,
@@ -100,6 +149,13 @@
       "width": 1440,
       "height": 1000,
       "fullPage": true
+    },
+    {
+      "file": "reserva-servicios-movil.webp",
+      "route": "/reservar/qa-:id",
+      "width": 390,
+      "height": 844,
+      "fullPage": false
     },
     {
       "file": "reserva-movil.webp",

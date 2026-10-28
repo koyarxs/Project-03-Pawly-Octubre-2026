@@ -16,7 +16,7 @@ import {
 } from "../sessions/sessions.service";
 import { SessionGuard } from "../sessions/session.guard";
 import { AuthService } from "./auth.service";
-import { LoginDto, RegisterClinicDto } from "./dto/auth.dto";
+import { LoginDto, RegisterClinicDto, RegisterUserDto } from "./dto/auth.dto";
 
 @Controller("auth")
 export class AuthController {
@@ -36,6 +36,15 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   login(@Body() dto: LoginDto, @Res({ passthrough: true }) response: Response) {
     return this.auth.login(dto, response);
+  }
+
+  @Post("register-user")
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  registerUser(
+    @Body() dto: RegisterUserDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.auth.registerUser(dto, response);
   }
 
   @Get("me")
